@@ -1,4 +1,4 @@
-package ch.so.agi.hop.geotools.vector;
+package ch.so.agi.hop.geotools.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +40,7 @@ class GeoToolsRuntimeSupportTest {
         new ServiceHidingClassLoader(
             new URL[] {pluginClasses, indriyaJar}, ClassLoader.getPlatformClassLoader())) {
       Class<?> runtimeSupport =
-          loader.loadClass("ch.so.agi.hop.geotools.vector.GeoToolsRuntimeSupport");
+          loader.loadClass("ch.so.agi.hop.geotools.common.GeoToolsRuntimeSupport");
       Method initialize = runtimeSupport.getDeclaredMethod("initialize");
       initialize.setAccessible(true);
       initialize.invoke(null);

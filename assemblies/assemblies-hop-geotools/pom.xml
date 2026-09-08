@@ -21,6 +21,36 @@
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-geotools-common</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-geotools-raster-core</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-transform-geotools-raster-clip</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-transform-geotools-raster-zonal-stats</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-transform-arcinfo-generate-writer</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
 
   <build>

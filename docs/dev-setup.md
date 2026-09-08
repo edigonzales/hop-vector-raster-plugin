@@ -12,7 +12,7 @@ sources/
 
 The GeoTools transforms and `ValueMetaGeometry` must share the Hop class-loader group `sogeo-geometry`. For that reason the GeoTools distribution does not contain another copy of `hop-geometry-type` or `jts-core`.
 
-The vector distribution excludes the GeoTools raster `gt-coverage` module. ImageN core remains present because GeoTools 35 declares it as a direct runtime dependency of `gt-main`; it belongs to the GeoTools core dependency set even though this MVP does not expose raster processing.
+The distribution includes GeoTools 35.1 vector/raster libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules, GDAL bindings and additional JTS/Geometry copies; SQLite JDBC bundled natives are allowed.
 
 ## Java and Maven
 
@@ -32,7 +32,7 @@ The script performs the following steps in order:
 1. runs `mvn clean install` in `hop-geometry-type-plugin`
 2. installs its ZIP into `$HOP_HOME/plugins/misc/hop-geometry-type`
 3. runs `mvn clean verify` in `hop-geotools-plugin`
-4. checks that the GeoTools ZIP contains the vector runtime and required GeoTools core dependencies, but neither another JTS/Geometry type copy nor `gt-coverage`
+4. checks all vector/raster/GENERATE modules, GeoTools 35.1, the reviewed dependency allowlist and shared JTS/Geometry packaging
 5. installs the ZIP into `$HOP_HOME/plugins/transforms/geotools-vector`
 6. stops a running Hop GUI process
 7. starts `$HOP_HOME/hop-gui.sh` again
@@ -123,7 +123,7 @@ Writing the same curve geometry to Shapefile is intentionally different: Shapefi
 
 The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDCURVE`, and `CURVEPOLYGON`, GeoPackage extension metadata, ordinary point output through the same GeoPackage path, and Shapefile linearization.
 
-## Current MVP limitations
+## Current Vector Reader/Writer limitations
 
 - Shapefile and GeoPackage only
 - one input layer at a time
@@ -135,4 +135,4 @@ The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDC
 - no reprojection, clipping or other geoprocessing in Reader/Writer
 - no generic DataStore parameter UI yet
 
-These limitations are intentional so the initial implementation can prove GeoTools I/O, Hop integration, packaging and class-loader behaviour before expanding the scope.
+For the separate raster and GENERATE transforms, see [raster usage](raster-transforms.md) and [GENERATE format decisions](generate-format.md).

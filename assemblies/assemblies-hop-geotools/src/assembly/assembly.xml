@@ -16,6 +16,11 @@
       <unpack>false</unpack>
       <includes>
         <include>ch.so.agi:hop-geotools-vector</include>
+        <include>ch.so.agi:hop-geotools-common</include>
+        <include>ch.so.agi:hop-geotools-raster-core</include>
+        <include>ch.so.agi:hop-transform-geotools-raster-clip</include>
+        <include>ch.so.agi:hop-transform-geotools-raster-zonal-stats</include>
+        <include>ch.so.agi:hop-transform-arcinfo-generate-writer</include>
       </includes>
     </dependencySet>
 
@@ -27,6 +32,11 @@
       <unpack>false</unpack>
       <excludes>
         <exclude>ch.so.agi:hop-geotools-vector</exclude>
+        <exclude>ch.so.agi:hop-geotools-common</exclude>
+        <exclude>ch.so.agi:hop-geotools-raster-core</exclude>
+        <exclude>ch.so.agi:hop-transform-geotools-raster-clip</exclude>
+        <exclude>ch.so.agi:hop-transform-geotools-raster-zonal-stats</exclude>
+        <exclude>ch.so.agi:hop-transform-arcinfo-generate-writer</exclude>
         <exclude>ch.so.agi:hop-geometry-type</exclude>
         <exclude>org.locationtech.jts:*</exclude>
         <exclude>org.apache.hop:*</exclude>

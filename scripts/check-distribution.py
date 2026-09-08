@@ -16,6 +16,15 @@ with zipfile.ZipFile(zip_path) as archive:
 
     required = [
         "hop-geotools-vector-",
+        "hop-geotools-common-",
+        "hop-geotools-raster-core-",
+        "hop-transform-geotools-raster-clip-",
+        "hop-transform-geotools-raster-zonal-stats-",
+        "hop-transform-arcinfo-generate-writer-",
+        "gt-geotiff-",
+        "gt-coverage-",
+        "imageio-ext-cog-reader-",
+        "imageio-ext-cog-streams-",
         "gt-main-",
         "gt-shapefile-",
         "gt-geopkg-",
@@ -33,14 +42,35 @@ with zipfile.ZipFile(zip_path) as archive:
     forbidden = [
         "hop-geometry-type",
         "jts-core-",
-        "gt-coverage-",
+        "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
     ]
     for fragment in forbidden:
         matches = [name for name in names if fragment in name]
         if matches:
             raise SystemExit(
-                f"{zip_path.name}: dependency {fragment!r} must not be bundled in the vector MVP: {matches}"
+                f"{zip_path.name}: dependency {fragment!r} must not be bundled: {matches}"
             )
+
+    # Explicitly reviewed GeoTools modules; none originate in modules/unsupported.
+    # Additions require reviewing their source module and runtime requirements.
+    allowed_geotools = {
+        "gt-api", "gt-main", "gt-metadata", "gt-referencing", "gt-http",
+        "gt-shapefile", "gt-geopkg", "gt-jdbc", "gt-epsg-hsql", "gt-coverage",
+        "gt-geotiff", "gt-xml", "gt-xsd-core", "gt-xsd-ows", "gt-xsd-gml2",
+        "gt-xsd-gml3", "gt-xsd-filter", "gt-xsd-fes",
+    }
+    for name in names:
+        if name.startswith("gt-") and name.endswith(".jar"):
+            if name.removesuffix("-35.1.jar") not in allowed_geotools:
+                raise SystemExit(f"Unreviewed GeoTools module or version (expected 35.1): {name}")
+    # SQLite JDBC's bundled natives are intentional; no raster native runtime is allowed.
+    for entry in entries:
+        if not entry.endswith(".jar"):
+            continue
+        with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
+            natives = [n for n in nested.namelist() if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]
+            if natives and not Path(entry).name.startswith("sqlite-jdbc-"):
+                raise SystemExit(f"Unexpected native library in {entry}: {natives}")
 
     indriya_entries = [
         entry for entry in entries if Path(entry).name.lower().startswith("indriya-") and entry.endswith(".jar")
@@ -65,7 +95,7 @@ with zipfile.ZipFile(zip_path) as archive:
 
 size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
-print("  GeoTools vector + EPSG/units runtime is bundled")
+print("  GeoTools 35.1 vector/raster + EPSG/units runtime is bundled")
 print("  Indriya NumberSystem service metadata is present")
 print("  hop-geometry-type and jts-core remain shared via classLoaderGroup=sogeo-geometry")
-print("  gt-coverage is not bundled; ImageN core remains as a required gt-main dependency")
+print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")

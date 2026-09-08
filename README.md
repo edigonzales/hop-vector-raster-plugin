@@ -1,12 +1,12 @@
 # Apache Hop GeoTools Plugin
 
-GeoTools-based geospatial transforms for Apache Hop.
+Java geospatial transforms for Apache Hop, using GeoTools **35.1** for vector and raster processing. Java 17+, without GDAL/OGR bindings or an installed GDAL runtime.
 
-GeoTools is deliberately an implementation detail. The transforms exposed in Hop use functional names and live in the `Geospatial` category.
+GeoTools is deliberately an implementation detail. The transforms live in the `Geospatial` category. Raster display names identify the GeoTools implementation so they can coexist with GDAL transforms.
 
-## MVP
+## Vector transforms
 
-The first implementation focuses on vector file I/O:
+Vector file I/O includes:
 
 - **Vector Reader**
   - Shapefile (`.shp`)
@@ -23,7 +23,13 @@ The first implementation focuses on vector file I/O:
   - schema is derived from the incoming Hop row metadata
   - geometry type is inferred from the first non-null geometry
 
-The MVP intentionally does not include reprojection, clipping, filtering, PostGIS/WFS, GeoJSON, raster processing, append/overwrite modes, or generic GeoTools DataStore configuration.
+## Raster and GENERATE transforms
+
+- **Raster Clip (GeoTools)**: local GeoTIFF or public HTTP/HTTPS COG → local tiled GeoTIFF, using a bounding box or Hop Polygon/MultiPolygon. Raster source, output path and box coordinates can be constants or input fields.
+- **Raster Zonal Statistics (GeoTools)**: enrich incoming polygon rows with selected `mean`, `min`, `max`, `sum`, population `stddev`, plus valid `count` and `status`. Read the original resolution, respect NoData, and transform a copy of the input geometry into the raster CRS.
+- **ArcInfo Generate Writer**: independent ASCII writer for explicit XY/XYZ point, line and polygon dialects. See [format documentation](docs/generate-format.md).
+
+See [raster usage and acceptance tests](docs/raster-transforms.md) and the [architecture decision](docs/adr/0001-java-geospatial-suite.md).
 
 ## Geometry type and class loading
 
@@ -31,7 +37,7 @@ This plugin depends on [hop-geometry-type-plugin](https://github.com/edigonzales
 
 Both plugins use the Hop class-loader group `sogeo-geometry`. The GeoTools plugin therefore declares `hop-geometry-type` and `jts-core` as provided dependencies and **does not package them in its ZIP**. JTS and the `ValueMetaGeometry` implementation come from the separately installed Geometry type plugin, avoiding two incompatible JTS `Geometry` classes in the same pipeline.
 
-The vector distribution excludes GeoTools' raster `gt-coverage` module. `org.eclipse.imagen:imagen-core` is still present because GeoTools 35 declares it as a direct runtime dependency of `gt-main`; it is therefore part of the GeoTools core stack, not evidence that raster processing has been bundled into this MVP.
+The distribution includes supported GeoTools raster modules, ImageIO-Ext COG/TIFF and ImageN. It excludes GeoTools `modules/unsupported`, GDAL/OGR bindings and raster native codecs. SQLite JDBC's bundled native libraries remain for GeoPackage; no separate installation is required.
 
 ## Curved geometries
 
@@ -132,10 +138,15 @@ When the reader geometry output field is empty, the source geometry column name 
 
 ```text
 hop-geotools-plugin
+├── hop-geotools-common
 ├── hop-geotools-vector
 │   ├── Vector Reader
 │   └── Vector Writer
+├── hop-geotools-raster-core
+├── hop-transform-geotools-raster-clip
+├── hop-transform-geotools-raster-zonal-stats
+├── hop-transform-arcinfo-generate-writer
 └── assemblies/assemblies-hop-geotools
 ```
 
-Raster support will be added separately as functional transforms such as `Raster Reproject` and `Raster Clip`; it is intentionally not part of the vector MVP.
+Raster reprojection/resampling, authenticated remote sources and COG output are not included in this version.

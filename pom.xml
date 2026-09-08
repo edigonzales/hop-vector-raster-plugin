@@ -12,7 +12,12 @@
   <description>Apache Hop plugin suite for GeoTools-based geospatial transforms.</description>
 
   <modules>
+    <module>hop-geotools-common</module>
     <module>hop-geotools-vector</module>
+    <module>hop-geotools-raster-core</module>
+    <module>hop-transform-geotools-raster-clip</module>
+    <module>hop-transform-geotools-raster-zonal-stats</module>
+    <module>hop-transform-arcinfo-generate-writer</module>
     <module>assemblies/assemblies-hop-geotools</module>
   </modules>
 
@@ -20,7 +25,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
     <hop.version>2.17.0</hop.version>
-    <geotools.version>35.0</geotools.version>
+    <geotools.version>35.1</geotools.version>
     <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
     <jts.version>1.20.0</jts.version>
     <junit.version>5.12.0</junit.version>
@@ -36,6 +41,13 @@
       <dependency>
         <groupId>org.geotools</groupId>
         <artifactId>gt-bom</artifactId>
+        <version>${geotools.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.geotools</groupId>
+        <artifactId>gt-platform-dependencies</artifactId>
         <version>${geotools.version}</version>
         <type>pom</type>
         <scope>import</scope>

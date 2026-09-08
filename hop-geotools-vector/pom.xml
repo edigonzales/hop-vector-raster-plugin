@@ -15,6 +15,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-geotools-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-core</artifactId>
       <scope>provided</scope>
