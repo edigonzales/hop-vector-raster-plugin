@@ -9,6 +9,9 @@
   <artifactId>hop-vector-transforms</artifactId>
   <name>Apache Hop Vector I/O</name>
   <dependencies>
+<dependency><groupId>ch.so.agi</groupId><artifactId>hop-vector-format-flatgeobuf</artifactId><version>${project.version}</version></dependency>
+<dependency><groupId>ch.so.agi</groupId><artifactId>hop-vector-format-parquet</artifactId><version>${project.version}</version></dependency>
+
     <dependency><groupId>org.apache.hop</groupId><artifactId>hop-transform-sort</artifactId><version>${hop.version}</version><scope>test</scope></dependency>
     <dependency><groupId>org.geotools</groupId><artifactId>gt-shapefile</artifactId><scope>test</scope></dependency>
     <dependency>

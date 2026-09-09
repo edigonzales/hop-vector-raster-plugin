@@ -22,6 +22,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-vector-transforms-",
         "hop-vector-core-",
         "hop-vector-format-shapefile-",
+        "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "flatgeobuf-", "parquet-hadoop-",
         "hop-vector-format-geopackage-",
         "hop-geotools-support-",
         "hop-raster-core-",
@@ -49,6 +50,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-geometry-type",
         "jts-core-",
         "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
+        "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
     ]
     for fragment in forbidden:
@@ -75,7 +77,7 @@ with zipfile.ZipFile(zip_path) as archive:
         if not entry.endswith(".jar"):
             continue
         with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
-            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-generate-", "hop-vector-transforms-")):
+            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-transforms-")):
                 for name in nested.namelist():
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")

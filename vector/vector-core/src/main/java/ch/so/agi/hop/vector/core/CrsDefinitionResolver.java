@@ -4,6 +4,10 @@ package ch.so.agi.hop.vector.core;
 public interface CrsDefinitionResolver {
   record Definition(int srid, String name, String organization, int organizationId, String wkt) {}
 
+  default boolean isGeographic(Definition crs) throws Exception {
+    return false;
+  }
+
   Definition resolve(int srid) throws Exception;
 
   default Definition parse(String value) throws Exception {

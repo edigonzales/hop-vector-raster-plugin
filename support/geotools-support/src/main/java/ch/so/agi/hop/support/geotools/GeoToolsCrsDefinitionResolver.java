@@ -18,6 +18,20 @@ public final class GeoToolsCrsDefinitionResolver implements CrsDefinitionResolve
         value);
   }
 
+  @Override
+  public boolean isGeographic(Definition definition) throws Exception {
+    GeoToolsRuntimeSupport.initialize();
+    var crs =
+        definition.wkt() != null
+                && !definition.wkt().isBlank()
+                && !definition.wkt().equalsIgnoreCase("undefined")
+            ? org.geotools.referencing.CRS.parseWKT(definition.wkt())
+            : definition.srid() > 0
+                ? org.geotools.referencing.CRS.decode("EPSG:" + definition.srid(), true)
+                : null;
+    return crs instanceof org.geotools.api.referencing.crs.GeographicCRS;
+  }
+
   public Definition resolve(int srid) throws Exception {
     if (srid <= 0)
       return new Definition(

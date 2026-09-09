@@ -18,7 +18,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 @Transform(
     id = "SOGIS_VECTOR_WRITER",
     name = "Vector Writer",
-    description = "Write vector features to Shapefile or GeoPackage",
+    description = "Write vector features to Shapefile, GeoPackage, GENERATE, FlatGeobuf or Parquet",
     image = "ch/so/agi/hop/vector/transforms/icons/vector-writer.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry",
@@ -27,6 +27,66 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   public VectorWriterMeta() {
     setDefault();
+  }
+
+  @HopMetadataProperty private boolean flatGeobufIndex = true;
+
+  public boolean isFlatGeobufIndex() {
+    return flatGeobufIndex;
+  }
+
+  public void setFlatGeobufIndex(boolean value) {
+    flatGeobufIndex = value;
+  }
+
+  @HopMetadataProperty private boolean flatGeobufSkipEmpty = false;
+
+  public boolean isFlatGeobufSkipEmpty() {
+    return flatGeobufSkipEmpty;
+  }
+
+  public void setFlatGeobufSkipEmpty(boolean value) {
+    flatGeobufSkipEmpty = value;
+  }
+
+  @HopMetadataProperty private String parquetLogicalType = "GEOMETRY";
+
+  public String getParquetLogicalType() {
+    return parquetLogicalType;
+  }
+
+  public void setParquetLogicalType(String value) {
+    parquetLogicalType = value;
+  }
+
+  @HopMetadataProperty private String parquetAlgorithm = "SPHERICAL";
+
+  public String getParquetAlgorithm() {
+    return parquetAlgorithm;
+  }
+
+  public void setParquetAlgorithm(String value) {
+    parquetAlgorithm = value;
+  }
+
+  @HopMetadataProperty private String parquetCompression = "GZIP";
+
+  public String getParquetCompression() {
+    return parquetCompression;
+  }
+
+  public void setParquetCompression(String value) {
+    parquetCompression = value;
+  }
+
+  @HopMetadataProperty private long parquetRowGroupSize = 128L * 1024 * 1024;
+
+  public long getParquetRowGroupSize() {
+    return parquetRowGroupSize;
+  }
+
+  public void setParquetRowGroupSize(long value) {
+    parquetRowGroupSize = value;
   }
 
   @HopMetadataProperty private String fileName;
@@ -116,6 +176,12 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   @Override
   public void setDefault() {
+    parquetRowGroupSize = 128L * 1024 * 1024;
+    parquetCompression = "GZIP";
+    parquetAlgorithm = "SPHERICAL";
+    parquetLogicalType = "GEOMETRY";
+    flatGeobufSkipEmpty = false;
+    flatGeobufIndex = true;
     charset = "";
     timezone = "UTC";
     crsOverride = "";
@@ -309,6 +375,7 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
       throw new IllegalArgumentException("Output and geometry field are required");
     if (("AUTO".equals(format) || format == null || format.isBlank()) && fileName.contains("${"))
       return;
+    options(VectorFormat.resolve(format, Path.of(fileName)), null);
     if (ch.so.agi.hop.vector.core.VectorFormat.resolve(format, Path.of(fileName))
         == ch.so.agi.hop.vector.core.VectorFormat.ARCINFO_GENERATE)
       new ch.so.agi.hop.vector.formats.generate.GenerateEncoder.Options(
@@ -321,6 +388,11 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   public FormatOptions options(VectorFormat f, IVariables vars) {
     java.util.function.Function<String, String> resolve = v -> vars == null ? v : vars.resolve(v);
+    if (f == VectorFormat.FLATGEOBUF)
+      return new FlatGeobufOptions(flatGeobufIndex, flatGeobufSkipEmpty, overwrite);
+    if (f == VectorFormat.PARQUET)
+      return new ParquetOptions(
+          parquetLogicalType, parquetAlgorithm, parquetCompression, parquetRowGroupSize, overwrite);
     if (f == VectorFormat.ARCINFO_GENERATE)
       return new GenerateOptions(
           geometryType,

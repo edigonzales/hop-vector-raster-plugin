@@ -44,7 +44,6 @@ public class VectorDialogSmoke {
                     "wStartId",
                     "wDecimals",
                     "wComma",
-                    "wOverwrite",
                     "wSkipEmpty",
                     "wDiscardExtraOrdinates"
                   }) {
@@ -61,6 +60,21 @@ public class VectorDialogSmoke {
               for (String name : new String[] {"wCharset", "wTimezone", "wFields"})
                 if (!((Control) field(dialog, name)).getVisible())
                   throw new AssertionError("Shapefile control hidden: " + name);
+              for (String f : new String[] {"FLATGEOBUF", "PARQUET"}) {
+                format.setText(f);
+                format.notifyListeners(SWT.Selection, new Event());
+                String groupName = f.equals("FLATGEOBUF") ? "flatGeobufOptions" : "parquetOptions";
+                if (!((Composite) field(dialog, groupName)).getVisible())
+                  throw new AssertionError(groupName + " hidden");
+                if (shape.getVisible() || group.getVisible())
+                  throw new AssertionError("Wrong options visible");
+                if (!((Button) field(dialog, "wOverwrite")).getVisible())
+                  throw new AssertionError("Overwrite hidden");
+              }
+              ((Combo) field(dialog, "wParquetType")).setText("GEOGRAPHY");
+              ((Combo) field(dialog, "wParquetType")).notifyListeners(SWT.Selection, new Event());
+              if (!((Combo) field(dialog, "wParquetAlgorithm")).getEnabled())
+                throw new AssertionError("Interpolation disabled");
               ((Combo) field(dialog, "wLayerType")).setText("POINT");
               ((Combo) field(dialog, "wLayerDimension")).setText("XYZM");
               ((org.apache.hop.ui.core.widget.TextVar) field(dialog, "wCharset"))
@@ -72,7 +86,7 @@ public class VectorDialogSmoke {
                   || !meta.getCharset().equals("windows-1252"))
                 throw new AssertionError("Dialog settings not saved");
               System.out.println(
-                  "Writer dialog format switching, Shapefile/GENERATE controls and save OK");
+                  "Writer dialog: all five formats, conditional controls and save OK");
             } catch (Throwable e) {
               e.printStackTrace();
               System.exit(1);

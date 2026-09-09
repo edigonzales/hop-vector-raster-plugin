@@ -12,8 +12,27 @@ public record WriteRequest(
     Geometry sample,
     GeometrySchema geometry,
     FormatOptions options,
-    Diagnostics diagnostics) {
+    Diagnostics diagnostics,
+    java.util.function.BooleanSupplier cancelled) {
+  public WriteRequest(
+      Path file,
+      String layer,
+      IRowMeta rowMeta,
+      int geometryIndex,
+      Geometry sample,
+      GeometrySchema geometry,
+      FormatOptions options,
+      Diagnostics diagnostics) {
+    this(file, layer, rowMeta, geometryIndex, sample, geometry, options, diagnostics, () -> false);
+  }
+
+  public void checkCancelled() throws java.io.InterruptedIOException {
+    StagedVectorFile.checkCancelled();
+    if (cancelled.getAsBoolean()) throw new java.io.InterruptedIOException("Vector export stopped");
+  }
+
   public WriteRequest {
+    cancelled = cancelled == null ? () -> false : cancelled;
     if (geometry == null && sample != null) geometry = GeometrySchema.infer(sample);
     if (sample == null && geometry != null) sample = geometry.emptyGeometry();
     options = options == null ? new FormatOptions.None() : options;

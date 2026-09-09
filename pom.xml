@@ -9,6 +9,8 @@
   <modules>
     <module>vector/vector-core</module>
     <module>vector/formats/shapefile</module>
+    <module>vector/formats/flatgeobuf</module>
+    <module>vector/formats/parquet</module>
     <module>vector/formats/geopackage</module>
     <module>support/geotools-support</module>
     <module>vector/vector-transforms</module>

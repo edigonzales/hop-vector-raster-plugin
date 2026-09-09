@@ -19,12 +19,14 @@ Vector file I/O includes:
 - **Vector Writer**
   - Shapefile (`.shp`)
   - GeoPackage (`.gpkg`)
+  - FlatGeobuf (`.fgb`), with an optional spatial index enabled by default
+  - Parquet (`.parquet`) with native GEOMETRY/GEOGRAPHY logical types
   - optional layer name; otherwise the output filename is used
   - schema is derived from the incoming Hop row metadata
   - geometry type for Shapefile/GeoPackage is inferred from the first non-null geometry
   - ArcInfo GENERATE (`.gen`): explicit point/line/polygon and XY/XYZ options, without attribute-schema or first-geometry inference; see [GENERATE format documentation](docs/generate-format.md)
 
-Both dialogs offer a format selector; `AUTO` recognizes `.shp`, `.gpkg` and (writer only) `.gen`. GENERATE options appear in the common writer when that format is selected. The reader never offers GENERATE.
+Both dialogs offer a format selector; `AUTO` recognizes `.shp`, `.gpkg` and (writer only) `.gen`, `.fgb`, `.parquet`. The writer shows format-specific options. FlatGeobuf and Parquet are output-only; see [cloud output formats](docs/cloud-output.md). Parquet uses native geometry logical types, not GeoParquet metadata.
 
 GeoPackage schema discovery, reading, schema creation and writing use SQLite JDBC and the shared JTS/curve WKB codecs. **The GeoPackage adapter has no GeoTools dependency**; EPSG/WKT definitions come through a neutral CRS service implemented in `support/geotools-support`. `gt-geopkg` and `gt-jdbc` are used only as test references and are excluded from the ZIP. See [GeoPackage behavior](docs/geopackage.md).
 
@@ -59,7 +61,7 @@ The following 2D geometry types are preserved when reading and writing GeoPackag
 
 For GeoPackage output the writer registers the corresponding `gpkg_geom_<TYPE>` read-write extension, stores the extended type in `gpkg_geometry_columns`, and writes the exact SQL/MM curve WKB from the shared geometry type. This avoids the implicit linearization that occurs when a curved `LineString` is passed to the standard JTS `WKBWriter`.
 
-Shapefile has no native curved geometry type. Curves are therefore explicitly linearized before they are handed to the Shapefile writer. The current curve implementation is 2D; Z/M curve ordinates are not supported yet.
+Shapefile, FlatGeobuf and Parquet exports use the existing linearized coordinates of curved geometries, with a warning. The current curve implementation is 2D; Z/M curve ordinates are not supported yet.
 
 ## Build and test
 
@@ -75,13 +77,14 @@ Install the Geometry type snapshot first, then build this repository:
 mvn -f ../hop-geometry-type-plugin/pom.xml -U clean install
 mvn -U clean verify
 python3 scripts/check-distribution.py
+python3 scripts/check-cloud-output.py
 ```
 
 The tests exercise the common vector interfaces with real Shapefile and GeoPackage files in temporary directories. GeoPackage tests include hand-authored SQL/binary fixtures, SQL integrity/metadata checks and reciprocal reading with GeoTools as an independent test reference. Schema-probe tests create a multi-layer GeoPackage and verify layer discovery, geometry column names and field metadata. Curve tests perform file roundtrips for `CIRCULARSTRING`, `COMPOUNDCURVE`, and `CURVEPOLYGON`, verify the GeoPackage extension metadata, and verify explicit Shapefile linearization. CI runs the same build on Linux, macOS and Windows.
 
 ## Releases
 
-Pushes to `main` publish the installable plugin distribution as a public GitHub Release after the Maven tests and `scripts/check-distribution.py` have passed.
+Pushes to `main` publish the installable plugin distribution as a public GitHub Release after the Maven tests, distribution inspection and the installed cloud-writer smoke test have passed.
 
 The release contains exactly one platform-independent asset:
 

@@ -10,6 +10,9 @@
   <packaging>pom</packaging>
   <name>Apache Hop Vector Raster Plugin Distribution</name>
   <dependencies>
+<dependency><groupId>ch.so.agi</groupId><artifactId>hop-vector-format-flatgeobuf</artifactId><version>${project.version}</version></dependency>
+<dependency><groupId>ch.so.agi</groupId><artifactId>hop-vector-format-parquet</artifactId><version>${project.version}</version></dependency>
+
     <dependency>
       <groupId>ch.so.agi</groupId>
       <artifactId>hop-vector-core</artifactId>

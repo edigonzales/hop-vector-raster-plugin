@@ -3,7 +3,9 @@ package ch.so.agi.hop.vector.core;
 public enum VectorFormat {
   SHAPEFILE,
   GEOPACKAGE,
-  ARCINFO_GENERATE;
+  ARCINFO_GENERATE,
+  FLATGEOBUF,
+  PARQUET;
 
   public boolean writable() {
     return true;
@@ -18,7 +20,7 @@ public enum VectorFormat {
   }
 
   public boolean readable() {
-    return this != ARCINFO_GENERATE;
+    return this == SHAPEFILE || this == GEOPACKAGE;
   }
 
   public boolean requiresGeometrySample() {
@@ -31,7 +33,10 @@ public enum VectorFormat {
     String name = file.toString().toLowerCase(java.util.Locale.ROOT);
     if (name.endsWith(".shp")) return SHAPEFILE;
     if (name.endsWith(".gpkg")) return GEOPACKAGE;
+    if (name.endsWith(".fgb")) return FLATGEOBUF;
+    if (name.endsWith(".parquet")) return PARQUET;
     if (name.endsWith(".gen")) return ARCINFO_GENERATE;
-    throw new IllegalArgumentException("Select a vector format or use .shp, .gpkg or .gen");
+    throw new IllegalArgumentException(
+        "Select a vector format or use .shp, .gpkg, .gen, .fgb or .parquet");
   }
 }

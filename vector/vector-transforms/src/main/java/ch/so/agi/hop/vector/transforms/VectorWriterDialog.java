@@ -36,6 +36,10 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private Button wComma;
   private Button wSkipEmpty;
   private Button wOverwrite;
+  private Composite flatGeobufOptions, parquetOptions;
+  private Button wFlatGeobufIndex, wFlatGeobufSkipEmpty;
+  private Combo wParquetType, wParquetAlgorithm, wParquetCompression;
+  private TextVar wParquetRowGroup;
 
   public VectorWriterDialog(
       Shell parent, IVariables variables, VectorWriterMeta meta, PipelineMeta pipeline) {
@@ -71,14 +75,17 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wTransformName.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Format");
     wFormat = new Combo(body, SWT.READ_ONLY);
-    wFormat.setItems(new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "ARCINFO_GENERATE"});
+    wFormat.setItems(
+        new String[] {
+          "AUTO", "SHAPEFILE", "GEOPACKAGE", "ARCINFO_GENERATE", "FLATGEOBUF", "PARQUET"
+        });
     wFormat.setText(input.getFormat());
     new Label(body, SWT.NONE).setText("Layer (optional)");
     wLayer = new TextVar(variables, body, SWT.BORDER);
     wLayer.setText(input.getLayerName() == null ? "" : input.getLayerName());
     wLayer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Output file");
-    wFileName = fileInput(body, true, "*.gpkg;*.shp;*.gen");
+    wFileName = fileInput(body, true, "*.gpkg;*.shp;*.gen;*.fgb;*.parquet");
     wFileName.setText(String.valueOf(input.getFileName()));
     wFileName.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Geometry field");
@@ -247,9 +254,41 @@ public class VectorWriterDialog extends BaseTransformDialog {
     new Label(generateOptions, SWT.NONE).setText("Skip null / empty geometries");
     wSkipEmpty = new Button(generateOptions, SWT.CHECK);
     wSkipEmpty.setSelection(input.isSkipEmpty());
-    new Label(generateOptions, SWT.NONE).setText("Overwrite existing file");
-    wOverwrite = new Button(generateOptions, SWT.CHECK);
+    new Label(body, SWT.NONE).setText("Overwrite existing file");
+    wOverwrite = new Button(body, SWT.CHECK);
     wOverwrite.setSelection(input.isOverwrite());
+    flatGeobufOptions = optionGroup();
+    new Label(flatGeobufOptions, SWT.NONE).setText("Spatial index (reorders features)");
+    wFlatGeobufIndex = new Button(flatGeobufOptions, SWT.CHECK);
+    wFlatGeobufIndex.setSelection(input.isFlatGeobufIndex());
+    new Label(flatGeobufOptions, SWT.NONE).setText("Skip NULL/EMPTY geometries with warning");
+    wFlatGeobufSkipEmpty = new Button(flatGeobufOptions, SWT.CHECK);
+    wFlatGeobufSkipEmpty.setSelection(input.isFlatGeobufSkipEmpty());
+    parquetOptions = optionGroup();
+    wParquetType =
+        optionCombo(
+            parquetOptions,
+            "Logical geometry type",
+            new String[] {"GEOMETRY", "GEOGRAPHY"},
+            input.getParquetLogicalType());
+    wParquetAlgorithm =
+        optionCombo(
+            parquetOptions,
+            "Geography interpolation",
+            new String[] {"SPHERICAL", "VINCENTY", "THOMAS", "ANDOYER", "KARNEY"},
+            input.getParquetAlgorithm());
+    wParquetCompression =
+        optionCombo(
+            parquetOptions,
+            "Compression",
+            new String[] {"GZIP", "UNCOMPRESSED"},
+            input.getParquetCompression());
+    wParquetRowGroup =
+        optionText(
+            parquetOptions,
+            "Row group size (bytes)",
+            Long.toString(input.getParquetRowGroupSize()));
+    wParquetType.addListener(SWT.Selection, e -> updateFormat());
     scroll.setContent(body);
     scroll.setMinSize(body.computeSize(760, SWT.DEFAULT));
     wFormat.addListener(SWT.Selection, e -> updateFormat());
@@ -289,6 +328,13 @@ public class VectorWriterDialog extends BaseTransformDialog {
     ((GridData) shapeOptions.getLayoutData()).exclude = !shape;
     generateOptions.setVisible(generate);
     ((GridData) generateOptions.getLayoutData()).exclude = !generate;
+    boolean fgb = format == ch.so.agi.hop.vector.core.VectorFormat.FLATGEOBUF;
+    boolean parquet = format == ch.so.agi.hop.vector.core.VectorFormat.PARQUET;
+    flatGeobufOptions.setVisible(fgb);
+    ((GridData) flatGeobufOptions.getLayoutData()).exclude = !fgb;
+    parquetOptions.setVisible(parquet);
+    ((GridData) parquetOptions.getLayoutData()).exclude = !parquet;
+    wParquetAlgorithm.setEnabled(wParquetType.getText().equals("GEOGRAPHY"));
     wLayer.setEnabled(!generate);
     body.layout(true, true);
     scroll.setMinSize(body.computeSize(760, SWT.DEFAULT));
@@ -340,6 +386,21 @@ public class VectorWriterDialog extends BaseTransformDialog {
     }
   }
 
+  private Composite optionGroup() {
+    Composite group = new Composite(body, SWT.NONE);
+    group.setLayout(new GridLayout(2, false));
+    group.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+    return group;
+  }
+
+  private Combo optionCombo(Composite group, String label, String[] values, String value) {
+    new Label(group, SWT.NONE).setText(label);
+    Combo combo = new Combo(group, SWT.READ_ONLY);
+    combo.setItems(values);
+    combo.setText(value);
+    return combo;
+  }
+
   private TextVar optionText(Composite parent, String label, String value) {
     new Label(parent, SWT.NONE).setText(label);
     TextVar t = new TextVar(variables, parent, SWT.BORDER);
@@ -349,6 +410,12 @@ public class VectorWriterDialog extends BaseTransformDialog {
   }
 
   private void readAdditional(VectorWriterMeta meta) {
+    meta.setFlatGeobufIndex(wFlatGeobufIndex.getSelection());
+    meta.setFlatGeobufSkipEmpty(wFlatGeobufSkipEmpty.getSelection());
+    meta.setParquetLogicalType(wParquetType.getText());
+    meta.setParquetAlgorithm(wParquetAlgorithm.getText());
+    meta.setParquetCompression(wParquetCompression.getText());
+    meta.setParquetRowGroupSize(Long.parseLong(wParquetRowGroup.getText().trim()));
     meta.setCrsOverride(wCrs.getText());
     meta.setCharset(wCharset.getText());
     meta.setTimezone(wTimezone.getText());

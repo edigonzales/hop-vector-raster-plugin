@@ -96,7 +96,15 @@ public class VectorWriter
             VectorProviders.get(format)
                 .create(
                     new WriteRequest(
-                        file, layer, rm, gi, (Geometry) value, geometry, options, diagnostics));
+                        file,
+                        layer,
+                        rm,
+                        gi,
+                        (Geometry) value,
+                        geometry,
+                        options,
+                        diagnostics,
+                        this::isStopped));
         for (Object[] pending : data.pending) {
           diagnostics.nextRow();
           if (data.sink.write(pending)) incrementLinesOutput();

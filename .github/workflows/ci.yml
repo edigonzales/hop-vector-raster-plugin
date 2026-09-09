@@ -51,3 +51,7 @@ jobs:
       - name: Check plugin distribution
         working-directory: hop-vector-raster-plugin
         run: python scripts/check-distribution.py
+
+      - name: Check cloud-format output from distribution
+        working-directory: hop-vector-raster-plugin
+        run: python scripts/check-cloud-output.py
