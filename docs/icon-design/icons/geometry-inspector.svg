@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>Geometry Inspector</title>
+  <desc>Polygon unter einer Lupe für visuelle Geometrieinspektion.</desc>
+  <path d="M5 9 16 5 21 18 9 23Z" fill="#D9EEEB" stroke="#F3F7FA" stroke-width="4" stroke-linejoin="round" />
+  <path d="M5 9 16 5 21 18 9 23Z" fill="#D9EEEB" stroke="#0E3A5A" stroke-width="2" stroke-linejoin="round" />
+  <g fill="#168C87">
+    <circle cx="5" cy="9" r="2" />
+    <circle cx="16" cy="5" r="2" />
+    <circle cx="9" cy="23" r="2" />
+  </g>
+  <path d="M24 24l4 4" fill="none" stroke="#F3F7FA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M24 24l4 4" fill="none" stroke="#0E3A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="20" cy="19" r="7" fill="#D9EEEB" stroke="#F3F7FA" stroke-width="4" stroke-linejoin="round" />
+  <circle cx="20" cy="19" r="7" fill="#D9EEEB" stroke="#0E3A5A" stroke-width="2" stroke-linejoin="round" />
+  <path d="m16 19 3-3 5 4-6 2Z" fill="#168C87" />
+</svg>

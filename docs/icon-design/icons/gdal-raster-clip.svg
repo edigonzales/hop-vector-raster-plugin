@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>GDAL Raster Clip</title>
+  <desc>Raster mit Zuschnittwinkeln; Quadrat für GDAL.</desc>
+  <rect x="5" y="5" width="21" height="21" rx="1" fill="#F7EBCF" stroke="#F3F7FA" stroke-width="4" stroke-linejoin="round" />
+  <rect x="5" y="5" width="21" height="21" rx="1" fill="#F7EBCF" stroke="#0E3A5A" stroke-width="2" stroke-linejoin="round" />
+  <path d="M5 12h21M5 19h21M12 5v21M19 5v21" fill="none" stroke="#C58A20" stroke-width="1.5" />
+  <path d="M12 5h7v7h-7zM5 12h7v7H5zM19 19h7v7h-7z" fill="#C58A20" fill-opacity=".35" />
+  <path d="M11 4v16h17M4 11h16v17" fill="none" stroke="#F3F7FA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M11 4v16h17M4 11h16v17" fill="none" stroke="#0E3A5A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="3" y="25" width="4" height="4" rx=".25" fill="#0E3A5A" stroke="#F3F7FA" stroke-width="1.5" />
+</svg>

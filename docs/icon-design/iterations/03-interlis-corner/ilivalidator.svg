@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>ilivalidator – INTERLIS prüfen</title>
+  <desc>INTERLIS-Eckmarkierung oben links: roter Viertelkreis mit blauem Viertelkreisring. Rechts darunter ein graues Prüffeld mit einem grossen, nach rechts oben herausragenden Häkchen.</desc>
+  <g id="interlis-corner">
+    <path d="M2 2H14A12 12 0 0 1 2 14Z" fill="#004489" />
+    <path d="M2 2H8A6 6 0 0 1 2 8Z" fill="#DA2520" />
+  </g>
+  <g id="task" stroke="#3D4B58" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="11" y="15" width="13" height="13" rx=".75" fill="#E9EDF1" stroke-width="2" />
+    <path d="M14 20l5 5L28 10" fill="none" stroke-width="2.5" />
+  </g>
+</svg>

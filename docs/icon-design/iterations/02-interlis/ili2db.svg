@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>ili2db – INTERLIS und Datenbank</title>
+  <desc>Kleines Dreieck oben links, auf halber Höhe waagrecht geteilt: oben rot, unten blau. Im Zentrum ein neutraler Datenbankzylinder.</desc>
+  <path d="M9 14c0-4 18-4 18 0v11c0 4-18 4-18 0Z" fill="#E9EDF1" stroke="#3D4B58" stroke-width="2" stroke-linejoin="round" />
+  <ellipse cx="18" cy="14" rx="9" ry="3" fill="#F8FAFB" stroke="#3D4B58" stroke-width="2" />
+  <path d="M9 19c0 4 18 4 18 0" fill="none" stroke="#3D4B58" stroke-width="2" />
+  <path d="M7 2 12 10H2Z" fill="#004489" />
+  <path d="M7 2 9.5 6h-5Z" fill="#DA2520" />
+</svg>
