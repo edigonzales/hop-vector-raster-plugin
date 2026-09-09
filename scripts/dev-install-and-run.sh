@@ -24,8 +24,8 @@ fi
 
 GEOMETRY_REPO="$(cd "$GEOMETRY_REPO" && pwd)"
 GEOMETRY_PLUGIN_DIR="$HOP_HOME/plugins/misc/hop-geometry-type"
-GEOTOOLS_PLUGIN_DIR="$HOP_HOME/plugins/transforms/geotools-vector"
-LOG_FILE="${TMPDIR:-/tmp}/hop-geotools-dev-hop.log"
+VECTOR_RASTER_PLUGIN_DIR="$HOP_HOME/plugins/transforms/vector-raster"
+LOG_FILE="${TMPDIR:-/tmp}/hop-vector-raster-dev-hop.log"
 
 echo "==> Building and testing hop-geometry-type-plugin"
 mvn -f "$GEOMETRY_REPO/pom.xml" -U -B -ntp clean install
@@ -41,23 +41,23 @@ echo "==> Installing Geometry type plugin"
 rm -rf "$GEOMETRY_PLUGIN_DIR"
 unzip -q -o "$GEOMETRY_ZIP" -d "$HOP_HOME"
 
-echo "==> Building and testing hop-geotools-plugin"
+echo "==> Building and testing hop-vector-raster-plugin"
 (
   cd "$PROJECT_DIR"
   mvn -U -B -ntp clean verify
   python3 scripts/check-distribution.py
 )
 
-GEOTOOLS_ZIP="$(find "$PROJECT_DIR/assemblies/assemblies-hop-geotools/target" \
-  -maxdepth 1 -name 'hop-geotools-plugin-*.zip' -print | head -n 1)"
-if [[ -z "$GEOTOOLS_ZIP" || ! -f "$GEOTOOLS_ZIP" ]]; then
-  echo "GeoTools plugin ZIP was not created" >&2
+VECTOR_RASTER_ZIP="$(find "$PROJECT_DIR/assemblies/assemblies-hop-vector-raster/target" \
+  -maxdepth 1 -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
+if [[ -z "$VECTOR_RASTER_ZIP" || ! -f "$VECTOR_RASTER_ZIP" ]]; then
+  echo "Vector/raster plugin ZIP was not created" >&2
   exit 1
 fi
 
-echo "==> Installing GeoTools plugin"
-rm -rf "$GEOTOOLS_PLUGIN_DIR"
-unzip -q -o "$GEOTOOLS_ZIP" -d "$HOP_HOME"
+echo "==> Installing vector/raster plugin"
+rm -rf "$VECTOR_RASTER_PLUGIN_DIR" "$HOP_HOME/plugins/transforms/geotools-vector"
+unzip -q -o "$VECTOR_RASTER_ZIP" -d "$HOP_HOME"
 
 echo "==> Restarting Hop GUI"
 if pgrep -f 'org\.apache\.hop\.ui\.hopgui\.HopGui' >/dev/null 2>&1; then
@@ -76,5 +76,5 @@ fi
 )
 
 echo "Installed: $GEOMETRY_PLUGIN_DIR"
-echo "Installed: $GEOTOOLS_PLUGIN_DIR"
+echo "Installed: $VECTOR_RASTER_PLUGIN_DIR"
 echo "Hop GUI restarted. Startup log: $LOG_FILE"

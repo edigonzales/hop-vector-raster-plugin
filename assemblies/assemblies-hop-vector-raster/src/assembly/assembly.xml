@@ -1,0 +1,47 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.1"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.1 https://maven.apache.org/xsd/assembly-2.1.1.xsd">
+  <id>plugin</id>
+  <formats>
+    <format>zip</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+
+  <dependencySets>
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
+      <outputDirectory>plugins/transforms/vector-raster</outputDirectory>
+      <scope>runtime</scope>
+      <unpack>false</unpack>
+      <includes>
+        <include>ch.so.agi:hop-vector-transforms</include><include>ch.so.agi:hop-vector-core</include><include>ch.so.agi:hop-vector-format-shapefile</include><include>ch.so.agi:hop-vector-format-geopackage</include>
+        <include>ch.so.agi:hop-geotools-support</include>
+        <include>ch.so.agi:hop-raster-core</include>
+        <include>ch.so.agi:hop-raster-clip</include>
+        <include>ch.so.agi:hop-raster-zonal-stats</include>
+        <include>ch.so.agi:hop-vector-format-generate</include>
+      </includes>
+    </dependencySet>
+
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <outputDirectory>plugins/transforms/vector-raster/lib</outputDirectory>
+      <scope>runtime</scope>
+      <unpack>false</unpack>
+      <excludes>
+        <exclude>ch.so.agi:hop-vector-transforms</exclude><exclude>ch.so.agi:hop-vector-core</exclude><exclude>ch.so.agi:hop-vector-format-shapefile</exclude><exclude>ch.so.agi:hop-vector-format-geopackage</exclude>
+        <exclude>ch.so.agi:hop-geotools-support</exclude>
+        <exclude>ch.so.agi:hop-raster-core</exclude>
+        <exclude>ch.so.agi:hop-raster-clip</exclude>
+        <exclude>ch.so.agi:hop-raster-zonal-stats</exclude>
+        <exclude>ch.so.agi:hop-vector-format-generate</exclude>
+        <exclude>ch.so.agi:hop-geometry-type</exclude>
+        <exclude>org.locationtech.jts:*</exclude>
+        <exclude>org.apache.hop:*</exclude>
+        <exclude>org.slf4j:*</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>
+</assembly>

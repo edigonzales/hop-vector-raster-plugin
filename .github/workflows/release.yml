@@ -35,10 +35,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check-distribution.py
-          mapfile -t zip_files < <(find assemblies/assemblies-hop-geotools/target -maxdepth 1 -type f -name 'hop-geotools-plugin-*.zip' | sort)
+          mapfile -t zip_files < <(find assemblies/assemblies-hop-vector-raster/target -maxdepth 1 -type f -name 'hop-vector-raster-plugin-*.zip' | sort)
 
           if [[ ${#zip_files[@]} -ne 1 ]]; then
-            echo "Expected exactly 1 GeoTools plugin ZIP, found ${#zip_files[@]}" >&2
+            echo "Expected exactly 1 vector/raster plugin ZIP, found ${#zip_files[@]}" >&2
             printf '%s\n' "${zip_files[@]}"
             exit 1
           fi
@@ -74,10 +74,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          mapfile -t zip_files < <(find dist -type f -name 'hop-geotools-plugin-*.zip' | sort)
+          mapfile -t zip_files < <(find dist -type f -name 'hop-vector-raster-plugin-*.zip' | sort)
 
           if [[ ${#zip_files[@]} -ne 1 ]]; then
-            echo "Expected exactly 1 GeoTools plugin ZIP under dist/, found ${#zip_files[@]}" >&2
+            echo "Expected exactly 1 vector/raster plugin ZIP under dist/, found ${#zip_files[@]}" >&2
             find dist -maxdepth 4 -type f -print || true
             exit 1
           fi
@@ -93,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           zip_name="${{ steps.assets.outputs.zip_name }}"
-          version="$(echo "$zip_name" | sed -E 's/^hop-geotools-plugin-([0-9A-Za-z.+_-]+)\.zip$/\1/')"
+          version="$(echo "$zip_name" | sed -E 's/^hop-vector-raster-plugin-([0-9A-Za-z.+_-]+)\.zip$/\1/')"
           if [[ -z "$version" || "$version" == "$zip_name" ]]; then
             echo "Could not resolve version from ZIP filename: $zip_name" >&2
             exit 1

@@ -22,10 +22,10 @@ jobs:
           - windows-latest
 
     steps:
-      - name: Checkout GeoTools plugin
+      - name: Checkout vector/raster plugin
         uses: actions/checkout@v4
         with:
-          path: hop-geotools-plugin
+          path: hop-vector-raster-plugin
 
       - name: Checkout Geometry type plugin
         uses: actions/checkout@v4
@@ -44,10 +44,10 @@ jobs:
         working-directory: hop-geometry-type-plugin
         run: mvn -U -B -ntp clean install
 
-      - name: Build and test GeoTools plugin
-        working-directory: hop-geotools-plugin
+      - name: Build and test vector/raster plugin
+        working-directory: hop-vector-raster-plugin
         run: mvn -U -B -ntp clean verify
 
       - name: Check plugin distribution
-        working-directory: hop-geotools-plugin
+        working-directory: hop-vector-raster-plugin
         run: python scripts/check-distribution.py

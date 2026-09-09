@@ -1,6 +1,6 @@
 # Java geospatial suite
 
-Status: implemented, 2026-09-08.
+Status: implemented 2026-09-08; vector architecture amended 2026-09-09.
 
 ## Decision
 
@@ -10,14 +10,17 @@ Use only maintained GeoTools library/plugin/extension modules. In particular, do
 
 The modules are:
 
-- `hop-geotools-common`: unit-system initialization and CRS support.
-- `hop-geotools-vector`: existing Vector Reader and Writer.
-- `hop-geotools-raster-core`: local/HTTP COG access, bounded original-resolution windows, polygon masks, streaming statistics and GeoTIFF writing.
-- `hop-transform-geotools-raster-clip`: one input row describes a clip; the original row receives output path/status.
-- `hop-transform-geotools-raster-zonal-stats`: one input polygon row receives statistics, valid count and status.
-- `hop-transform-arcinfo-generate-writer`: independent Java/JTS encoder and file sink, without any GeoTools dependency.
+- `hop-geotools-support`: unit-system initialization and CRS support.
+- `hop-vector-core`: format capabilities, layer/Hop row schemas, streaming source/sink interfaces and neutral CRS definition service.
+- `hop-vector-transforms`: common Vector Reader and Writer, including GENERATE settings.
+- `hop-vector-format-shapefile`: native Java Shapefile I/O with Z/M and DBF encoding.
+- `hop-vector-format-geopackage`: SQLite JDBC schema, attributes, geometry headers and shared WKB/curve codecs; no GeoTools dependency.
+- `hop-raster-core`: local/HTTP COG access, bounded original-resolution windows, polygon masks, streaming statistics and GeoTIFF writing.
+- `hop-raster-clip`: one input row describes a clip; the original row receives output path/status.
+- `hop-raster-zonal-stats`: one input polygon row receives statistics, valid count and status.
+- `hop-vector-format-generate`: independent Java/JTS encoder and file sink, without any GeoTools dependency.
 
-Keep the installation directory `plugins/transforms/geotools-vector` for compatibility. All transforms share `classLoaderGroup=sogeo-geometry`. The Geometry Type plugin supplies JTS and Hop Geometry once; neither JAR is included here. Different raster plugin IDs and explicit `(GeoTools)` display names permit installation alongside GDAL transforms.
+Use the new installation directory `plugins/transforms/vector-raster` and remove the former `geotools-vector` directory on upgrade. Transform IDs intentionally change without aliases; see [migration](../migration.md). All transforms share `classLoaderGroup=sogeo-geometry`. The Geometry Type plugin supplies JTS and Hop Geometry once; neither JAR is included here. Different raster plugin IDs and explicit `(GeoTools)` display names permit installation alongside GDAL transforms.
 
 ## Raster semantics
 
@@ -30,6 +33,12 @@ Use JTS prepared polygons and pixel-centre inclusion (`covers`: boundary centres
 Use raw NoData (or an explicit replacement override), masks and finite-value checks before applying scale/offset. Zero is valid. Accumulate mean and population standard deviation with Welford's algorithm and sum with compensated addition. `count` and `status` always accompany selected statistics. Empty/no-valid zones are normal results with null statistics and zero count; technical failures use Hop error handling or fail the transform.
 
 GeoTIFF clips preserve the selected band's raw data type and scale/offset, georeferencing and NoData. Integer rasters without a NoData declaration require an explicit sentinel. Float rasters can use NaN. GeoTools supplies georeferencing and ImageIO-Ext writes explicit TIFF metadata (including GDAL_METADATA scale/offset; this metadata convention does not require GDAL bindings). Output is tiled/DEFLATE GeoTIFF; it is not advertised as COG. Write to a temporary sibling file and publish only after success.
+
+## Vector adapter boundary
+
+Common transforms use Hop row metadata and the shared Geometry type. They never use `DataStore` or `SimpleFeature`; those remain only in independent test references. GeoPackage requests CRS definitions through `CrsDefinitionResolver`, whose GeoTools implementation stays in the support module. Native SQLite libraries remain intentionally bundled in one cross-platform ZIP. Shapefile now uses native Java with Z/M and DBF encoding support. FlatGeobuf and Parquet remain separate future work packages.
+
+Writers publish their output only after successful EOF. Shapefile stages its sidecar bundle and removes files it published if a move fails; GeoPackage stages one transactional database; GENERATE retains its existing temporary-file lifecycle. Reader/writer instances belong to one transform copy. No append/update or spatial-index feature is added to GeoPackage. Its current geometry contract is XY, including the existing curve types; unsupported Z/M is rejected rather than reduced.
 
 ## GENERATE
 

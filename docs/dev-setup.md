@@ -7,12 +7,12 @@ Keep these repositories next to each other for the shortest development loop:
 ```text
 sources/
 ├── hop-geometry-type-plugin/
-└── hop-geotools-plugin/
+└── hop-vector-raster-plugin/
 ```
 
 The GeoTools transforms and `ValueMetaGeometry` must share the Hop class-loader group `sogeo-geometry`. For that reason the GeoTools distribution does not contain another copy of `hop-geometry-type` or `jts-core`.
 
-The distribution includes GeoTools 35.1 vector/raster libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules, GDAL bindings and additional JTS/Geometry copies; SQLite JDBC bundled natives are allowed.
+The distribution includes GeoTools 35.1 raster/CRS libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules, GDAL bindings and additional JTS/Geometry copies; SQLite JDBC bundled natives are allowed.
 
 ## Java and Maven
 
@@ -23,7 +23,7 @@ The project builds with Java 17 and Maven. The GeoTools artifacts are resolved f
 Set `HOP_HOME` to an unpacked local Apache Hop installation and run:
 
 ```bash
-cd /path/to/hop-geotools-plugin
+cd /path/to/hop-vector-raster-plugin
 bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
 ```
 
@@ -31,16 +31,16 @@ The script performs the following steps in order:
 
 1. runs `mvn clean install` in `hop-geometry-type-plugin`
 2. installs its ZIP into `$HOP_HOME/plugins/misc/hop-geometry-type`
-3. runs `mvn clean verify` in `hop-geotools-plugin`
+3. runs `mvn clean verify` in `hop-vector-raster-plugin`
 4. checks all vector/raster/GENERATE modules, GeoTools 35.1, the reviewed dependency allowlist and shared JTS/Geometry packaging
-5. installs the ZIP into `$HOP_HOME/plugins/transforms/geotools-vector`
+5. installs the ZIP into `$HOP_HOME/plugins/transforms/vector-raster`
 6. stops a running Hop GUI process
 7. starts `$HOP_HOME/hop-gui.sh` again
 
 Hop startup output is written to:
 
 ```text
-${TMPDIR:-/tmp}/hop-geotools-dev-hop.log
+${TMPDIR:-/tmp}/hop-vector-raster-dev-hop.log
 ```
 
 If the Geometry type repository is not next to this repository, pass it explicitly:
@@ -75,7 +75,7 @@ python3 scripts/check-distribution.py
 The resulting distribution is:
 
 ```text
-assemblies/assemblies-hop-geotools/target/hop-geotools-plugin-0.1.0-SNAPSHOT.zip
+assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-0.1.0-SNAPSHOT.zip
 ```
 
 Install manually:
@@ -83,12 +83,12 @@ Install manually:
 ```bash
 rm -rf "$HOP_HOME/plugins/misc/hop-geometry-type"
 unzip -q -o \
-  ../hop-geometry-type-plugin/assemblies/assemblies-hop-geometry-type/target/hop-geometry-type-plugin-0.1.0-SNAPSHOT.zip \
+  ../hop-geometry-type-plugin/assemblies/assemblies-hop-geometry-type/target/hop-geometry-type-plugin-0.2.0-SNAPSHOT.zip \
   -d "$HOP_HOME"
 
-rm -rf "$HOP_HOME/plugins/transforms/geotools-vector"
+rm -rf "$HOP_HOME/plugins/transforms/vector-raster" "$HOP_HOME/plugins/transforms/geotools-vector"
 unzip -q -o \
-  assemblies/assemblies-hop-geotools/target/hop-geotools-plugin-0.1.0-SNAPSHOT.zip \
+  assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-0.1.0-SNAPSHOT.zip \
   -d "$HOP_HOME"
 ```
 
@@ -135,4 +135,8 @@ The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDC
 - no reprojection, clipping or other geoprocessing in Reader/Writer
 - no generic DataStore parameter UI yet
 
-For the separate raster and GENERATE transforms, see [raster usage](raster-transforms.md) and [GENERATE format decisions](generate-format.md).
+For raster transforms and the GENERATE format in Vector Writer, see [raster usage](raster-transforms.md) and [GENERATE format decisions](generate-format.md).
+
+For upgrades, follow the [migration table](migration.md). Do not leave the old `geotools-vector` folder alongside `vector-raster`; old IDs have no aliases.
+
+After `mvn verify`, run `python3 scripts/check-vector-dialogs.py` with a desktop display to open and automatically check both vector dialogs. It checks the format selectors and that every GENERATE control belongs to the format-specific group. The script obtains the matching Apache Hop RCP fragment from Maven Central into `target/ui-smoke`; it is not included in the plugin ZIP.

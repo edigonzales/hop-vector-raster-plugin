@@ -1,32 +1,29 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>ch.so.agi</groupId>
-  <artifactId>hop-geotools-plugin-parent</artifactId>
+  <artifactId>hop-vector-raster-plugin-parent</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-
-  <name>Apache Hop GeoTools Plugin</name>
-  <description>Apache Hop plugin suite for GeoTools-based geospatial transforms.</description>
-
+  <name>Apache Hop Vector Raster Plugin</name>
+  <description>Vector formats and raster processing for Apache Hop.</description>
   <modules>
-    <module>hop-geotools-common</module>
-    <module>hop-geotools-vector</module>
-    <module>hop-geotools-raster-core</module>
-    <module>hop-transform-geotools-raster-clip</module>
-    <module>hop-transform-geotools-raster-zonal-stats</module>
-    <module>hop-transform-arcinfo-generate-writer</module>
-    <module>assemblies/assemblies-hop-geotools</module>
+    <module>vector/vector-core</module>
+    <module>vector/formats/shapefile</module>
+    <module>vector/formats/geopackage</module>
+    <module>support/geotools-support</module>
+    <module>vector/vector-transforms</module>
+    <module>raster/raster-core</module>
+    <module>raster/raster-clip</module>
+    <module>raster/raster-zonal-stats</module>
+    <module>vector/formats/arcinfo-generate</module>
+    <module>assemblies/assemblies-hop-vector-raster</module>
   </modules>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
     <hop.version>2.17.0</hop.version>
     <geotools.version>35.1</geotools.version>
-    <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
+    <hop.geometry.type.version>0.2.0-SNAPSHOT</hop.geometry.type.version>
     <jts.version>1.20.0</jts.version>
     <junit.version>5.12.0</junit.version>
     <assertj.version>3.27.3</assertj.version>
@@ -35,7 +32,6 @@
     <maven.surefire.version>3.5.2</maven.surefire.version>
     <maven.assembly.version>3.7.1</maven.assembly.version>
   </properties>
-
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -79,7 +75,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
   <repositories>
     <repository>
       <id>central</id>
@@ -89,8 +84,12 @@
       <id>osgeo</id>
       <name>OSGeo Release Repository</name>
       <url>https://repo.osgeo.org/repository/release/</url>
-      <snapshots><enabled>false</enabled></snapshots>
-      <releases><enabled>true</enabled></releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
     </repository>
     <repository>
       <id>sogeo-releases</id>
@@ -101,7 +100,6 @@
       <url>https://jars.sogeo.services/snapshots/</url>
     </repository>
   </repositories>
-
   <build>
     <pluginManagement>
       <plugins>

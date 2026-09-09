@@ -1,6 +1,6 @@
-# ArcInfo Generate Writer
+# ArcInfo GENERATE in Vector Writer
 
-This is a dedicated file sink. It consumes Hop Geometry and writes a homogeneous ASCII GENERATE file. It has no GeoTools or GDAL dependency.
+Select **ARCINFO_GENERATE** in the common **Vector Writer**, or use AUTO with a `.gen` output. The format module consumes Hop Geometry and writes a homogeneous ASCII GENERATE file without GeoTools or GDAL dependencies. There is no separately registered GENERATE transform or dialog.
 
 ## Dialects and primary sources
 

@@ -64,12 +64,12 @@ The buildings nDSM already contains building heights. Do **not** subtract the te
 Run the external acceptance test explicitly:
 
 ```bash
-mvn -B -ntp -pl hop-geotools-raster-core -am test \
+mvn -B -ntp -pl raster/raster-core -am test \
   -Dtest=RemoteCogTest -Dsurefire.failIfNoSpecifiedTests=false -DremoteCogTests=true
 ```
 
-It checks both sources at the box above, writes clips in `hop-geotools-raster-core/target/cog-smoke`, opens them again, and compares valid counts and means. It verifies the expected output dimensions and a bounded transfer volume. It logs requests/bytes and timings; normal CI does not depend on these external servers. The large files are not downloaded in full.
+It checks both sources at the box above, writes clips in `raster/raster-core/target/cog-smoke`, opens them again, and compares valid counts and means. It verifies the expected output dimensions and a bounded transfer volume. It logs requests/bytes and timings; normal CI does not depend on these external servers. The large files are not downloaded in full.
 
-For the tested snapshot on 2026-09-08, the nDSM returned 130009 valid pixels with mean 13.589200030; the DTM returned 40000 with mean 430.198857469. These are acceptance observations for this box, not immutable assertions about future data at the `aktuell` URLs.
+For the tested snapshot on 2026-09-09, the nDSM returned 130009 valid pixels with mean 13.589200030; the DTM returned 40000 with mean 430.198857469. These are acceptance observations for this box, not immutable assertions about future data at the `aktuell` URLs.
 
 Deterministic tests use synthetic TIFF/BigTIFF fixtures, a local range server, poisoned overview values, and known polygon statistics. They cover cache reuse, >4 GiB HTTP offsets, ignored/malformed ranges, changing resources, CRS, holes/multipart, NoData/zero, scaling, integer output and cancellation. Hop contract tests exercise metadata XML persistence, row enrichment and GENERATE sink completion. The existing Linux/macOS/Windows Java 17 CI matrix also runs the distribution audit.

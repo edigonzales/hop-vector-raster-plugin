@@ -4,8 +4,8 @@ from pathlib import Path
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-target = root / "assemblies" / "assemblies-hop-geotools" / "target"
-zips = sorted(target.glob("hop-geotools-plugin-*.zip"))
+target = root / "assemblies" / "assemblies-hop-vector-raster" / "target"
+zips = sorted(target.glob("hop-vector-raster-plugin-*.zip"))
 if len(zips) != 1:
     raise SystemExit(f"Expected exactly one plugin ZIP in {target}, found {len(zips)}")
 
@@ -13,21 +13,27 @@ zip_path = zips[0]
 with zipfile.ZipFile(zip_path) as archive:
     entries = [name for name in archive.namelist() if not name.endswith("/")]
     names = [Path(name).name.lower() for name in entries]
+    if len(names)!=len(set(names)):
+        raise SystemExit("Duplicate distribution filenames")
+    if any(not entry.startswith("plugins/transforms/vector-raster/") for entry in entries):
+        raise SystemExit("Unexpected plugin installation path")
 
     required = [
-        "hop-geotools-vector-",
-        "hop-geotools-common-",
-        "hop-geotools-raster-core-",
-        "hop-transform-geotools-raster-clip-",
-        "hop-transform-geotools-raster-zonal-stats-",
-        "hop-transform-arcinfo-generate-writer-",
+        "hop-vector-transforms-",
+        "hop-vector-core-",
+        "hop-vector-format-shapefile-",
+        "hop-vector-format-geopackage-",
+        "hop-geotools-support-",
+        "hop-raster-core-",
+        "hop-raster-clip-",
+        "hop-raster-zonal-stats-",
+        "hop-vector-format-generate-",
         "gt-geotiff-",
         "gt-coverage-",
         "imageio-ext-cog-reader-",
         "imageio-ext-cog-streams-",
         "gt-main-",
-        "gt-shapefile-",
-        "gt-geopkg-",
+
         "gt-epsg-hsql-",
         "sqlite-jdbc-",
         "imagen-core-",
@@ -42,6 +48,7 @@ with zipfile.ZipFile(zip_path) as archive:
     forbidden = [
         "hop-geometry-type",
         "jts-core-",
+        "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
     ]
     for fragment in forbidden:
@@ -55,7 +62,7 @@ with zipfile.ZipFile(zip_path) as archive:
     # Additions require reviewing their source module and runtime requirements.
     allowed_geotools = {
         "gt-api", "gt-main", "gt-metadata", "gt-referencing", "gt-http",
-        "gt-shapefile", "gt-geopkg", "gt-jdbc", "gt-epsg-hsql", "gt-coverage",
+        "gt-epsg-hsql", "gt-coverage",
         "gt-geotiff", "gt-xml", "gt-xsd-core", "gt-xsd-ows", "gt-xsd-gml2",
         "gt-xsd-gml3", "gt-xsd-filter", "gt-xsd-fes",
     }
@@ -68,6 +75,12 @@ with zipfile.ZipFile(zip_path) as archive:
         if not entry.endswith(".jar"):
             continue
         with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
+            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-generate-", "hop-vector-transforms-")):
+                for name in nested.namelist():
+                    if name.endswith(".class") and b"org/geotools/" in nested.read(name):
+                        raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
+            if any("ArcInfoGenerateWriter" in name for name in nested.namelist()):
+                raise SystemExit(f"Legacy separate GENERATE transform in {entry}")
             natives = [n for n in nested.namelist() if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]
             if natives and not Path(entry).name.startswith("sqlite-jdbc-"):
                 raise SystemExit(f"Unexpected native library in {entry}: {natives}")
@@ -95,7 +108,7 @@ with zipfile.ZipFile(zip_path) as archive:
 
 size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
-print("  GeoTools 35.1 vector/raster + EPSG/units runtime is bundled")
+print("  Native Java Shapefile + GeoTools 35.1 raster + EPSG runtime; GeoPackage uses SQLite JDBC")
 print("  Indriya NumberSystem service metadata is present")
 print("  hop-geometry-type and jts-core remain shared via classLoaderGroup=sogeo-geometry")
 print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")
