@@ -68,6 +68,18 @@
       <groupId>ch.so.agi</groupId><artifactId>hop-raster-reproject</artifactId>
       <version>${project.version}</version><scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.locationtech.jts</groupId>
+      <artifactId>jts-core</artifactId>
+      <version>${jts.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
+      <artifactId>hop-geometry-type</artifactId>
+      <version>${hop.geometry.type.version}</version>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

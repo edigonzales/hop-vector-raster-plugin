@@ -67,7 +67,7 @@ public class RasterZonalStatsTransform
     } catch (Exception e) {
       data.sources.close();
       if (isStopped()) return false;
-      if (getTransformMeta().isDoingErrorHandling())
+      if (isErrorHandlingEnabled())
         putError(
             data.inputMeta, row, 1L, message(e), meta.getGeometryField(), "RASTER_STATS_ERROR");
       else throw new HopTransformException("Raster statistics failed: " + message(e), e);
@@ -77,6 +77,11 @@ public class RasterZonalStatsTransform
 
   private static String message(Exception e) {
     return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+  }
+
+  private boolean isErrorHandlingEnabled() {
+    var errorMeta = getTransformMeta().getTransformErrorMeta();
+    return getTransformMeta().isDoingErrorHandling() || (errorMeta != null && errorMeta.isEnabled());
   }
 
   @Override

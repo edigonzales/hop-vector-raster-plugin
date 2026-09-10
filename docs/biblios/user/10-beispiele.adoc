@@ -72,5 +72,5 @@ NULL-Statistikwerte bei `NO_VALID_PIXELS` sind keine Höhe null.
 === Lokale Prüfung
 
 `scripts/check-doc-examples.py` führt Clip und Statistik aus den echten HPL-Dateien mit kleinen,
-lokal erzeugten Testdaten aus. Es benötigt den vorher gebauten Plugin-ZIP und Java 17; siehe
+lokal erzeugten Testdaten aus. Es benötigt den vorher gebauten Plugin-ZIP und Java 21; siehe
 {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung]. Externe COGs gehören nicht zur verpflichtenden Prüfung.

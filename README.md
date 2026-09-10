@@ -25,7 +25,7 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
 
 ## Requirements
 
-- Java 17 or newer; the plugin is built against Apache Hop **2.17.0**.
+- Java 21 or newer; the plugin is built against Apache Hop **2.19.0**.
 - The separately installed
   [Geometry Type plugin](https://github.com/edigonzales/hop-geometry-type-plugin),
   **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.

@@ -7,7 +7,7 @@ Suche und öffentliche GitHub-Quelllinks. PDF und DOCX sind deaktiviert.
 ## Lokal bauen und ansehen
 
 Benötigt: **Java 21**, Python **3.9+**, Git und beim ersten Build Internetzugang.
-Der Plugin-/Maven-Build verwendet weiterhin Java 17 und startet Biblios nie.
+Der Plugin-/Maven-Build verwendet Java 21 und startet Biblios nie.
 
 ```sh
 python3 docs/biblios/build.py

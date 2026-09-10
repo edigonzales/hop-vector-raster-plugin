@@ -24,6 +24,11 @@ public final class GeoToolsRuntimeSupport {
       }
 
       try {
+        // Hop loads plugin libraries through a grouped classloader. Register the ImageIO
+        // providers from those libraries explicitly so GeoTools does not fall back to a JDK
+        // provider that cannot consume the URL used for local overview probing.
+        javax.imageio.ImageIO.scanForPlugins();
+
         // On a regular Maven/application classpath Indriya discovers this implementation through
         // META-INF/services. In Hop a shared plugin classloader can make that service resource
         // invisible even though the implementation class itself is available.

@@ -16,7 +16,7 @@ The distribution includes GeoTools 35.1 raster/CRS libraries and ImageIO-Ext COG
 
 ## Java and Maven
 
-The project builds with Java 17 and Maven. The GeoTools artifacts are resolved from the OSGeo release repository.
+The project builds with Java 21 and Maven. The GeoTools artifacts are resolved from the OSGeo release repository.
 
 ## One-command development loop
 

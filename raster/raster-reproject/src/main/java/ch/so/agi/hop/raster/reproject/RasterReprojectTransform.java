@@ -77,7 +77,7 @@ public class RasterReprojectTransform
       data.sources.close();
       if (isStopped()) return false;
       String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-      if (getTransformMeta().isDoingErrorHandling())
+      if (isErrorHandlingEnabled())
         putError(data.inputMeta, row, 1L, message, "", "RASTER_REPROJECT_ERROR");
       else throw new HopTransformException("Raster reprojection failed: " + message, e);
     }
@@ -93,6 +93,11 @@ public class RasterReprojectTransform
     if (!Double.isFinite(value))
       throw new IllegalArgumentException("Grid coordinates and pixel sizes must be finite");
     return value;
+  }
+
+  private boolean isErrorHandlingEnabled() {
+    var errorMeta = getTransformMeta().getTransformErrorMeta();
+    return getTransformMeta().isDoingErrorHandling() || (errorMeta != null && errorMeta.isEnabled());
   }
 
   @Override

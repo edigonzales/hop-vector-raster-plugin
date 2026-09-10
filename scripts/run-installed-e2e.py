@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +15,11 @@ import zipfile
 
 def jars(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.jar") if path.is_file())
+
+
+def run_command(command: list[str], env: dict[str, str], timeout: int = 180) -> None:
+    print("==>", " ".join(command), flush=True)
+    subprocess.run(command, check=True, env=env, timeout=timeout)
 
 
 def extract_plugin(zip_path: Path, hop_home: Path, plugin_root: str) -> None:
@@ -56,8 +62,20 @@ def main() -> int:
         audit = work / "audit"
         classes = work / "classes"
         data = work / "data"
+        config.mkdir()
+        audit.mkdir()
         classes.mkdir()
         data.mkdir()
+        run_config = config / "metadata/pipeline-run-configuration/local.json"
+        run_config.parent.mkdir(parents=True)
+        run_config.write_text(
+            '{\n'
+            '  "name": "local",\n'
+            '  "engineRunConfiguration": {"Local": {"rowset_size": "2", "safe_mode": true}},\n'
+            '  "configurationVariables": []\n'
+            '}\n',
+            encoding="utf-8",
+        )
         env = os.environ.copy()
         env["HOP_CONFIG_FOLDER"] = str(config)
         env["HOP_AUDIT_FOLDER"] = str(audit)
@@ -82,19 +100,58 @@ def main() -> int:
             check=True,
             env=env,
         )
-        subprocess.run(
-            [
-                str(java),
-                "-cp",
-                str(classes) + os.pathsep + classpath,
-                "DocumentationExamplesSmoke",
-                str(Path(__file__).parents[1]),
-                str(data),
-            ],
-            check=True,
-            env=env,
-            timeout=180,
-        )
+        java_smoke = [
+            str(java), "-cp", str(classes) + os.pathsep + classpath,
+            "DocumentationExamplesSmoke", str(Path(__file__).parents[1]), str(data),
+        ]
+        run_command(java_smoke + ["prepare"], env)
+
+        hop_run = str(args.hop_home / "hop-run.sh")
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/raster-clip/clip-cog.hpl"),
+            "-p", f"INPUT_RASTER={data / 'input.tif'}",
+            "-p", f"OUTPUT_FILE={data / 'clip.tif'}",
+            "-p", "BBOX_CRS=EPSG:2056", "-p", "MIN_X=2600001", "-p", "MIN_Y=1200001",
+            "-p", "MAX_X=2600003", "-p", "MAX_Y=1200003", "-p", "NODATA=255",
+        ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "scripts/e2e/zonal-statistics-to-csv.hpl"),
+            "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
+            "-p", f"INPUT_RASTER={data / 'input.tif'}", "-p", "GEOMETRY_CRS=EPSG:2056",
+            "-p", "NODATA=255", "-p", f"OUTPUT_FILE={data / 'zonal.csv'}",
+        ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/cloud-output/vector-to-flatgeobuf.hpl"),
+            "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
+            "-p", f"OUTPUT_FILE={data / 'zones.fgb'}",
+        ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/cloud-output/vector-to-parquet.hpl"),
+            "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
+            "-p", f"OUTPUT_FILE={data / 'zones.parquet'}",
+        ], env)
+
+        run_command(java_smoke + ["check"], env)
+        with (data / "zonal.csv").open(newline="", encoding="utf-8") as stream:
+            rows = list(csv.DictReader(stream, delimiter=";"))
+        if len(rows) != 1:
+            raise SystemExit(f"Expected exactly one zonal-statistics row, got {len(rows)}")
+        row = rows[0]
+        expected = {"raster_mean": 5.5, "raster_min": 0.0, "raster_max": 11.0, "raster_count": 12.0}
+        for name, value in expected.items():
+            if float(row[name]) != value:
+                raise SystemExit(f"Unexpected {name}: {row[name]!r}")
+        if row["name"] != "whole raster":
+            raise SystemExit(f"Input attribute was not preserved: {row['name']!r}")
+        for output in (data / "zones.fgb", data / "zones.parquet"):
+            if not output.is_file() or output.stat().st_size <= 4:
+                raise SystemExit(f"Installed Hop did not create {output.name}")
+        if (data / "zones.parquet").read_bytes()[:4] != b"PAR1":
+            raise SystemExit("Unexpected zones.parquet header")
 
     print("Installed Hop vector/raster E2E OK")
     return 0

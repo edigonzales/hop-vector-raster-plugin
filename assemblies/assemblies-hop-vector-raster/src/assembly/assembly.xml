@@ -33,8 +33,6 @@
         <exclude>ch.so.agi:hop-raster-clip</exclude>
         <exclude>ch.so.agi:hop-raster-reproject</exclude>
         <exclude>ch.so.agi:hop-raster-zonal-stats</exclude>
-        <exclude>ch.so.agi:hop-geometry-type</exclude>
-        <exclude>org.locationtech.jts:*</exclude>
         <exclude>org.apache.hop:*</exclude>
         <exclude>org.slf4j:*</exclude>
       </excludes>

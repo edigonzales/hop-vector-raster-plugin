@@ -3,7 +3,7 @@
 
 === Voraussetzungen
 
-* Java 17 oder neuer; diese Plugin-Version wird gegen Apache Hop 2.17.0 gebaut.
+* Java 21 oder neuer; diese Plugin-Version wird gegen Apache Hop 2.19.0 gebaut.
 * Das separate https://github.com/edigonzales/hop-geometry-type-plugin[Geometry-Type-Plugin],
   mindestens `0.2.0-SNAPSHOT` mit Z/M-Serialisierungsupdate oder ein kompatibler neuerer Build.
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.

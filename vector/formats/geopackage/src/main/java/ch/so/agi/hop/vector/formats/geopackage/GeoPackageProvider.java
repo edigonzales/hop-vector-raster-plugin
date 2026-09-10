@@ -31,6 +31,7 @@ public final class GeoPackageProvider implements VectorProvider {
   private static Connection readConnection(Path path) throws Exception {
     if (!Files.isRegularFile(path))
       throw new IllegalArgumentException("GeoPackage does not exist: " + path);
+    ensureSqliteDriver();
     java.util.Properties props = new java.util.Properties();
     props.setProperty("open_mode", "1");
     return DriverManager.getConnection("jdbc:sqlite:" + path.toAbsolutePath(), props);
@@ -392,8 +393,7 @@ public final class GeoPackageProvider implements VectorProvider {
     }
   }
 
-  private static void createSchema(Path file, WriteRequest r, CrsDefinitionResolver crs)
-      throws Exception {
+  static void ensureSqliteDriver() throws SQLException {
     // Hop loads plugin libraries through child classloaders, so the SQLite JDBC service
     // provider is not guaranteed to be discovered by DriverManager automatically.
     try {
@@ -401,6 +401,11 @@ public final class GeoPackageProvider implements VectorProvider {
     } catch (ClassNotFoundException e) {
       throw new SQLException("SQLite JDBC driver is missing from the installed plugin", e);
     }
+  }
+
+  private static void createSchema(Path file, WriteRequest r, CrsDefinitionResolver crs)
+      throws Exception {
+    ensureSqliteDriver();
     try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file.toAbsolutePath())) {
       try (Statement s = c.createStatement()) {
         s.execute("PRAGMA application_id=1196444487");

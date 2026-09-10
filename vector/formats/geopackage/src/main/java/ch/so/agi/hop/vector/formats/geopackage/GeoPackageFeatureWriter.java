@@ -53,6 +53,7 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
       int geometryFieldIndex,
       Geometry sampleGeometry)
       throws Exception {
+    GeoPackageProvider.ensureSqliteDriver();
     String database = file.toAbsolutePath().normalize().toString().replace('\\', '/');
     Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
     try {

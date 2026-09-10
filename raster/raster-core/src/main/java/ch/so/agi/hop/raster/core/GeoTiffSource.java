@@ -1,6 +1,7 @@
 package ch.so.agi.hop.raster.core;
 
 import ch.so.agi.hop.support.geotools.GeoToolsRuntimeSupport;
+import it.geosolutions.imageio.compression.CompressionFinder;
 import it.geosolutions.imageio.core.BasicAuthURI;
 import it.geosolutions.imageioimpl.plugins.cog.CogImageInputStreamSpi;
 import it.geosolutions.imageioimpl.plugins.cog.CogImageReaderSpi;
@@ -16,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.imageio.spi.IIORegistry;
+import it.geosolutions.imageio.stream.input.spi.StringImageInputStreamSpi;
 import org.eclipse.imagen.PlanarImage;
 import org.eclipse.imagen.ROI;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
@@ -134,15 +137,34 @@ public final class GeoTiffSource implements RasterSource {
 
   public GeoTiffSource(RasterDatasetRef ref) throws IOException {
     GeoToolsRuntimeSupport.initialize();
+    ClassLoader pluginLoader = GeoTiffSource.class.getClassLoader();
+    ClassLoader previousLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      // Hop groups plugin libraries in a classloader where ImageIO's service scan does not
+      // reliably register the String provider. GeoTools otherwise selects the JDK
+      // RandomAccessFile provider for a local String source and fails before reading the TIFF.
+      Thread.currentThread().setContextClassLoader(pluginLoader);
+      IIORegistry.getDefaultInstance()
+          .registerServiceProvider(new StringImageInputStreamSpi());
+      javax.imageio.ImageIO.scanForPlugins();
+      CompressionFinder.scanForPlugins();
+    } finally {
+      Thread.currentThread().setContextClassLoader(previousLoader);
+    }
     reference = ref;
-    Object input =
-        ref.remote()
-            ? new CogSourceSPIProvider(
-                new BasicAuthURI(ref.location(), false),
-                new CogImageReaderSpi(),
-                new CogImageInputStreamSpi(),
-                StrictHttpRangeReader.class.getName())
-            : new File(ref.location());
+    Object input;
+    if (ref.remote()) {
+      input =
+          new CogSourceSPIProvider(
+              new BasicAuthURI(ref.location(), false),
+              new CogImageReaderSpi(),
+              new CogImageInputStreamSpi(),
+              StrictHttpRangeReader.class.getName());
+    } else {
+      // Keep the source as a String so GeoTools reopens a fresh ImageIO stream for each read,
+      // while avoiding the File/URL overview probe in Hop's grouped plugin classloader.
+      input = ref.location();
+    }
     try (var scope = session.activate()) {
       reader = new RawReader(input);
     }

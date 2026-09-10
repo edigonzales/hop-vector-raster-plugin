@@ -101,7 +101,7 @@ public class RasterClipTransform extends BaseTransform<RasterClipMeta, RasterCli
       data.sources.close();
       if (isStopped()) return false;
       String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-      if (getTransformMeta().isDoingErrorHandling())
+      if (isErrorHandlingEnabled())
         putError(data.inputMeta, row, 1L, message, meta.getGeometryField(), "RASTER_CLIP_ERROR");
       else throw new HopTransformException("Raster clip failed: " + message, e);
     }
@@ -115,6 +115,11 @@ public class RasterClipTransform extends BaseTransform<RasterClipMeta, RasterCli
     if (!Double.isFinite(value))
       throw new IllegalArgumentException("Bounding box coordinates must be finite");
     return value;
+  }
+
+  private boolean isErrorHandlingEnabled() {
+    var errorMeta = getTransformMeta().getTransformErrorMeta();
+    return getTransformMeta().isDoingErrorHandling() || (errorMeta != null && errorMeta.isEnabled());
   }
 
   @Override
