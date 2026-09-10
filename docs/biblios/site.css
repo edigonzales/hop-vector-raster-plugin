@@ -1,0 +1,9 @@
+/* Keep long field labels, URLs and tables usable on narrow viewports. */
+.layout > main.content { min-width: 0; }
+.doc-content { overflow-wrap: anywhere; }
+.doc-content table.tableblock { display: block; max-width: 100%; overflow-x: auto; }
+.doc-content pre { max-width: 100%; overflow-wrap: normal; }
+@media (max-width: 768px) {
+  .doc-content table.tableblock { font-size: 1rem; }
+  .doc-content table.tableblock th, .doc-content table.tableblock td { min-width: 8rem; overflow-wrap: normal; }
+}

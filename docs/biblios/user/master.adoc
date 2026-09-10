@@ -1,0 +1,26 @@
+= Apache Hop Vector Raster Plugin – Benutzerhandbuch
+:lang: de
+:toc: left
+:toclevels: 2
+:sectnums:
+:sectnumlevels: 3
+:source-highlighter: rouge
+:icons: font
+:tip-caption: Tipp
+:note-caption: Hinweis
+:warning-caption: Warnung
+:important-caption: Wichtig
+:caution-caption: Vorsicht
+:repo: https://github.com/edigonzales/hop-vector-raster-plugin
+
+include::01-grundlagen.adoc[]
+include::02-installation.adoc[]
+include::03-erste-pipeline.adoc[]
+include::04-vector-reader.adoc[]
+include::05-vector-writer.adoc[]
+include::06-raster-clip.adoc[]
+include::07-raster-reproject.adoc[]
+include::08-raster-statistik.adoc[]
+include::09-formate.adoc[]
+include::10-beispiele.adoc[]
+include::11-fehler-glossar.adoc[]

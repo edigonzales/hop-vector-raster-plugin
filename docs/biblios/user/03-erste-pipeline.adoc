@@ -1,0 +1,35 @@
+[[erste-pipeline]]
+== Erste Pipeline: Vektoren konvertieren
+
+Dieses Beispiel kopiert eine Shapefile-Ebene in eine neue GeoPackage-Datei.
+Verwenden Sie eine kleine eigene Shapefile mit gültigen XY-Geometrien. Shapefile-Z/M wird unterstützt,
+GeoPackage-Ausgabe in diesem Plugin jedoch nur XY; das Beispiel soll keine Dimensionen verlieren.
+
+. Legen Sie eine neue Pipeline an.
+. Fügen Sie *Vector Reader* und *Vector Writer* hinzu und verbinden Sie beide.
+. Konfigurieren Sie den Reader mit `Format = SHAPEFILE`, dem Pfad zur `.shp`-Datei
+  und `Geometry output field = geometry`.
+. Prüfen Sie Layer und Schema in der Vorschau. Für eine Shapefile ist ein einzelner Layer vorhanden.
+. Konfigurieren Sie den Writer mit `Format = GEOPACKAGE`, einem neuen Ausgabepfad,
+  `Layer (optional) = parcels` und `Geometry field = geometry`.
+. Lassen Sie das CRS leer, wenn das richtige CRS aus der Quelle bekannt ist.
+  Bei fehlender PRJ-Datei müssen Sie das tatsächliche Quell-CRS kennen und explizit zuweisen.
+. Führen Sie die Pipeline aus. Öffnen Sie die Ausgabe anschliessend mit einem zweiten Vector Reader
+  und prüfen Sie Attribute, Geometriefeld und Datensatzanzahl.
+
+[source,text]
+----
+Vector Reader                       Vector Writer
+Format: SHAPEFILE                   Format: GEOPACKAGE
+Vector file: ${PROJECT_HOME}/parcels.shp -> Output file: ${PROJECT_HOME}/parcels-copy.gpkg
+Geometry output field: geometry           Geometry field: geometry
+                                    Layer (optional): parcels
+----
+
+Die Datei `parcels-copy.gpkg` darf noch nicht existieren. Für ein zweites Ausführen wählen Sie einen neuen Dateinamen.
+Ein Hop-Preview mit wenigen Zeilen ersetzt keinen vollständigen Schreiblauf: Der Writer veröffentlicht erst bei erfolgreichem EOF.
+
+Wenn Sie das Geometry-Ausgabefeld im Reader leer lassen, wird der Name der Quell-Geometriespalte übernommen,
+beispielsweise `geom`. Dann müssen Sie im Writer diesen tatsächlichen Feldnamen auswählen.
+
+Für FlatGeobuf und Parquet gibt es bereits parametrisierte Pipelines im Kapitel <<beispiele,Beispiele>>.

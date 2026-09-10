@@ -1,0 +1,51 @@
+site:
+  title: "hop-vector-raster-plugin: Benutzerhandbuch"
+  url: https://edigonzales.github.io/hop-vector-raster-plugin/
+  default_language: de
+
+output:
+  dir: build/docs-site
+  clean: true
+
+ui:
+  theme: default
+  show_version_badge: false
+  show_edit_link: true
+  show_source_link: true
+  edit_url_pattern: "https://github.com/edigonzales/hop-vector-raster-plugin/edit/main/{path}"
+  source_url_pattern: "https://github.com/edigonzales/hop-vector-raster-plugin/blob/main/{path}"
+  syntax_highlighting: prism
+  version_switch_mode: start_page
+  search_language_mode: multilingual_safe
+  sidebar_toc_depth: 2
+  content_toc: off
+  content_section_numbers: on
+  content_section_number_depth: 3
+
+content:
+  sources:
+    - id: benutzerhandbuch
+      display_name: Benutzerhandbuch
+      card_label: Benutzer
+      url: https://github.com/edigonzales/hop-vector-raster-plugin.git
+      branches:
+        - name: main
+          display_version: Aktuell
+      start_path: docs/biblios/user
+      default_version: main
+      render_mode: single_page
+      master_file: master.adoc
+      sidebar_toc_numbers: on
+
+pdf:
+  enabled: false
+  attributes:
+    source-highlighter: rouge
+    rouge-style: github
+    pdf-theme: default
+    toc: true
+    sectnums: true
+    chapter-signifier: false
+
+docx:
+  enabled: false

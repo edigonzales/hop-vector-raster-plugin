@@ -1,0 +1,76 @@
+[[beispiele]]
+== Beispielpipelines
+
+Die Vorlagen liegen unter {repo}/tree/main/examples[examples im Repository].
+Die hier angebotenen Downloads werden beim Handbuchbuild aus demselben Git-Stand übernommen.
+Öffnen Sie die HPL-Datei in Hop GUI und setzen Sie die Parameter in der Ausführungskonfiguration.
+Ausgabeordner müssen existieren; verwenden Sie neue Ausgabedateien oder ändern Sie bewusst die Overwrite-Einstellung.
+Raster-Clip und Reproject starten mit einer Generate-Rows-Zeile; die Statistik erhält eine Zeile pro Polygon aus Vector Reader.
+
+=== Vektorkonvertierung
+
+* link:downloads/cloud-output/vector-to-flatgeobuf.hpl[Vector Reader → FlatGeobuf herunterladen]
+* link:downloads/cloud-output/vector-to-parquet.hpl[Vector Reader → Parquet herunterladen]
+
+Parameter: `INPUT_VECTOR` (lokales `.shp`/`.gpkg`), `INPUT_LAYER` (leer: erster Layer), `OUTPUT_FILE`.
+Beispiel: `/data/parcels.gpkg`, `parcels`, `/data/parcels.fgb`.
+Der Reader benennt die Geometrie `geometry`; Attribute werden weitergereicht.
+FlatGeobuf verwendet den räumlichen Index und lehnt NULL/EMPTY ab. Parquet verwendet GEOMETRY, GZIP und 128-MiB-Row-Groups.
+Für leere Quellen Typ/Dimension im Writer explizit einstellen; fehlende Dezimalmetadaten vor Parquet ergänzen.
+
+=== Externer COG-Clip
+
+link:downloads/raster-clip/clip-cog.hpl[Parametrisierte Clip-Pipeline herunterladen]
+
+[cols="2,4",options="header"]
+|===
+|Parameter |Beispiel
+|INPUT_RASTER |`https://files.geo.so.ch/ch.swisstopo.swissalti3d_2025.dtm/aktuell/ch.swisstopo.swissalti3d_2025.dtm.tif`
+|BBOX_CRS |`EPSG:2056`
+|MIN_X / MIN_Y |`2607400` / `1228400`
+|MAX_X / MAX_Y |`2607500` / `1228500`
+|NODATA |Leer: Metadaten übernehmen
+|OUTPUT_FILE |`/data/solothurn-clip.tif`
+|===
+
+Band ist in beiden neuen Vorlagen im Dialog auf `1` gesetzt (kein variabler Parameter).
+
+Die URL ist ein Beispiel, keine dauerhaft zugesicherte Datenversion. Dieselbe Pipeline akzeptiert lokale GeoTIFFs.
+Sie schneidet genau ein Band auf dem Quellraster aus; sie erzeugt keine neue Auflösung.
+Im Ergebnis stehen `raster_output_file` und `raster_status = OK`.
+
+=== Reprojektion und Auflösungsänderung
+
+* link:downloads/raster-reproject/elevation.hpl[Höhenmodell]: vorgegebene Solothurn-Box, standardmässig 1-m-Zielraster.
+* link:downloads/raster-reproject/multiband.hpl[Mehrbanddaten]: automatische Ausdehnung, BILINEAR, alle numerischen Bänder.
+* link:downloads/raster-reproject/palette.hpl[Palettenbild]: NEAREST mit Erhalt von Indizes und Farbtabelle.
+
+Die Parameter stehen jeweils in der HPL-Datei: `INPUT_RASTER`, `OUTPUT_FILE`, `TARGET_CRS`,
+`PIXEL_SIZE_X`, `PIXEL_SIZE_Y` und gegebenenfalls `OUTPUT_NODATA`.
+Für reine Auflösungsänderung `TARGET_CRS` leer lassen. Numerisches Beispiel: lokales Höhenmodell EPSG:2056,
+Pixelgrössen `2`/`2`, neue Zieldatei. Für EPSG:4326 werden die Pixelgrössen in Grad angegeben, beispielsweise `0.00001`/`0.00001`.
+Die automatische Ausdehnung folgt der Quelle; das Höhenmodell-Beispiel besitzt dagegen eine feste Box und verlangt dazu passende CRS-Einstellungen.
+
+Bei Paletten muss ein Sentinel ein vorhandener, nicht gültig verwendeter Index sein, falls zusätzliche ungültige Bereiche entstehen.
+BILINEAR wandelt Paletten stattdessen zu RGBA16 um. Weitere Regeln stehen unter <<raster-reproject,Reproject / Resample>>.
+
+=== Zonale Statistik
+
+link:downloads/raster-stats/zonal-statistics.hpl[Vector Reader → Raster Zonal Statistics herunterladen]
+
+Parameter: `INPUT_VECTOR`, `INPUT_LAYER`, `INPUT_RASTER`, `GEOMETRY_CRS`, `NODATA`.
+`GEOMETRY_CRS` darf bei korrekter Geometry-SRID leer bleiben. Beispiel: Gebäude-Polygone EPSG:2056 und
+`https://files.geo.so.ch/ch.swisstopo.lidar_2023.ndsm_buildings/aktuell/ch.swisstopo.lidar_2023.ndsm_buildings.tif`,
+Band `1`, Statistiken `mean min max` (im Dialog erweitern, etwa um `stddev sum`).
+Das Gebäude-nDSM beschreibt Höhen über Terrain: nicht nochmals ein DTM abziehen.
+
+Die Beispielpipeline liefert Ergebniszeilen zur Vorschau; sie schreibt keine neue Vektordatei.
+Zum Speichern fügen Sie einen Vector Writer mit neuem Zielpfad hinzu.
+Überprüfen Sie neben `raster_mean`, `raster_min`, `raster_max` stets `raster_count` und `raster_status`.
+NULL-Statistikwerte bei `NO_VALID_PIXELS` sind keine Höhe null.
+
+=== Lokale Prüfung
+
+`scripts/check-doc-examples.py` führt Clip und Statistik aus den echten HPL-Dateien mit kleinen,
+lokal erzeugten Testdaten aus. Es benötigt den vorher gebauten Plugin-ZIP und Java 17; siehe
+{repo}/blob/main/docs/dev-setup.md[Entwickleranleitung]. Externe COGs gehören nicht zur verpflichtenden Prüfung.

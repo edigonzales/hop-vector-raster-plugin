@@ -1,0 +1,45 @@
+[[fehlerbehebung]]
+== Fehlerbehebung
+
+[cols="2,4",options="header"]
+|===
+|Symptom |Prüfung und Abhilfe
+|Transform fehlt / Geometry unbekannt |Geometry-Plugin und vector-raster-Ordner prüfen, alte Versionen entfernen, Hop neu starten; <<installation,Installationskontrolle>>.
+|ClassNotFound / NoSuchMethod |Hop 2.17.0 und passende Geometry-Version verwenden; keine doppelten JTS-/GeoTools-JARs installieren.
+|Alte Pipeline erkennt IDs nicht |<<migration,Migration>> durchführen; alte IDs haben keine automatischen Aliase.
+|Datei oder Layer fehlt |Variablenauflösung und lokalen Pfad prüfen; Reader-Layerliste und Available fields verwenden.
+|Geometrie wird als String erkannt |WKT/WKB zuerst ausdrücklich in den gemeinsamen Geometry-Typ umwandeln.
+|CRS fehlt oder SRID widerspricht |Tatsächliches CRS ermitteln. Assign CRS beschreibt Koordinaten, reprojiziert sie nicht. Raster-CRS darf nicht fehlen.
+|Ausschnitt an falschem Ort |XY-/Longitude-Latitude-Reihenfolge, Box-CRS und Einheiten kontrollieren. Clip-Box liegt im expliziten CRS, Reproject-Box im Ziel-CRS.
+|Rasterauflösung falsch |Beide Pixelgrössen in Ziel-CRS-Einheiten eingeben. Nach aussen gerundete Ausdehnung ist beabsichtigt.
+|HTTP-Range-Fehler |Öffentliche direkte COG-URL statt HTML-Downloadseite verwenden; Server/Proxy muss Byte-Ranges mit 206 liefern. Kein Voll-Download-Fallback.
+|NoData-Sentinel fehlt / kollidiert |Darstellbaren, fachlich unbenutzten Sentinel wählen. Integer braucht einen Sentinel; gültige Null nicht pauschal als NoData erklären.
+|NO_VALID_PIXELS |Überlappung, Band, Polygonpixelzentren und NoData kontrollieren. Count ist 0; Statistik-NULL ist kein Messwert.
+|Palette nicht schreibbar |Für Nearest einen vorhandenen unbenutzten NoData-Index wählen oder BILINEAR mit RGBA-Konvertierung verwenden.
+|Z/M-/Schemakonflikt |Typ/Dimension explizit festlegen, Werte vereinheitlichen; GeoPackage unterstützt hier nur XY. Zusätzliche Dimensionen nicht still verlieren.
+|Leere Vektorausgabe scheitert |Für Shapefile/FlatGeobuf/Parquet Typ und Dimension explizit setzen; FlatGeobuf-NULL-Regeln beachten. GeoPackage benötigt eine nicht-NULL-Geometrie zur Inferenz.
+|Datei existiert / Konflikt |Eindeutiger Zielpfad pro Zeile und Transform-Kopie; Elternordner anlegen. Eingabe darf nicht Ausgabe sein. Overwrite nur bei unterstützten Formaten aktivieren.
+|Dezimalüberlauf / DBF-Kürzung |DBF-Zuordnung oder Parquet-precision/scale prüfen; Quellmetadaten vorgelagert korrigieren.
+|===
+
+Bei Rasterfehlern kann ein Error Hop die fehlerhafte Zeile und Hop-Fehlerinformationen aufnehmen.
+Ohne Error Hop stoppt der Transform. Protokolle geben den konkreten Datei-, CRS- oder Wertfehler an;
+Statusfelder ersetzen technische Fehler nicht. Geben Sie bei Fehlermeldungen Plugin-Version, Hop-/Java-Version,
+Konfiguration und möglichst ein kleines reproduzierbares Beispiel an. Zugangsdaten gehören nicht in öffentliche Tickets.
+
+[[glossar]]
+== Glossar
+
+Band:: Einzelner Rasterkanal; Bandnummern im Dialog beginnen bei 1.
+Bounding Box:: Rechteck aus Minimum/Maximum X und Y in einem benannten CRS.
+COG:: Cloud Optimized GeoTIFF: TIFF-Anordnung für selektive HTTP-Range-Zugriffe. Nicht jedes gekachelte GeoTIFF ist ein COG.
+CRS / SRID:: Koordinatenreferenzsystem beziehungsweise dessen numerische Kennung an der Geometrie.
+Geometry:: Gemeinsamer Hop-Datentyp des separat installierten Geometry-Plugins; enthält Geometrie und gegebenenfalls SRID.
+Grid / Zielraster:: Zellnetz aus Auflösung, Ursprung, Ausdehnung und CRS.
+NoData:: Fehlender Messwert, bezeichnet durch Sentinel, Maske oder nichtendlichen Wert. Zahl 0 ist grundsätzlich gültig.
+NULL / EMPTY:: Fehlender Geometriewert gegenüber vorhandener Geometrie ohne Koordinaten; Formate unterscheiden dies unterschiedlich.
+Reprojektion:: Transformation von Koordinaten zwischen CRS; beim Raster mit Resampling auf ein Zielraster verbunden.
+Resampling:: Bestimmung neuer Rasterwerte auf einem anderen Zellnetz; hier Nearest oder Bilinear.
+Scale / Offset:: Physikalischer Wert = Rohwert × Scale + Offset. Reproject interpoliert Rohwerte, Statistik verwendet physikalische Werte.
+XY / XYZ / XYM / XYZM:: Planare Koordinaten mit optionaler Höhe Z und optionalem Messwert M.
+EOF:: Ende des Eingabestroms; Vektor-Writer veröffentlichen erst nach erfolgreichem Abschluss ihre Datei.

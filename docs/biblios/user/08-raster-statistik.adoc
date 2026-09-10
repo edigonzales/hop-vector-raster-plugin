@@ -1,0 +1,73 @@
+[[raster-statistik]]
+== Raster Zonal Statistics (GeoTools)
+
+Dieser Transform ergänzt pro eingehender Polygonzeile Rasterstatistiken.
+Typische Pipeline: *Vector Reader → Raster Zonal Statistics (GeoTools) → Vector Writer*.
+Er schreibt selbst keine Rasterdatei. Plugin-ID: `SOGIS_RASTER_ZONAL_STATS`.
+
+=== Einstellungen
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Transform name |Von Hop vergeben |Name des Schritts.
+|Input raster |Leer |Lokale GeoTIFF-Datei oder öffentliche COG-URL.
+|Raster address from input field |Aus |Die Rasteradresse stammt aus dem benannten Feld.
+|Geometry field |`geometry` |Hop-Geometry-Spalte mit Polygon/MultiPolygon.
+|Explicit geometry CRS (empty: geometry SRID) |Leer |CRS der Polygone; sonst SRID ungleich null erforderlich.
+|Band (1 based) |`1` |Zu analysierendes Band.
+|NoData override (empty: raster metadata) |Leer |Ersetzt den deklarierten Sentinel.
+|Output field prefix |`raster_` |Präfix aller angehängten Kennzahlen und des Status.
+|Statistics (mean min max sum stddev; count always included) |`mean min max` |Feste Auswahl (keine Variablen) mit Leerzeichen, Komma oder Semikolon; `count` wird immer ergänzt.
+|===
+
+=== Auswahl der Pixel und Kennzahlen
+
+Ein Pixel wird gezählt, wenn sein Zentrum vom Polygon überdeckt wird, einschliesslich Zentren genau auf der Grenze.
+Löcher und MultiPolygone sind möglich. Ungültige oder gekrümmte Geometrien müssen vorgelagert behandelt werden.
+Die Geometrie wird bei Bedarf als Kopie in das Raster-CRS transformiert; Originalgeometrie und Attribute bleiben erhalten.
+Rasterwerte stammen aus der Originalauflösung, ohne Resampling.
+
+NoData, Masken und nichtendliche Werte werden vor Scale/Offset ausgeschlossen.
+Die Kennzahlen beziehen sich danach auf physikalische Werte. Nullwerte werden berücksichtigt.
+`stddev` ist die Standardabweichung der Grundgesamtheit, nicht die Stichproben-Standardabweichung.
+Flächengewichtung, ALL_TOUCHED, Perzentile und Quantile werden nicht angeboten.
+
+=== Ergebnisfelder und Fehler
+
+Die ausgewählten Kennzahlen erscheinen in angegebener Reihenfolge, danach `count`, falls noch nicht enthalten, und `status`.
+`count` ist Hop Integer, die übrigen Kennzahlen sind Hop Number, `status` ist String.
+Bei `prefix = height_` und `statistics = mean min max stddev` entstehen:
+
+[source,text]
+----
+height_mean, height_min, height_max, height_stddev, height_count, height_status
+----
+
+[cols="2,3",options="header"]
+|===
+|Status |Ergebnis
+|`OK` |Positive Anzahl gültiger Pixel und berechnete Kennzahlen.
+|`EMPTY_GEOMETRY` |Null-/leere Geometrie; count 0, übrige Kennzahlen null.
+|`NO_VALID_PIXELS` |Ausserhalb des Rasters, nur NoData oder kein erfasstes Pixelzentrum; count 0, übrige Kennzahlen null.
+|===
+
+Vorhandene Felder dürfen nicht mit den neuen Feldnamen kollidieren.
+Technische Fehler werden über einen Error Hop behandelt oder stoppen den Transform;
+sie werden niemals als erfolgreiche count-0-Zeile kaschiert.
+Für HTTP-COGs gelten die Range-/Authentifizierungsgrenzen aus <<raster-clip,Raster Clip>>.
+Leser schliessen bei Quellenwechsel, EOF, Fehler und Disposal.
+
+=== Beispiel: Gebäudehöhen
+
+Lesen Sie Gebäudegrundrisse aus einem GeoPackage mit `Geometry output field = geometry`.
+Wählen Sie folgendes Raster und konfigurieren Sie Band 1, Präfix `height_`, Statistiken `mean min max stddev`:
+
+[source,text]
+----
+https://files.geo.so.ch/ch.swisstopo.lidar_2023.ndsm_buildings/aktuell/ch.swisstopo.lidar_2023.ndsm_buildings.tif
+----
+
+Das Raster enthält bereits Gebäudehöhen. Ziehen Sie nicht nochmals das Terrainmodell ab.
+`height_mean` ist die mittlere gültige Rasterhöhe innerhalb des Polygons, keine automatisch ermittelte First-, Trauf- oder baurechtliche Höhe.
+Die Beispieldaten wurden mit 0.25 m, EPSG:2056, Float32 und NoData -9999 beschrieben; eine `aktuell`-URL kann sich ändern.

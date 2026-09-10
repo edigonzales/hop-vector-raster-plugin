@@ -125,17 +125,17 @@ The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDC
 
 ## Current Vector Reader/Writer limitations
 
-- Shapefile and GeoPackage only
-- one input layer at a time
-- output files must not already exist
-- output geometry type is inferred from the first non-null geometry
-- an input where every geometry is null cannot be written yet
-- curved geometries are currently 2D only; curve Z/M ordinates are not supported
-- Shapefile necessarily linearizes curved geometries
-- no reprojection, clipping or other geoprocessing in Reader/Writer
-- no generic DataStore parameter UI yet
+- Reader: Shapefile and GeoPackage, one local layer at a time.
+- Writer: Shapefile, GeoPackage, FlatGeobuf, native spatial Parquet and ArcInfo GENERATE.
+- Shapefile and GeoPackage require new targets; the other writers offer explicit overwrite.
+- Shapefile/FlatGeobuf/Parquet support explicit geometry schemas, including empty/all-NULL streams; AUTO buffers at most 10,000 initial NULL/EMPTY rows.
+- GeoPackage infers its XY schema from the first non-NULL geometry; all-NULL output cannot provide it.
+- Curves are XY only; Shapefile/FlatGeobuf/Parquet linearize them, GENERATE rejects them.
+- Reader/Writer assign CRS but do not reproject or clip. Dedicated Raster Clip and Raster Reproject / Resample transforms handle raster processing.
 
-For raster transforms and the GENERATE format in Vector Writer, see [raster usage](raster-transforms.md) and [GENERATE format decisions](generate-format.md).
+The [German handbook](https://edigonzales.github.io/hop-vector-raster-plugin/) is the central user documentation for all five transforms and format rules.
+Documentation builds use Java 21 independently of Maven; see [Biblios build and preview](biblios/README.md).
+After building the ZIP, `python3 scripts/check-doc-examples.py` with Java 17 executes the documented clip/statistics HPLs on local fixtures.
 
 For upgrades, follow the [migration table](migration.md). Do not leave the old `geotools-vector` folder alongside `vector-raster`; old IDs have no aliases.
 

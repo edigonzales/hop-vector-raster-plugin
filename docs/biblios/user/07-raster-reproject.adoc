@@ -1,0 +1,109 @@
+[[raster-reproject]]
+== Raster Reproject / Resample (GeoTools)
+
+Dieser Transform ändert CRS und/oder Pixelgrösse eines Rasters und verarbeitet *alle Bänder*.
+Eine Eingabezeile erzeugt eine GeoTIFF-Datei. Quelle ist eine lokale GeoTIFF-Datei oder ein öffentliches HTTP/HTTPS-COG.
+Plugin-ID: `SOGIS_RASTER_REPROJECT`.
+
+=== Einstellungen
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Transform name |Von Hop vergeben |Name des Schritts.
+|Raster (local GeoTIFF or public COG URL) |Leer |Quelle; `Raster value is an input field` bezieht sie aus einer Spalte.
+|Raster value is an input field |Aus |Rasteradresse aus der benannten Spalte.
+|Source NoData override (empty: metadata) |Leer |Ersetzt den deklarierten Quell-Sentinel.
+|Target CRS (empty: source CRS) |Leer |EPSG-Code oder Quell-CRS beibehalten.
+|Target CRS is an input field |Aus |Ziel-CRS aus der benannten Spalte.
+|Pixel size X / Y (target CRS units) |Leer |Beide erforderlich, endlich und positiv; über `Pixel sizes are input fields` feldgebunden möglich.
+|Pixel sizes are input fields |Aus |Beide Pixelgrössen aus Eingabespalten.
+|Extent |`AUTO` |Automatische Ausdehnung oder `BOUNDING_BOX` im Ziel-CRS.
+|Minimum X / Y, Maximum X / Y |Leer |Zielbox; gemeinsames Kästchen für Werte aus Eingabefeldern.
+|Bounding box values are input fields |Aus |Vier Boxwerte aus Eingabespalten.
+|Interpolation |`NEAREST` |Alternativ `BILINEAR`.
+|Numeric output type |`AUTO` |Auch `SOURCE`, `FLOAT32`, `FLOAT64`; gilt nur für numerische Raster.
+|Output GeoTIFF |Leer |Zieldatei; `Output path is an input field` bezieht den Pfad aus einer Spalte.
+|Output path is an input field |Aus |Ausgabepfad aus der benannten Spalte.
+|Output NoData (numeric / palette only) |Leer |Ausgabe-Sentinel; sonst Quell-Override, Quellmetadaten, bei Float schliesslich NaN.
+|Overwrite existing file |Aus |Bestehende Datei ausdrücklich ersetzen.
+|Output field prefix |`raster_` |Präfix für Dateipfad und Status.
+|===
+
+=== Zielraster und Ausschnitt
+
+Das Zielraster ist nordorientiert. Zellgrenzen liegen auf ganzzahligen Vielfachen der Pixelgrössen,
+bezogen auf den Ursprung des Ziel-CRS. Die Ausdehnung wird nach aussen gerundet, pro Seite um weniger als ein Pixel.
+Gleiche CRS- und Auflösungseinstellungen erzeugen deckungsgleiche Zellgrenzen.
+Es gibt keine automatische Pixelgrössenwahl und keine Übernahme eines Referenzrasters.
+
+`AUTO` transformiert die tatsächlichen äusseren Pixelkanten der Quelle mit 256 Segmenten pro Kante,
+auch bei gedrehten Quellrastern. Mehrdeutige Grenzen, Longitude-Wraparound, fehlendes CRS und Transformationsfehler werden abgelehnt.
+Ein vollständig disjunkter expliziter Ausschnitt ist ein Fehler. Bei teilweiser Überlappung bleibt die Zielbox vollständig bestehen;
+ausserhalb der Quelle entstehen NoData beziehungsweise transparente Pixel. Ein überlappender NoData-only-Bereich darf erfolgreich geschrieben werden.
+
+=== Numerische Bänder und Interpolation
+
+`NEAREST` wählt den nächsten Quellwert und eignet sich für Klassenwerte.
+`BILINEAR` interpoliert kontinuierliche Werte aus bis zu vier Nachbarn.
+Ungültige Nachbarn werden ausgeschlossen und die Gewichte der gültigen Beiträge neu normiert.
+Ohne gültigen Beitrag entsteht NoData. Das ist keine flächenbasierte Mittelung aller Pixel beim Vergröbern.
+
+`AUTO` erhält bei Nearest den Quelltyp, bei Bilinear entsteht Float64.
+`SOURCE` mit Integer-Werten rundet zum nächsten Integer, bei exakt halben Werten zur geraden Zahl.
+Überlauf bricht ab, statt Werte still auf Typgrenzen zu begrenzen.
+Rohwerte werden interpoliert; bandweises Scale/Offset bleibt erhalten. Reihenfolge und Anzahl numerischer Bänder bleiben unverändert.
+
+NoData, Masken und nichtendliche Werte gehen nicht als Messwerte ein; Null bleibt gültig.
+Der Ausgabe-Sentinel muss genau im Ausgabetyp darstellbar sein.
+Integer-Ausgabe ohne geerbten Sentinel erfordert eine Angabe. Ein gültiger Ergebniswert, der mit dem Sentinel kollidiert, ist ein Fehler.
+Der Ausgabe-TIFF-Sentinel ist gemeinsam; die Gültigkeit der Quellbänder wird unabhängig beurteilt.
+
+=== Farbe, Palette und Alpha
+
+Die TIFF-Farbinterpretation entscheidet, ob Daten als Farben oder Messwerte gelten.
+Drei Bänder allein bedeuten nicht RGB. Numerische Typoptionen verändern keine Farbraster.
+RGB und Grau mit Alpha behalten Byte/UInt16 beziehungsweise ihren Float-Typ; Float-Farbe und Float-Alpha verwenden 0–1.
+RGB-Ausgabe enthält ein nicht vormultipliziertes Alphaband, Grau mit Alpha bleibt zweibandig.
+
+* Nearest erhält Palettenindizes und die vollständige 16-Bit-Farbtabelle. Die Tabelle kann auf die Byte-/UInt16-Indexkapazität aufgefüllt werden.
+  Für zusätzliche ungültige Zellen muss ein deklarierter oder expliziter unbenutzter NoData-Index vorhanden sein.
+  Ein gültig verwendeter Index wird nicht für Transparenz umgewidmet.
+* Bilinear löst Paletten zu RGBA mit 16 Bit pro Kanal auf.
+* Farbwerte werden mit Alpha gewichtet interpoliert. Transparente Pixel liefern keine fremden Farbbeiträge und erzeugen dadurch keine Farbsäume.
+  Vormultipliziertes Quell-Alpha wird zur unassoziierten Ausgabe zurückgerechnet.
+* Ein RGB-Quell-NoData-Sentinel macht einen Pixel ungültig, wenn alle Farbkanäle diesen Wert besitzen;
+  ein einzelner Null-Kanal bleibt gültig. Nichtstandardisierte Farbräume oder zusätzliche Kanalanordnungen werden abgelehnt.
+
+Die Interpolation erfolgt in der gespeicherten Farbkodierung, ohne zusätzliche Farbraumkonvertierung.
+
+=== Ausgabe, Ressourcen und Beispiel
+
+Die Eingabezeile erhält `raster_output_file` und `raster_status = OK` beziehungsweise das konfigurierte Präfix.
+Namenskollisionen sind Fehler. Quelle und Ziel dürfen auch über Dateisystemaliasse nicht dieselbe Datei sein.
+Ausgabeformat: DEFLATE, 512 × 512 Tiles, ab geschätzten 2 GiB Rohdaten BigTIFF, keine COG-Zusage.
+Temporäre Nachbardatei und anschliessende Veröffentlichung schützen bestehende Ziele bei Fehlern und Abbruch.
+Ein konfigurierter Error Hop erhält fehlerhafte Zeilen; sonst stoppt der Transform.
+
+Quelle und Leser werden wiederverwendet, solange die Quelle gleich bleibt.
+Quellcache: höchstens 64 MiB pro Kopie; zusätzliche Ausgabe-/Operationscaches: 16/8 MiB.
+Quellblöcke werden auf höchstens 262144 Pixel begrenzt und bei starker Vergröberung weiter unterteilt.
+Diese Cache-Limits sind keine Gesamtgrenze für den JVM-Heap. Gelesen wird in Originalauflösung ohne Overviews.
+
+[source,text]
+----
+Generate Rows (Limit = 1) -> Raster Reproject / Resample (GeoTools)
+Raster: ${INPUT_RASTER}
+Target CRS: EPSG:2056
+Pixel size X / Y: 1 / 1
+Extent: BOUNDING_BOX
+Minimum X / Y: 2607400 / 1228400
+Maximum X / Y: 2607500 / 1228500
+Interpolation: BILINEAR
+Numeric output type: AUTO
+Output GeoTIFF: ${OUTPUT_DIR}/terrain-1m.tif
+----
+
+Bei passender Quelle entsteht ein 100 × 100 Pixel grosses Float64-Raster.
+Für eine reine Auflösungsänderung lassen Sie das Ziel-CRS leer.
+Bicubic, Average und Polygonmasken gehören nicht zu diesem Transform.

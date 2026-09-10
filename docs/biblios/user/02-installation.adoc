@@ -1,0 +1,63 @@
+[[installation]]
+== Installation und Upgrade
+
+=== Voraussetzungen
+
+* Java 17 oder neuer; diese Plugin-Version wird gegen Apache Hop 2.17.0 gebaut.
+* Das separate https://github.com/edigonzales/hop-geometry-type-plugin[Geometry-Type-Plugin],
+  mindestens `0.2.0-SNAPSHOT` mit Z/M-Serialisierungsupdate oder ein kompatibler neuerer Build.
+* Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
+
+Das Plugin-ZIP enthält seine GeoTools- und Rasterbibliotheken sowie SQLite JDBC.
+Geometry-Type und JTS sind bewusst nicht doppelt enthalten: Beide Plugins teilen die Classloader-Gruppe `sogeo-geometry`.
+Es werden weder GDAL noch eine Hadoop-Installation benötigt.
+
+=== Release installieren
+
+. Beenden Sie Hop vollständig.
+. Installieren beziehungsweise aktualisieren Sie das Geometry-Type-Plugin gemäss dessen Anleitung.
+. Laden Sie aus {repo}/releases[GitHub Releases] die Datei `hop-vector-raster-plugin-<version>.zip` herunter.
+. Entfernen Sie bei einem Upgrade das bisherige Verzeichnis `plugins/transforms/vector-raster`.
+  Entfernen Sie auch das frühere Verzeichnis `plugins/transforms/geotools-vector`, falls vorhanden.
+. Entpacken Sie das ZIP direkt im Hop-Hauptverzeichnis. Danach muss `plugins/transforms/vector-raster/` vorhanden sein.
+. Starten Sie Hop neu und suchen Sie unter *Geospatial* nach allen fünf Transforms.
+
+[source,text]
+----
+HOP_HOME/
+  plugins/
+    misc/hop-geometry-type/
+    transforms/vector-raster/
+----
+
+Kopieren Sie nicht zusätzlich einzelne JTS- oder Geometry-JARs in andere Plugin-Verzeichnisse.
+Fehlende Transforms oder Fehler beim Laden von Geometry deuten oft auf eine unvollständige oder doppelte Installation hin.
+
+[[migration]]
+=== Bestehende Pipelines migrieren
+
+Frühere Transform-IDs haben keine Kompatibilitätsaliasse. Sichern Sie alte Pipelines vor dem Anpassen.
+
+[cols="2,2",options="header"]
+|===
+|Frühere ID |Aktuelle ID
+|`GEOTOOLS_VECTOR_READER` |`SOGIS_VECTOR_READER`
+|`GEOTOOLS_VECTOR_WRITER` |`SOGIS_VECTOR_WRITER`
+|`GEOTOOLS_RASTER_CLIP` |`SOGIS_RASTER_CLIP`
+|`GEOTOOLS_RASTER_ZONAL_STATS` |`SOGIS_RASTER_ZONAL_STATS`
+|`ARCINFO_GENERATE_WRITER` |`SOGIS_VECTOR_WRITER`, Format `ARCINFO_GENERATE`
+|===
+
+Auch die zwischenzeitlichen `SOGEO_*`-IDs sind durch ihre `SOGIS_*`-Entsprechung zu ersetzen.
+Der neue Reproject-Transform verwendet `SOGIS_RASTER_REPROJECT`; dafür gibt es keine alte ID.
+
+Bei GENERATE heisst die frühere Einstellung `output` neu `fileName`.
+Geometrietyp, Dimension, IDs, Dezimalstellen und sonstige GENERATE-Einstellungen behalten ihre Bedeutung.
+Das Repository heisst heute `hop-vector-raster-plugin`; ein lokaler Checkout darf weiterhin `hop-geotools-plugin` heissen.
+Die vollständige Zuordnung alter Modul- und Distributionsnamen steht in den {repo}/blob/main/docs/migration.md[Migrationsnotizen].
+
+=== Für Entwickler
+
+Build und lokale Installation sind in der {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung] beschrieben.
+Das Skript `scripts/dev-sync-hop-plugin.sh` baut und installiert beide Plugins und startet Hop GUI neu.
+Für die normale Benutzung genügt die Installation der Release-ZIPs.

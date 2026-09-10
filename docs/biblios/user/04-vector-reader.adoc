@@ -1,0 +1,56 @@
+[[vector-reader]]
+== Vector Reader
+
+*Vector Reader* liest einen Layer aus einer lokalen Shapefile oder GeoPackage-Datei.
+Er benötigt keinen vorgelagerten Generate-Rows-Transform und erzeugt für jedes Feature eine Hop-Zeile.
+Die Plugin-ID lautet `SOGIS_VECTOR_READER`.
+
+=== Einstellungen und Vorschau
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Transform name |Von Hop vergeben |Name dieses Pipeline-Schritts.
+|Format |`AUTO` |Erkennt `.shp` oder `.gpkg`; alternativ `SHAPEFILE`/`GEOPACKAGE` wählen.
+|Vector file |Leer |Lokale Eingabedatei; Hop-Variablen sind möglich.
+|Layer name (optional) |Leer |Ein Layer pro Reader. Ohne Angabe wird der erste verfügbare Layer verwendet.
+|Geometry output field |Leer |Leer übernimmt den Quellnamen der Geometriespalte; sonst wird nur das Hop-Ausgabefeld umbenannt.
+|DBF encoding (empty: auto) |Leer |Bei Shapefile explizite DBF-Kodierung; sonst automatische Ermittlung.
+|Date timezone |`UTC` |Zeitzone für Datumsumwandlungen des Formatadapters.
+|Assign CRS (EPSG or WKT) |Leer |EPSG oder WKT zuweisen; keine Koordinatentransformation.
+|===
+
+Die Layerliste wird aus der ausgewählten Datei gelesen. Die schreibgeschützte Schemapreview zeigt Attribute,
+Geometriespalte, Geometrietyp, Dimension und CRS, soweit verfügbar.
+Ändern Sie Layer oder Datei, kontrollieren Sie die Vorschau vor dem Ausführen erneut.
+Eine noch nicht auflösbare Variable oder ein Probe-Fehler wird im Dialog angezeigt;
+das tatsächliche Lesen kann erst mit einem gültigen Pfad gelingen.
+
+=== Ausgabe und Fehler
+
+Die Ausgabe enthält die typisierten Attribute und die Geometry-Spalte.
+GeoPackage-Geometrie steht am Ende der Zeile. Ein Geometry-Ausgabename darf nicht mit einem Attribut kollidieren.
+Die Quelldatei bleibt unverändert; der Reader legt keine räumlichen Indizes an.
+
+Shapefile-Charset-Reihenfolge: explizite Angabe, CPG-Datei, erkannte DBF-Codepage,
+sonst ISO-8859-1 mit Warnung. Fehlende PRJ bedeutet unbekanntes CRS mit Warnung;
+tragen Sie nur dann einen Override ein, wenn Sie das tatsächliche Koordinatensystem kennen.
+Fehlerhafte Kodierung, widersprüchliche Dateikomponenten oder ungültige Geometrieheader führen zum Fehler.
+Vektor-I/O meldet solche technischen Fehler als fehlgeschlagenen Transform; die Raster-Error-Hop-Regeln gelten hier nicht automatisch.
+
+Die vollständigen Regeln für Attribute, Kurven, NULL/EMPTY und Dimensionen stehen unter <<formate,Formate>>.
+FlatGeobuf, Parquet, GENERATE und Rasterdateien sind keine Reader-Eingabeformate.
+
+=== Beispiel: GeoPackage-Layer auswählen
+
+[source,text]
+----
+Format: GEOPACKAGE
+Vector file: ${PROJECT_HOME}/buildings.gpkg
+Layer name (optional): buildings
+Geometry output field: geometry
+Assign CRS (EPSG or WKT): (leer)
+----
+
+Verbinden Sie den Reader mit einem Vorschau- oder Verarbeitungs-Transform.
+Überprüfen Sie, dass `geometry` ein echtes Geometry-Feld ist und seine SRID zum Layer passt.

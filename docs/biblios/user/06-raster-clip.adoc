@@ -1,0 +1,76 @@
+[[raster-clip]]
+== Raster Clip (GeoTools)
+
+Dieser Transform schneidet *ein ausgewähltes Band* eines Rasters aus.
+Er erhält Quell-CRS, Quellpixelraster, Rohdatentyp, Scale/Offset und NoData.
+Er reprojiziert keine Rasterpixel und ändert die Auflösung nicht. Plugin-ID: `SOGIS_RASTER_CLIP`.
+
+=== Eingabe und Einstellungen
+
+Jede Eingabezeile beschreibt einen Clip. Quelle ist eine lokale GeoTIFF-Datei oder eine öffentliche HTTP/HTTPS-COG-URL.
+Der entfernte Server muss Byte-Range-Anfragen mit HTTP 206 beantworten. Ein vollständiger Download als HTTP-200-Fallback wird abgelehnt.
+Zugangsdaten und eigene HTTP-Header werden nicht unterstützt.
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Transform name |Von Hop vergeben |Name des Schritts.
+|Input raster |Leer |Dateipfad oder öffentliche COG-URL.
+|Raster address from input field |Aus |Quelle aus der benannten Eingabespalte beziehen.
+|Clip method |`POLYGON` |Polygonmaske oder `BOUNDING_BOX`.
+|Geometry field |`geometry` |Geometry-Spalte für `POLYGON`.
+|Explicit geometry CRS (empty: geometry SRID) |Leer |CRS der Eingabegeometrie beziehungsweise Box; bei Box erforderlich.
+|Band (1 based) |`1` |Bandnummer beginnt im Dialog bei 1.
+|NoData override (empty: raster metadata) |Leer |Ersetzt den deklarierten Sentinel und wird für die Ausgabe verwendet.
+|Minimum X / Y, Maximum X / Y |Leer |Vier endliche Boxkoordinaten; Minimum jeweils kleiner als Maximum.
+|Bounding box values from input fields |Aus |Boxwerte aus Spalten statt Konstanten beziehen.
+|Output GeoTIFF |Leer |Lokaler Ausgabepfad.
+|Output path from input field |Aus |Ausgabepfad aus einer Spalte beziehen.
+|Overwrite existing file |Aus |Vorhandene Zieldatei nur ausdrücklich ersetzen.
+|Output field prefix |`raster_` |Präfix der angehängten Ergebnisfelder.
+|===
+
+Die Box wird vor dem Zuschnitt in das Quell-CRS transformiert; ihre Kanten werden dafür verdichtet.
+Ausgeschnitten wird ihre resultierende Hüllbox auf dem Quellpixelraster.
+Bei Polygonen entscheidet das Pixelzentrum: Es muss im Polygon oder genau auf dessen Grenze liegen.
+Löcher und MultiPolygone werden berücksichtigt. Ungültige oder gekrümmte Geometrien müssen vorher verarbeitet werden.
+
+Ein teilweise überlappender Ausschnitt wird auf die Überlappung beschränkt. Leere oder vollständig ausserhalb liegende Regionen sind Fehler.
+Integer-Raster ohne NoData benötigen einen genau darstellbaren Sentinel; Float-Raster können NaN verwenden.
+Für vollständige RGB-/Mehrband-Ausgabe verwenden Sie <<raster-reproject,Reproject / Resample>> mit passender Zielrasterdefinition.
+
+=== Ausgabe und Fehler
+
+Die unveränderten Eingabefelder werden um `<prefix>output_file` und `<prefix>status` ergänzt.
+Standardnamen: `raster_output_file`, `raster_status`; Erfolg ist `OK`.
+Ein bereits vorhandenes Feld mit demselben Namen ist ein Fehler.
+
+Die Datei ist DEFLATE-komprimiert und in 512 × 512 Pixel gekachelt; grössenabhängig wird BigTIFF verwendet.
+Das Ergebnis ist GeoTIFF, *keine zugesicherte COG-Datei*.
+Elternverzeichnis muss existieren; Eingabe und Ausgabe müssen verschieden sein.
+Eindeutige Dateinamen pro Zeile/Kopie vermeiden Konflikte. Geschrieben wird zuerst in eine temporäre Nachbardatei.
+Fehler und Abbruch erhalten eine bestehende Zieldatei und entfernen die temporäre Datei.
+
+Mit einem Hop Error Hop wird die fehlerhafte Eingabezeile dorthin geleitet; ohne Error Hop stoppt der Transform.
+Ein technischer Fehler wird nicht als erfolgreicher leerer Clip ausgegeben.
+
+=== Beispiel: 100-Meter-Ausschnitt aus einem externen COG
+
+. Fügen Sie *Generate Rows* mit `Limit = 1` vor Raster Clip ein.
+. Wählen Sie `Clip method = BOUNDING_BOX` und Band `1`.
+. Verwenden Sie folgende Werte und einen neuen lokalen Ausgabepfad:
+
+[cols="2,4",options="header"]
+|===
+|Einstellung |Wert
+|Input raster |`https://files.geo.so.ch/ch.swisstopo.swissalti3d_2025.dtm/aktuell/ch.swisstopo.swissalti3d_2025.dtm.tif`
+|Minimum X / Y |`2607400` / `1228400`
+|Maximum X / Y |`2607500` / `1228500`
+|Explicit geometry CRS |`EPSG:2056`
+|Output GeoTIFF |`${OUTPUT_DIR}/solothurn-clip.tif`
+|===
+
+Das externe Beispiel wurde für einen DTM mit 0.5 m Pixelgrösse und NoData -9999 gewählt.
+Bei unverändertem Datensatz ergibt diese Box 200 × 200 Pixel. `aktuell`-URLs können sich ändern;
+überprüfen Sie die Quelldaten. Die Pipeline lädt benötigte Bereiche per HTTP-Range und nicht die gesamte Datei.
+Eine parametrisierte Vorlage finden Sie unter <<beispiele,Beispiele>>.

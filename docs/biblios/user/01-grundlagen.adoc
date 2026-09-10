@@ -1,0 +1,73 @@
+[[grundlagen]]
+== Einführung und Grundlagen
+
+Das Plugin verbindet Vektordateien und Rasterdaten mit Apache-Hop-Pipelines.
+Sie finden seine fünf Transforms in der Kategorie *Geospatial*.
+Eine GDAL-/OGR-Installation ist nicht erforderlich. GeoTools 35.1 übernimmt Rasterverarbeitung und CRS-Dienste;
+Vektorformate verwenden eigene Java-Adapter, GeoPackage zusätzlich SQLite JDBC.
+
+[cols="2,3",options="header"]
+|===
+|Aufgabe |Transform
+|Vektordatei lesen |<<vector-reader,Vector Reader>>
+|Vektordatei schreiben |<<vector-writer,Vector Writer>>
+|Raster ausschneiden, Quellauflösung erhalten |<<raster-clip,Raster Clip (GeoTools)>>
+|Raster-CRS oder Pixelgrösse ändern |<<raster-reproject,Raster Reproject / Resample (GeoTools)>>
+|Rasterwerte innerhalb von Polygonen auswerten |<<raster-statistik,Raster Zonal Statistics (GeoTools)>>
+|===
+
+=== Wie Daten durch die Pipeline fliessen
+
+Eine Hop-Zeile enthält benannte, typisierte Felder, beispielsweise eine Nummer, einen Namen und eine Geometrie.
+Der Vector Reader erzeugt pro Feature eine Zeile. Die Geometrie liegt als gemeinsamer Hop-Typ `Geometry` vor,
+nicht als WKT-Text. Das separate Geometry-Type-Plugin stellt diesen Typ bereit.
+
+Der Vector Writer ist ein Senken-Transform: Er schreibt die eingehenden Zeilen und gibt keine Ergebniszeilen aus.
+Raster Clip und Reproject verarbeiten dagegen *pro Eingabezeile einen Auftrag* und hängen Dateipfad und Status an.
+Zonal Statistics ergänzt pro Polygonzeile die gewünschten Kennzahlen.
+Rasterpixel werden nicht einzeln als Hop-Zeilen transportiert.
+
+[TIP]
+====
+Ein konstanter Rasterpfad allein startet noch keinen Clip.
+Für einen einzelnen Auftrag schalten Sie *Generate Rows* mit `Limit = 1` davor.
+====
+
+=== Konstante, Variable oder Feldname
+
+`${PROJECT_HOME}/data/terrain.tif` ist ein Beispiel für einen konstanten Pfad mit Hop-Variable.
+Die Variable wird beim Ausführen aufgelöst.
+Ein Eingabefeld, etwa `raster_url`, wird bei den Raster-Transforms über das zugehörige Kontrollkästchen ausgewählt.
+Ohne dieses Kästchen wird der Text als konstanter Wert interpretiert.
+
+Bei Clip können Quelle, Ausgabepfad und Bounding-Box-Werte aus Feldern stammen.
+Bei Reproject sind zusätzlich Ziel-CRS und Pixelgrössen feldgebunden möglich.
+Bei Zonal Statistics kann die Rasterquelle aus einem Feld stammen; das Geometriefeld bezeichnet immer eine Spalte.
+NoData- und Präfix-Einstellungen akzeptieren Hop-Variablen, keine impliziten Feldreferenzen.
+Vector Reader/Writer verwenden konfigurierte Dateipfade mit Variablen, keine Dateiauswahl pro Eingabezeile.
+
+=== Koordinatensystem und Zellraster
+
+Ein CRS beschreibt, wie Koordinaten zu interpretieren sind. `EPSG:2056` bezeichnet Schweizer LV95-Koordinaten in Metern.
+`EPSG:4326` verwendet geografische Winkel; Raster-Pixelgrössen werden dort in Grad angegeben.
+Die Raster-Transforms verwenden XY beziehungsweise Longitude/Latitude.
+
+[IMPORTANT]
+====
+Die CRS-Einstellung des Vector Reader/Writer *weist ein CRS zu*. Sie verändert keine Koordinaten.
+Ein Datensatz wird durch Eintragen von `EPSG:4326` daher nicht aus LV95 nach WGS84 umgerechnet.
+Raster Reproject / Resample verändert dagegen tatsächlich Rastergeoreferenzierung und Pixelwerte.
+====
+
+Eine Geometry kann eine numerische SRID tragen. Clip und Zonal Statistics verwenden eine explizite Geometrie-CRS-Angabe,
+falls vorhanden; sonst benötigen sie eine SRID ungleich null. Die Eingabegeometrie bleibt unverändert.
+
+=== Gültige Werte und NoData
+
+NoData kennzeichnet fehlende Messwerte und ist nicht mit nullwertiger Höhe gleichzusetzen: *Null ist gültig*,
+sofern sie nicht ausdrücklich als NoData deklariert wurde.
+Maskierte und nichtendliche Werte werden bei der Rasterauswertung ausgeschlossen.
+Ein NoData-Override ersetzt den deklarierten Sentinel. Details zu Interpolation und Ausgabe stehen in den Raster-Kapiteln.
+
+Rohwerte können eine bandweise Skalierung besitzen: `physikalischer Wert = Rohwert × scale + offset`.
+Statistiken verwenden physikalische Werte. Clip und Reproject schreiben Rohwerte und erhalten Scale/Offset.

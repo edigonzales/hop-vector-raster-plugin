@@ -37,9 +37,9 @@ GeoTIFF clips preserve the selected band's raw data type and scale/offset, geore
 
 ## Vector adapter boundary
 
-Common transforms use Hop row metadata and the shared Geometry type. They never use `DataStore` or `SimpleFeature`; those remain only in independent test references. GeoPackage requests CRS definitions through `CrsDefinitionResolver`, whose GeoTools implementation stays in the support module. Native SQLite libraries remain intentionally bundled in one cross-platform ZIP. Shapefile now uses native Java with Z/M and DBF encoding support. FlatGeobuf and Parquet remain separate future work packages.
+Common transforms use Hop row metadata and the shared Geometry type. They never use `DataStore` or `SimpleFeature`; those remain only in independent test references. GeoPackage requests CRS definitions through `CrsDefinitionResolver`, whose GeoTools implementation stays in the support module. Native SQLite libraries remain intentionally bundled in one cross-platform ZIP. Shapefile now uses native Java with Z/M and DBF encoding support. FlatGeobuf and native spatial Parquet are implemented as separate write-only format modules behind the common Vector Writer.
 
-Writers publish their output only after successful EOF. Shapefile stages its sidecar bundle and removes files it published if a move fails; GeoPackage stages one transactional database; GENERATE retains its existing temporary-file lifecycle. Reader/writer instances belong to one transform copy. No append/update or spatial-index feature is added to GeoPackage. Its current geometry contract is XY, including the existing curve types; unsupported Z/M is rejected rather than reduced.
+Writers publish their output only after successful EOF. Shapefile stages its sidecar bundle and removes files it published if a move fails; GeoPackage stages one transactional database; GENERATE retains its existing temporary-file lifecycle; FlatGeobuf and Parquet publish staged files with atomic rename or hard links. Reader/writer instances belong to one transform copy. No append/update or spatial-index feature is added to GeoPackage. Its current geometry contract is XY, including the existing curve types; unsupported Z/M is rejected rather than reduced.
 
 ## GENERATE
 

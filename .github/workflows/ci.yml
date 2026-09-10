@@ -55,3 +55,7 @@ jobs:
       - name: Check cloud-format output from distribution
         working-directory: hop-vector-raster-plugin
         run: python scripts/check-cloud-output.py
+
+      - name: Execute documentation example pipelines on local fixtures
+        working-directory: hop-vector-raster-plugin
+        run: python scripts/check-doc-examples.py

@@ -1,0 +1,84 @@
+<pipeline>
+  <info>
+    <name>Zonal statistics from polygon features</name>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+      <parameter>
+        <name>INPUT_VECTOR</name>
+        <default_value />
+        <description>Local polygon Shapefile or GeoPackage</description>
+      </parameter>
+      <parameter>
+        <name>INPUT_LAYER</name>
+        <default_value />
+        <description>Optional layer name</description>
+      </parameter>
+      <parameter>
+        <name>INPUT_RASTER</name>
+        <default_value />
+        <description>Local GeoTIFF or public HTTP COG</description>
+      </parameter>
+      <parameter>
+        <name>GEOMETRY_CRS</name>
+        <default_value />
+        <description>Empty uses Geometry SRID</description>
+      </parameter>
+      <parameter>
+        <name>NODATA</name>
+        <default_value />
+        <description>Optional raw NoData override</description>
+      </parameter>
+    </parameters>
+  </info>
+  <order>
+    <hop>
+      <from>Read vector</from>
+      <to>Zonal statistics</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>Read vector</name>
+    <type>SOGIS_VECTOR_READER</type>
+    <description />
+    <distribute>Y</distribute>
+    <custom_distribution />
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name />
+    </partitioning>
+    <charset />
+    <crsOverride />
+    <fileName>${INPUT_VECTOR}</fileName>
+    <format>AUTO</format>
+    <geometryFieldName>geometry</geometryFieldName>
+    <layerName>${INPUT_LAYER}</layerName>
+    <timezone>UTC</timezone>
+    <attributes />
+    <GUI>
+      <xloc>150</xloc>
+      <yloc>150</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Zonal statistics</name>
+    <type>SOGIS_RASTER_ZONAL_STATS</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <source>${INPUT_RASTER}</source>
+    <sourceField>N</sourceField>
+    <geometryField>geometry</geometryField>
+    <explicitCrs>${GEOMETRY_CRS}</explicitCrs>
+    <band>1</band>
+    <noData>${NODATA}</noData>
+    <statistics>mean min max</statistics>
+    <prefix>raster_</prefix>
+    <GUI>
+      <xloc>450</xloc>
+      <yloc>150</yloc>
+    </GUI>
+  </transform>
+  <transform_error_handling />
+  <attributes />
+</pipeline>

@@ -1,0 +1,103 @@
+[[vector-writer]]
+== Vector Writer
+
+*Vector Writer* schreibt eingehende Hop-Zeilen in eine lokale Vektordatei.
+Er benötigt eine ausgewählte Geometry-Spalte und passende Attributmetadaten.
+Er ist eine Senke ohne nachfolgende Ergebniszeilen. Plugin-ID: `SOGIS_VECTOR_WRITER`.
+
+=== Gemeinsame Einstellungen
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Transform name |Von Hop vergeben |Name dieses Schritts.
+|Format |`AUTO` |`.shp`, `.gpkg`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
+|Layer (optional) |Leer |Layername; ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung. Für GENERATE ohne Bedeutung.
+|Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren.
+|Geometry field |`geometry` |Geometry-Spalte aus den Eingabezeilen.
+|Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie bei Shapefile/FlatGeobuf/Parquet.
+|Layer dimension |`AUTO` |`XY`, `XYZ`, `XYM`, `XYZM` oder Ableitung; für die genannten Formate.
+|DBF encoding (empty: UTF-8) |Leer |Bei Shapefile-Ausgabe standardmässig UTF-8 mit CPG-Datei.
+|Date timezone |`UTC` |Zeitzone für Datumsumwandlungen.
+|Assign CRS (EPSG or WKT) |Leer |EPSG/WKT zuweisen, keine Reprojektion; bekannte widersprüchliche SRIDs werden abgelehnt.
+|Overwrite existing file |Aus |Für GENERATE, FlatGeobuf und Parquet verfügbar. Shapefile und GeoPackage verlangen neue Dateien.
+|===
+
+Für leere oder ausschliesslich NULL-haltige Shapefile-/FlatGeobuf-/Parquet-Ausgaben geben Sie Typ und Dimension explizit an.
+Bei `AUTO` werden maximal 10'000 anfängliche NULL/EMPTY-Zeilen bis zur Schemaableitung gepuffert.
+Alle weiteren Geometrien müssen zum festgelegten Schema passen. GeoPackage hat eine eigene XY-Inferenz und kann reine NULL-Streams nicht ableiten.
+
+Wählen oder entfernen Sie Attribute vor dem Writer mit üblichen Hop-Transforms.
+Eine zweite Geometry-Spalte und komplexe Werte müssen vor der Ausgabe auf ein unterstütztes Format abgebildet werden.
+
+=== Shapefile: DBF-Schema
+
+*Get fields* übernimmt die eingehenden Felder in die DBF-Zuordnung.
+Die Tabelle *DBF fields (double-click to edit)* bietet Quellname, Zielname, Bytebreite und Dezimalstellen.
+`-1` verwendet die abgeleiteten Einstellungen. *Preview DBF schema* zeigt die tatsächlich resultierenden Namen und Breiten.
+*Remove selected mapping* entfernt die explizite Zuordnung; das Attribut wird dadurch wieder automatisch konfiguriert, nicht aus der Ausgabe entfernt.
+
+Namenskürzung, Zeichenersetzung, Textkürzung, Rundung und Dimensionsregeln sind unter <<shapefile,Shapefile>> erklärt.
+
+=== FlatGeobuf
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Spatial index (reorders features) |Ein |Erstellt einen räumlichen Index und sortiert Features um.
+|Skip NULL/EMPTY geometries with warning |Aus |Bei indizierter Ausgabe fehlende Geometrien überspringen statt abbrechen.
+|===
+
+Ohne Index bleibt die Eingabereihenfolge erhalten. Die <<flatgeobuf,Formatbeschreibung>> erläutert Attribute und Speicher-/Platzbedarf.
+
+=== Parquet
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Logical geometry type |`GEOMETRY` |Planare Geometrie oder `GEOGRAPHY` für geografische Koordinaten.
+|Geography interpolation |`SPHERICAL` |Auch `VINCENTY`, `THOMAS`, `ANDOYER`, `KARNEY`; beschreibt Kanten, transformiert keine Koordinaten.
+|Compression |`GZIP` |Alternativ `UNCOMPRESSED`.
+|Row group size (bytes) |`134217728` |128 MiB Zielgrösse, keine harte Heap-Grenze.
+|===
+
+Es entsteht <<parquet,natives räumliches Parquet>>, kein GeoParquet-Metadatendokument.
+
+=== ArcInfo GENERATE
+
+[cols="2,1,4",options="header"]
+|===
+|Einstellung |Standard |Bedeutung
+|Geometry type |`LINE` |`POINT`, `LINE` oder `POLYGON`.
+|Dimension |`XY` |Alternativ `XYZ`; XYM ist kein XYZ.
+|ID field (empty: sequential IDs) |Leer |Hop-Integer-Feld oder fortlaufende IDs.
+|Sequential start ID |`1` |Beginn automatisch vergebener IDs.
+|Discard extra Z/M ordinates |Aus |Zusätzliche Ordinaten nur ausdrücklich verwerfen.
+|Decimal places (-1: preserve precision, 0–15: fixed) |`-1` |Double-Präzision erhalten; `0–15` rundet HALF_UP auf feste Dezimalstellen.
+|Comma delimiter (default: space) |Aus |Komma statt Leerzeichen zwischen Werten.
+|Skip null / empty geometries |Aus |Fehlende Geometrien mit protokollierter Anzahl überspringen.
+|===
+
+Nur einfache Point-, LineString- und Polygon-Geometrien ohne Löcher werden akzeptiert.
+Die sechs Ausgabedialekte und Einschränkungen stehen unter <<generate,GENERATE>>.
+
+=== Abschluss, Fehler und Beispiel
+
+Verwenden Sie einen eindeutigen Zielpfad pro Writer/Kopie. Die Ausgabe wird erst nach erfolgreichem EOF veröffentlicht.
+Ein Abbruch soll keine teilweise geschriebene Zieldatei hinterlassen; Details unterscheiden sich nach Format.
+Fehler bei Schema, Geometrie, CRS, Kodierung oder Dateikonflikten stoppen den Writer.
+
+[source,text]
+----
+Vector Reader -> Vector Writer
+Output file: ${PROJECT_HOME}/parcels.fgb
+Format: FLATGEOBUF
+Geometry field: geometry
+Layer geometry type: MULTIPOLYGON
+Layer dimension: XY
+Spatial index (reorders features): aktiviert
+Overwrite existing file: deaktiviert
+----
+
+Ein explizites Multipart-Schema akzeptiert auch die entsprechende einfache Geometrie.
+Für dieses Beispiel müssen Quelle und Ziel dasselbe CRS besitzen; der Writer rechnet Koordinaten nicht um.

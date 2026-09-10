@@ -1,0 +1,190 @@
+[[formate]]
+== Formatübersicht
+
+[cols="2,1,1,3,3",options="header"]
+|===
+|Format |Lesen |Schreiben |Dimensionen |Besonderheiten
+|Shapefile |Ja |Ja |XY, XYZ, XYM, XYZM |Mehrere Dateien; DBF-Grenzen; Kurven werden linearisiert.
+|GeoPackage (Vektor) |Ja |Ja |XY |Ein Layer pro Reader/Writer; unterstützt ausgewählte Kurventypen.
+|FlatGeobuf |Nein |Ja |XY, XYZ, XYM, XYZM |Optionaler räumlicher Index; sortiert Features um.
+|Native spatial Parquet |Nein |Ja |XY, XYZ, XYM, XYZM |GEOMETRY/GEOGRAPHY; kein GeoParquet-`geo`-Metadatendokument.
+|ArcInfo GENERATE |Nein |Ja |XY, XYZ |Homogene einfache Geometrien, keine beliebigen Attribute.
+|GeoTIFF / HTTP-COG |Raster-Transforms |GeoTIFF |Rasterbänder |Ausgabe ist nicht zwingend COG; keine GeoPackage-Rasterkacheln.
+|===
+
+Vector Reader/Writer verwenden lokale Dateien. HTTP-COGs gehören ausschliesslich zu den Raster-Transforms.
+Ein unbekanntes CRS darf nicht als WGS84 geraten werden. CRS-Zuweisung verändert niemals Koordinaten.
+
+[[shapefile]]
+=== Shapefile
+
+Unterstützt werden Point, MultiPoint, PolyLine und Polygon einschliesslich Multipart und Löchern.
+MultiPatch und heterogene GeometryCollections werden abgelehnt. Kurven werden mit der vorhandenen
+linearen Darstellung des Geometry-Typs geschrieben; Kurven mit Z/M sind nicht unterstützt.
+Expliziter Geometrietyp und explizite Dimension erlauben auch leere und ausschliesslich NULL-haltige Ausgaben.
+Bei AUTO bestimmt die erste nichtleere Geometrie das Schema; höchstens 10'000 anfängliche NULL/EMPTY-Zeilen werden gepuffert.
+
+Z muss bei XYZ/XYZM endlich vorhanden sein. Fehlendes M wird als Esri-NoData kleiner als -1e38 gespeichert.
+Z-Shape-Header dürfen einen optionalen M-Teil besitzen. NULL und EMPTY werden beide Null-Shape;
+bei EMPTY wird der Informationsverlust protokolliert. Zusätzliche Dimensionen werden nicht still entfernt.
+
+Ein fehlendes PRJ bedeutet unbekanntes CRS mit Warnung. EPSG/WKT weist ein CRS zu;
+widersprüchliche bekannte SRIDs werden zurückgewiesen. Eine SHX ist beim Lesen optional;
+vorhandene Komponenten und Offsets werden geprüft. Als gelöscht markierte DBF-Zeilen werden übersprungen.
+
+Die Lesekodierung folgt expliziter Einstellung, CPG, DBF-Codepage, dann ISO-8859-1 mit Warnung.
+Ungültige Bytefolgen führen zum Fehler. Der Writer verwendet standardmässig UTF-8 und schreibt eine CPG.
+Nicht darstellbare Zeichen und Kürzungen werden gemeldet; Texte werden an gültigen Zeichengrenzen auf die Bytebreite gekürzt.
+DBF-Feldnamen sind ASCII, maximal zehn Zeichen; Kollisionen erhalten stabile Suffixe.
+
+[cols="2,4",options="header"]
+|===
+|Attribut |Verhalten
+|String |Standardbreite maximal 254 Byte; explizite DBF-Zuordnung möglich.
+|Integer |Standardbreite 20; Überlauf des ganzzahligen Anteils ist ein Fehler.
+|Number / BigNumber |Standardbreite 33, Skala 15; HALF_UP-Rundung mit Warnung. BigDecimal wird nicht über Double geführt.
+|Dezimalwerte beim Lesen |Hop BigNumber; ganzzahlige Felder bis Breite 20 werden Hop Integer.
+|Date / Timestamp |DBF enthält nur das Datum; verlorene Uhrzeit wird gemeldet. Date timezone beachten.
+|NULL |Leere Zahlen-, Datums- und logische Felder ergeben NULL; leere Zeichenfelder ergeben einen leeren String.
+|Binary / komplexe Typen |Vorher in unterstützte Attribute umwandeln.
+|===
+
+NULL und leerer String sind in DBF-Zeichenfeldern nicht unterscheidbar.
+Keine Append-/Update-Funktion, QIX-Erzeugung oder räumliche Reader-Filterung; Komponenten über 2 GiB werden nicht unterstützt.
+Der Writer stellt die Sidecar-Dateien zunächst temporär bereit. Ihre Veröffentlichung ist kein atomarer Austausch des gesamten Dateibündels.
+Vorhandene Zieldateien werden abgelehnt.
+
+[[geopackage]]
+=== GeoPackage
+
+Der Reader ermittelt Layer über `gpkg_contents` und `gpkg_geometry_columns`.
+Layernamen werden zuerst exakt, danach ohne Beachtung der Gross-/Kleinschreibung aufgelöst.
+Die Geometry-Spalte steht zuletzt; ihr Quellname bleibt ohne explizite Umbenennung erhalten.
+Geometrie-SRID und Layer-CRS müssen übereinstimmen.
+
+Neben linearen XY-Geometrien werden CircularString, CompoundCurve, CurvePolygon, MultiCurve und MultiSurface unterstützt.
+NULL und EMPTY bleiben verschieden. Z/M, nicht unterstützte Geometrieheader und Kurven in generischen GeometryCollections werden abgelehnt.
+Beim Schreiben werden die passenden `gpkg_geom_<TYPE>`-Erweiterungen registriert.
+Die Geometrieausgabe verwendet Little Endian ohne eingebettete EWKB-SRID und ohne Envelope im GeoPackage-Header.
+
+String, Integer, Number, BigNumber, Boolean, Date, Timestamp und Binary werden unterstützt.
+SQLite REAL garantiert keine exakten Dezimalwerte; bei entsprechenden Anforderungen ein anderes Zielformat wählen.
+Datumswerte verwenden UTC. Ein Integer-Primärschlüssel ist Feature-ID und erscheint nicht nochmals als gewöhnliches Attribut.
+Bei einer Namenskollision mit `fid` wählt der Writer einen anderen internen Schlüsselspaltennamen.
+
+Der Writer erzeugt eine neue Datei mit einem Layer. Die erste nicht-NULL-Geometrie bestimmt Typ und SRID;
+rein NULL-haltige Streams können dieses Schema nicht liefern. Nach erfolgreichem EOF wird die Transaktion abgeschlossen,
+die Datenbank geschlossen und die temporäre Datei veröffentlicht.
+Kein Überschreiben, Append, Update oder konfigurierbarer räumlicher Index; keine Raster-Tile-Unterstützung.
+SQLite JDBC bringt seine plattformspezifischen Bibliotheken im gemeinsamen ZIP mit; eine separate Installation ist nicht nötig.
+
+[[flatgeobuf]]
+=== FlatGeobuf
+
+Die Ausgabe unterstützt Point, MultiPoint, LineString, MultiLineString, Polygon und MultiPolygon.
+Ein explizites Multipart-Schema akzeptiert die entsprechende einfache Geometrie.
+Heterogene Collections und weitere Geometry-Attribute werden abgelehnt.
+Typ/Dimension explizit setzen, wenn die Eingabe leer oder ausschliesslich NULL ist; AUTO puffert maximal 10'000 anfängliche NULL/EMPTY-Zeilen.
+Z muss vorhanden sein, fehlendes optionales M bleibt NaN. Kurven werden mit Warnung linearisiert.
+
+Der standardmässige räumliche Index sortiert Features nach Hilbert-Schlüssel; bei Gleichstand zählt die Eingabeposition.
+Der gepackte R-Baum hat Knotengrösse 16. Die externe Sortierung verwendet 64 MiB Arbeitsbudget und maximal 64 offene Läufe;
+Indexebenen liegen auf der Platte. Temporärer Platzbedarf wächst mit Daten und Index, einzelne grosse Features benötigen weiterhin Speicher.
+
+Mit Index sind NULL/EMPTY standardmässig Fehler. *Skip NULL/EMPTY geometries with warning* lässt diese Zeilen aus und protokolliert ihre Anzahl.
+Ohne Index bleibt die Eingabereihenfolge erhalten, NULL wird erhalten und EMPTY mit Warnung zu NULL.
+Eine Datei ohne Features besitzt keinen Index.
+
+[cols="2,3",options="header"]
+|===
+|Hop-Typ |FlatGeobuf
+|Integer / Number |Long (64 Bit) / Double
+|BigNumber |Exakter Dezimal-String, Warnung wegen Typumwandlung
+|String / Boolean / Binary |UTF-8 String / Bool / Binary
+|Date / Timestamp |ISO-8601 UTC DateTime mit vorhandenen Sekundenbruchteilen
+|===
+
+NULL-Attribute werden ausgelassen und bleiben von leeren Strings unterscheidbar.
+Bekannte CRS-Autorität, Code und verfügbares WKT kommen in den Header; unbekanntes CRS wird nicht als WGS84 markiert.
+Doppelte/leere Feldnamen und komplexe Attribute müssen vorgelagert korrigiert werden.
+
+[[parquet]]
+=== Native spatial Parquet
+
+Der Writer verwendet Apache Parquet Java 1.17.0 und die nativen logischen Typen
+https://github.com/apache/parquet-format/blob/master/Geospatial.md[GEOMETRY/GEOGRAPHY].
+Ein Client benötigt Unterstützung dafür oder muss die WKB-Binärspalte selbst interpretieren.
+Ein GeoParquet-`geo`-Metadatendokument wird nicht erzeugt. Hadoop oder zusätzliche JNI-Kompressionsbibliotheken sind nicht erforderlich.
+
+Geometriefamilien, Schemaableitung, Z/M und Kurvenlinearisation entsprechen FlatGeobuf.
+NULL und EMPTY bleiben hier verschieden. ISO-WKB verwendet Dimensionscodes ohne EWKB-Flags oder eingebettete SRID.
+Das CRS liegt am logischen Typ; unbekanntes GEOMETRY-CRS wird explizit als `srid:0` angegeben.
+Binäre Min-/Max-Statistiken der Geometriespalte sind deaktiviert; zusätzliche räumliche Statistiken werden nicht zugesichert.
+
+GEOMETRY beschreibt planare Kanten. GEOGRAPHY verlangt ein bekanntes geografisches CRS und
+Longitude/Latitude in [-180, 180] beziehungsweise [-90, 90]. Die Interpolationsannotation SPHERICAL,
+VINCENTY, THOMAS, ANDOYER oder KARNEY beschreibt Kanten, führt selbst keine Berechnung durch.
+Standardkompression ist GZIP; UNCOMPRESSED ist die Alternative. 128 MiB Row-group-Grösse ist ein Zielwert, keine harte Heap-Grenze.
+
+[cols="2,3",options="header"]
+|===
+|Hop-Typ |Parquet
+|Integer / Number |INT64 / DOUBLE
+|BigNumber |BINARY mit DECIMAL precision/scale
+|String / Boolean / Binary |BINARY mit STRING / BOOLEAN / BINARY
+|Date / Timestamp |TIMESTAMP(MILLIS, UTC) / TIMESTAMP(NANOS, UTC)
+|===
+
+Für BigNumber müssen Hop-Metadaten explizit `length = Gesamtpräzision` und `precision = Skala` liefern,
+beispielsweise durch Select Values. Fehlende Angaben, Überlauf oder erforderliche Rundung führen zum Fehler;
+es erfolgt keine Umwandlung über Double. Auch Nanosekunden-Überlauf bei Timestamp wird abgelehnt.
+
+FlatGeobuf und Parquet schreiben zuerst eine Nachbardatei. Erfolg veröffentlicht sie mittels atomarem Rename beim Überschreiben
+beziehungsweise Hardlink ohne Überschreiben. Dateisysteme ohne diese Unterstützung werden abgelehnt.
+Fehler/Abbruch erhalten vorhandene Ziele; Elternverzeichnis und eindeutiger Zielpfad pro Transform-Kopie sind erforderlich.
+Die Adapter enthalten den MIT-Hinweis zu https://github.com/edigonzales/gpkg2cloudformats[gpkg2cloudformats] in `META-INF/NOTICE.txt`.
+
+[[generate]]
+=== ArcInfo GENERATE
+
+`ARCINFO_GENERATE` beziehungsweise AUTO mit `.gen` schreibt homogene ASCII-Dateien.
+Nur einfache Point, LineString und Polygon ohne Löcher sind erlaubt; Multipart, Collections, Kurven,
+ungültige Geometrien und nichtendliche Koordinaten werden abgelehnt. Bei Bedarf vorgelagert explodieren oder linearisieren.
+Polygonringe werden geschlossen und im Uhrzeigersinn ausgegeben, ohne die Eingabe zu verändern.
+
+[cols="2,2,2,2",options="header"]
+|===
+|Dimension/Typ |Feature-Kopf |Koordinaten |Abschluss
+|XY Point |`ID X Y` |Im Kopf |Datei `END`
+|XY Line |`ID` |Je Punkt `X Y` |Feature `END`, Datei `END`
+|XY Polygon |`ID AUTO` |Geschlossener Aussenring `X Y` |Feature `END`, Datei `END`
+|XYZ Point |`ID X Y Z` |Im Kopf |Datei `END`
+|XYZ Line |`ID` |Je Punkt `X Y Z` |Feature `END`, Datei `END`
+|XYZ Polygon |`ID` |Geschlossener Aussenring `X Y Z` |Feature `END`, Datei `END`
+|===
+
+Diese Dialekte sind nicht mit jedem `.gen`-Importer austauschbar. Erwartet ein Empfänger Polygone als geschlossene Linien,
+wandeln Sie die Geometrie vorher in ihre Grenze um und wählen LINE.
+Die Ausgabe wird gegen exakte Referenztexte getestet; ein Import in ein lizenziertes Esri-Produkt wurde nicht durchgeführt.
+Die sechs kleinen Referenzdateien sind unter {repo}/tree/main/docs/examples[docs/examples] verfügbar.
+
+Ein ID-Feld muss Hop Integer enthalten; ohne Feld beginnen fortlaufende IDs bei 1.
+Überlauf ist ein Fehler, Eindeutigkeit wird nicht überprüft. Der Empfänger muss den verwendeten 64-Bit-ID-Bereich unterstützen;
+Polygon-ID -99999 ist wegen der Esri-Inselkonvention verboten.
+XYZ verlangt endliches Z; XYM ersetzt XYZ nicht. Zusätzliche Ordinaten dürfen nur mit ausdrücklichem *Discard extra Z/M ordinates* entfallen.
+
+Standardmässig bleibt die Double-Präzision in einfacher Dezimalschreibweise erhalten.
+0–15 Dezimalstellen runden HALF_UP; geometrischer Kollaps nach Rundung wird abgefangen.
+Dezimalpunkt und LF-Zeilenenden sind unabhängig vom Gebietsschema; negative Null wird normalisiert.
+Trennzeichen ist Leerzeichen oder optional Komma. NULL/EMPTY führt ohne Skip-Option zum Fehler.
+CRS und beliebige Attribute werden nicht eingebettet; Koordinaten müssen bereits im Ziel-CRS vorliegen.
+
+Der Zielordner muss existieren. Eine Transform-Kopie besitzt die Datei; Überschreiben muss explizit aktiviert sein.
+Temporäre Ausgabe wird erst bei erfolgreichem EOF veröffentlicht; Abbruch erhält das vorherige Ziel.
+Auch ein erfolgreicher leerer Stream erzeugt ein abschliessendes `END`.
+
+Die Grammatik folgt Esris
+https://desktop.arcgis.com/en/arcmap/10.3/tools/coverage-toolbox/how-generate-works.htm[How Generate works],
+https://doc.esri.com/en/arcgis-pro/latest/tool-reference/3d-analyst/ascii-3d-to-feature-class.html[ASCII 3D To Feature Class],
+https://doc.esri.com/en/arcgis-pro/latest/tool-reference/3d-analyst/feature-class-z-to-ascii.html[Feature Class Z To ASCII] und
+https://resources.arcgis.com/en/help/main/10.2/0013/00130000001w000000.htm[Generate (Inselkonvention)].

@@ -26,3 +26,13 @@
 # Virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# Biblios documentation (independent of Maven)
+docs/biblios/build/
+docs/biblios/.downloads/
+docs/biblios/.cache/
+docs/biblios/.biblios-cache/
+docs/biblios/biblios.local.yml
+docs/biblios/user/downloads/
+**/__pycache__/
+/.thoth/
