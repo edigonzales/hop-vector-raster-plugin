@@ -31,8 +31,9 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
   **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.
 - A writable local directory for output files.
 
-The Geometry Type plugin supplies shared Geometry and JTS classes. They are not
-included in this ZIP. Both plugins use classloader group `sogeo-geometry`.
+The Geometry Type plugin supplies the shared Hop Geometry type and is not
+included in this ZIP. The ZIP includes JTS for raster startup; both plugins
+use classloader group `sogeo-geometry`.
 
 ## Installation
 

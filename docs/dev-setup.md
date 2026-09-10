@@ -10,9 +10,9 @@ sources/
 └── hop-vector-raster-plugin/
 ```
 
-The GeoTools transforms and `ValueMetaGeometry` must share the Hop class-loader group `sogeo-geometry`. For that reason the GeoTools distribution does not contain another copy of `hop-geometry-type` or `jts-core`.
+The GeoTools transforms and `ValueMetaGeometry` must share the Hop class-loader group `sogeo-geometry`. The distribution does not contain another copy of `hop-geometry-type`; it does contain `jts-core` because raster transforms need JTS while the shared Geometry plugin is still loaded lazily by Hop.
 
-The distribution includes GeoTools 35.1 raster/CRS libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules, GDAL bindings and additional JTS/Geometry copies; SQLite JDBC bundled natives are allowed.
+The distribution includes GeoTools 35.1 raster/CRS libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules, GDAL bindings and duplicate Geometry JARs; SQLite JDBC bundled natives are allowed.
 
 ## Java and Maven
 
@@ -32,7 +32,7 @@ The script performs the following steps in order:
 1. runs `mvn clean install` in `hop-geometry-type-plugin`
 2. installs its ZIP into `$HOP_HOME/plugins/misc/hop-geometry-type`
 3. runs `mvn clean verify` in `hop-vector-raster-plugin`
-4. checks all vector/raster/GENERATE modules, GeoTools 35.1, the reviewed dependency allowlist and shared JTS/Geometry packaging
+4. checks all vector/raster/GENERATE modules, GeoTools 35.1, the reviewed dependency allowlist and the shared Geometry/JTS packaging contract
 5. installs the ZIP into `$HOP_HOME/plugins/transforms/vector-raster`
 6. stops a running Hop GUI process
 7. starts `$HOP_HOME/hop-gui.sh` again

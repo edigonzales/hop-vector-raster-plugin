@@ -9,7 +9,7 @@
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
 
 Das Plugin-ZIP enthält seine GeoTools- und Rasterbibliotheken sowie SQLite JDBC.
-Das Geometry-Type-Plugin stellt Geometry und JTS bereit. Beide Plugins teilen die Classloader-Gruppe `sogeo-geometry`.
+Das Geometry-Type-Plugin stellt Geometry und JTS bereit. Das Vector/Raster-ZIP enthält JTS zusätzlich für den Raster-Start, weil Hop die gemeinsame Classloader-Gruppe `sogeo-geometry` bei Bedarf lazy lädt. Beide Plugins teilen diese Classloader-Gruppe.
 Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 
 === Release installieren
@@ -34,7 +34,7 @@ HOP_HOME/
         └── vector-raster/
 ----
 
-Kopieren Sie nicht zusätzlich einzelne JTS- oder Geometry-JARs in andere Plugin-Verzeichnisse.
+Kopieren Sie keine zusätzlichen JTS- oder Geometry-JARs manuell in andere Plugin-Verzeichnisse; verwenden Sie die mitgelieferten ZIPs.
 Fehlende Transforms oder Fehler beim Laden von Geometry deuten oft auf eine unvollständige oder doppelte Installation hin.
 
 === Plugin-Kontrolle
