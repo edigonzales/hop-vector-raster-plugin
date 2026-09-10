@@ -3,49 +3,11 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-15
-          - windows-latest
-
-    steps:
-      - name: Checkout vector/raster plugin
-        uses: actions/checkout@v4
-        with:
-          path: hop-vector-raster-plugin
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: maven
-
-      - name: Build and test vector/raster plugin
-        working-directory: hop-vector-raster-plugin
-        run: mvn -U -B -ntp clean verify
-
-      - name: Check plugin distribution
-        working-directory: hop-vector-raster-plugin
-        run: python scripts/check-distribution.py
-
-      - name: Check cloud-format output from distribution
-        working-directory: hop-vector-raster-plugin
-        run: python scripts/check-cloud-output.py
-
-      - name: Execute documentation example pipelines on local fixtures
-        working-directory: hop-vector-raster-plugin
-        run: python scripts/check-doc-examples.py
+  verify:
+    uses: ./.github/workflows/verify.yml

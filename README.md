@@ -5,7 +5,7 @@ reproject rasters, and calculate zonal statistics. Raster processing uses
 GeoTools 35.1; no GDAL/OGR installation is required.
 
 **[User manual (Deutsch)](https://edigonzales.github.io/hop-vector-raster-plugin/)** ·
-[Releases](https://github.com/edigonzales/hop-vector-raster-plugin/releases) ·
+[Maven-Artefakte](https://jars.interlis.guru/releases/ch/so/agi/hop-vector-raster-plugin/) ·
 [Examples](examples/README.md)
 
 ## Transforms
@@ -38,8 +38,8 @@ included in this ZIP. Both plugins use classloader group `sogeo-geometry`.
 
 1. Stop Apache Hop.
 2. Install the Geometry Type plugin according to its installation instructions.
-3. Download `hop-vector-raster-plugin-<version>.zip` from
-   [Releases](https://github.com/edigonzales/hop-vector-raster-plugin/releases).
+3. Download the versioned `hop-vector-raster-plugin-<version>.zip` from the
+   [Maven repository](https://jars.interlis.guru/releases/ch/so/agi/hop-vector-raster-plugin/).
 4. Keep exactly one Vector Raster installation. When changing versions,
    replace the complete `plugins/transforms/vector-raster` directory.
 5. Extract the ZIP into Hop home. It creates `plugins/transforms/vector-raster/`.

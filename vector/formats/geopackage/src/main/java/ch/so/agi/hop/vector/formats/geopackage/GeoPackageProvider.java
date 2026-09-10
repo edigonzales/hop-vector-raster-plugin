@@ -394,6 +394,13 @@ public final class GeoPackageProvider implements VectorProvider {
 
   private static void createSchema(Path file, WriteRequest r, CrsDefinitionResolver crs)
       throws Exception {
+    // Hop loads plugin libraries through child classloaders, so the SQLite JDBC service
+    // provider is not guaranteed to be discovered by DriverManager automatically.
+    try {
+      Class.forName("org.sqlite.JDBC");
+    } catch (ClassNotFoundException e) {
+      throw new SQLException("SQLite JDBC driver is missing from the installed plugin", e);
+    }
     try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file.toAbsolutePath())) {
       try (Statement s = c.createStatement()) {
         s.execute("PRAGMA application_id=1196444487");
@@ -507,6 +514,11 @@ public final class GeoPackageProvider implements VectorProvider {
       case IValueMeta.TYPE_DATE, IValueMeta.TYPE_TIMESTAMP -> "DATETIME";
       case IValueMeta.TYPE_BINARY -> "BLOB";
       case IValueMeta.TYPE_STRING -> "TEXT";
+      // A row may contain additional geometry attributes besides the selected
+      // feature geometry. They are ordinary attributes in this layer and are
+      // represented as their textual WKT/debug value rather than as a second
+      // GeoPackage geometry column.
+      case ValueMetaGeometry.TYPE_GEOMETRY -> "TEXT";
       default -> throw new IllegalArgumentException("Unsupported Hop attribute type: " + type);
     };
   }

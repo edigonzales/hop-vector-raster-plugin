@@ -135,7 +135,15 @@ The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDC
 
 The [German handbook](https://edigonzales.github.io/hop-vector-raster-plugin/) is the central user documentation for all five transforms and format rules.
 Documentation builds use Java 21 independently of Maven; see [Biblios build and preview](biblios/README.md).
-After building the ZIP, `python3 scripts/check-doc-examples.py` with Java 17 executes the documented clip/statistics HPLs on local fixtures.
+After building the ZIP, run the documentation smoke against a clean Hop installation and the matching Geometry runtime ZIP:
+
+```bash
+HOP_HOME=/path/to/clean/hop \
+GEOMETRY_ZIP=../hop-geometry-type-plugin/assemblies/assemblies-hop-geometry-type/target/hop-geometry-type-plugin-0.2.0-SNAPSHOT.zip \
+python3 scripts/check-doc-examples.py
+```
+
+The smoke uses the installed ZIPs only; it does not add Maven test dependencies to Hop's classpath.
 
 For upgrades, follow the [migration table](migration.md). Do not leave the old `geotools-vector` folder alongside `vector-raster`; old IDs have no aliases.
 

@@ -96,13 +96,23 @@
     </repository>
     <repository>
       <id>sogeo-releases</id>
-      <url>https://jars.sogeo.services/releases/</url>
+      <url>https://jars.interlis.guru/releases/</url>
     </repository>
     <repository>
       <id>sogeo-snapshots</id>
-      <url>https://jars.sogeo.services/snapshots/</url>
+      <url>https://jars.interlis.guru/snapshots/</url>
     </repository>
   </repositories>
+  <distributionManagement>
+    <repository>
+      <id>sogeo-releases</id>
+      <url>https://jars.interlis.guru/releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>sogeo-snapshots</id>
+      <url>https://jars.interlis.guru/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
   <build>
     <pluginManagement>
       <plugins>

@@ -29,7 +29,11 @@ For former GENERATE transforms, rename the `output` setting to `fileName`, set `
 
 Stop Hop before installing manually. Remove both the previous plugin folder and an existing `vector-raster` folder, then extract the new ZIP into Hop home. Install `hop-geometry-type-plugin` separately as before; do not duplicate JTS or the Geometry type JAR. The development installation script performs the old-folder cleanup automatically.
 
-Update release consumers such as `hop-distributions` to the new repository and ZIP asset name; those repositories are outside this change. A local checkout may keep its existing directory name. Its Git remote should use the new repository URL.
+Update distribution consumers such as `hop-distributions` to the Maven coordinates
+`ch.so.agi:hop-vector-raster-plugin:<version>` and the ZIP installation root
+`plugins/transforms/vector-raster`; plugin GitHub Releases are no longer a runtime
+dependency. A local checkout may keep its existing directory name. Its Git remote
+should use the new repository URL.
 
 Java remains 17; GeoTools remains 35.1 for raster and isolated CRS services. GeoPackage I/O now uses JDBC directly. Read the [GeoPackage contract](geopackage.md) for dimensional and file-lifecycle rules.
 

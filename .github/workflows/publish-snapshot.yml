@@ -1,8 +1,9 @@
-name: Publish Maven release
+name: Publish Maven snapshot
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +16,7 @@ jobs:
     uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@main
     with:
       ci-ref: main
-      repository-kind: release
+      repository-kind: snapshot
       verified-artifact-name: hop-vector-raster-plugin-ubuntu-latest-jdk17
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
       artifact-id: hop-vector-raster-plugin

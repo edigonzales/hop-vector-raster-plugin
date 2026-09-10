@@ -1,0 +1,94 @@
+name: Verify plugin
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: edigonzales/hop-geometry-type
+          ref: 371fdd69e5a949effbb3fbb501cf6a76842f4ede
+          path: .ci/geometry
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build geometry runtime ZIP
+        run: |
+          set -euo pipefail
+          mvn -f .ci/geometry/pom.xml -B -ntp clean package
+          mkdir -p .ci/geometry-dist
+          geometry_zip="$(find .ci/geometry/assemblies/assemblies-hop-geometry-type/target -maxdepth 1 -type f -name 'hop-geometry-type-plugin-*.zip' -print)"
+          test -n "$geometry_zip"
+          test "$(printf '%s\n' "$geometry_zip" | wc -l)" -eq 1
+          cp "$geometry_zip" .ci/geometry-dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geometry-runtime
+          path: .ci/geometry-dist/*.zip
+          if-no-files-found: error
+
+  build:
+    needs: geometry
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@main
+    with:
+      ci-ref: main
+      java-versions: '["17"]'
+      runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
+      maven-working-directory: .
+      maven-options: -U -B -ntp
+      maven-goals: clean verify
+      pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
+      zip-glob: assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip
+      validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py"]'
+      dependency-artifact-name: geometry-runtime
+      dependency-artifact-path: .ci/geometry-dist
+      artifact-name-prefix: hop-vector-raster-plugin
+      group-id: ch.so.agi
+      artifact-id: hop-vector-raster-plugin
+      hop-version: 2.17.0
+      plugin-root: plugins/transforms/vector-raster
+
+  installed-e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          name: hop-vector-raster-plugin-ubuntu-latest-jdk17
+          path: .ci/verified
+      - uses: actions/download-artifact@v4
+        with:
+          name: geometry-runtime
+          path: .ci/geometry-dist
+      - name: Download isolated Hop 2.17.0
+        run: |
+          if ! curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
+            https://downloads.apache.org/hop/2.17.0/apache-hop-client-2.17.0.zip -o "$RUNNER_TEMP/hop.zip"; then
+            curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
+              https://archive.apache.org/dist/hop/2.17.0/apache-hop-client-2.17.0.zip -o "$RUNNER_TEMP/hop.zip"
+          fi
+          echo "c0d24fac767b61fa0cb3d2889a0a18f111b6fb725a94f691f25746d5eb0f90193eae969ee670d450cdc9ba1adc3645af38580453ebaa0eeadc19ebd58b3655cf  $RUNNER_TEMP/hop.zip" | sha512sum -c -
+      - name: Install package into clean Hop and run raster/vector smoke
+        run: |
+          set -euo pipefail
+          unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/hop"
+          zip_path="$(find .ci/verified -type f -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
+          geometry_zip="$(find .ci/geometry-dist -type f -name 'hop-geometry-type-plugin-*.zip' -print | head -n 1)"
+          test -n "$zip_path"
+          test -n "$geometry_zip"
+          python3 scripts/run-installed-e2e.py \
+            --hop-home "$RUNNER_TEMP/hop/hop" \
+            --plugin-zip "$zip_path" \
+            --geometry-zip "$geometry_zip"

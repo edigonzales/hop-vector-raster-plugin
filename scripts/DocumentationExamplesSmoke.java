@@ -83,6 +83,11 @@ public class DocumentationExamplesSmoke {
     rm.addValueMeta(new ValueMetaString("name"));
     rm.addValueMeta(new ValueMetaGeometry("geometry"));
     Path vector = temp.resolve("zones.gpkg");
+    // The SQLite JDBC driver is packaged inside the installed plugin and is
+    // not visible to DriverManager's service scan after Hop initializes its
+    // plugin classloaders. Loading the packaged driver explicitly mirrors the
+    // provider's runtime contract without adding a Maven test classpath.
+    Class.forName("org.sqlite.JDBC");
     var provider = new GeoPackageProvider(new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
     try (var sink = provider.create(new WriteRequest(vector, "zones", rm, 1, geometry,
         GeometrySchema.infer(geometry), null, Diagnostics.NONE))) {

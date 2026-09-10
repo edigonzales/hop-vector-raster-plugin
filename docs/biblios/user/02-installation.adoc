@@ -16,7 +16,9 @@ Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 
 . Beenden Sie Hop vollständig.
 . Installieren beziehungsweise aktualisieren Sie das Geometry-Type-Plugin gemäss dessen Anleitung.
-. Laden Sie aus {repo}/releases[GitHub Releases] die Datei `hop-vector-raster-plugin-<version>.zip` herunter.
+. Laden Sie die Datei `hop-vector-raster-plugin-<version>.zip` aus dem
+  https://jars.interlis.guru/releases/ch/so/agi/hop-vector-raster-plugin/[Maven-Repository]
+  herunter.
 . Stellen Sie sicher, dass genau eine Installation des Vector-Raster-Plugins vorhanden ist.
   Verwenden Sie für einen Versionswechsel ein vollständig ersetztes Verzeichnis `plugins/transforms/vector-raster`.
 . Entpacken Sie das ZIP direkt im Hop-Hauptverzeichnis. Danach muss `plugins/transforms/vector-raster/` vorhanden sein.
