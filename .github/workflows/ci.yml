@@ -27,22 +27,12 @@ jobs:
         with:
           path: hop-vector-raster-plugin
 
-      - name: Checkout Geometry type plugin
-        uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-geometry-type-plugin
-          path: hop-geometry-type-plugin
-
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
-
-      - name: Install Geometry type dependency
-        working-directory: hop-geometry-type-plugin
-        run: mvn -U -B -ntp clean install
 
       - name: Build and test vector/raster plugin
         working-directory: hop-vector-raster-plugin
