@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: edigonzales/hop-plugin-ci
-          ref: ec8951c511093f927ed9263f68e50c31e07f61b0
+          ref: 3c90ffcc2ad051a5d678e39980230c7711d79742
           path: .ci/hop-plugin-ci
           persist-credentials: false
       - name: Resolve published geometry snapshot
@@ -38,9 +38,9 @@ jobs:
 
   build:
     needs: geometry
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@ec8951c511093f927ed9263f68e50c31e07f61b0
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@3c90ffcc2ad051a5d678e39980230c7711d79742
     with:
-      ci-ref: ec8951c511093f927ed9263f68e50c31e07f61b0
+      ci-ref: 3c90ffcc2ad051a5d678e39980230c7711d79742
       java-versions: '["21", "25"]'
       runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
       canonical-runner-os: ubuntu-latest
