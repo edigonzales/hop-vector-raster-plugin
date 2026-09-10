@@ -12,9 +12,9 @@ jobs:
     uses: ./.github/workflows/verify.yml
   publish:
     needs: verify
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@3c90ffcc2ad051a5d678e39980230c7711d79742
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@e3985b7ab27d22cc63d9d9bf206d0ffdd118c38e
     with:
-      ci-ref: 3c90ffcc2ad051a5d678e39980230c7711d79742
+      ci-ref: e3985b7ab27d22cc63d9d9bf206d0ffdd118c38e
       repository-kind: release
       verified-artifact-name: hop-vector-raster-plugin-canonical
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
