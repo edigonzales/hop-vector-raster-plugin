@@ -1,8 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="4" y="4" width="56" height="56" rx="8" fill="#0f4c5c"/>
-  <circle cx="22" cy="22" r="5" fill="#e6efe9"/>
-  <circle cx="42" cy="18" r="4" fill="#f4a259"/>
-  <circle cx="40" cy="40" r="6" fill="#5bc0be"/>
-  <path d="M22 22 L42 18 L40 40 L22 22" stroke="#e6efe9" stroke-width="2" fill="none"/>
-  <path d="M12 50 H52" stroke="#e6efe9" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-labelledby="title desc">
+  <title id="title">Vektordaten importieren</title>
+  <desc id="desc">Grüner Pfeil von links in einen transparenten, grauen Arbeitsbereich mit einem Polygon und fünf Stützpunkten. Rahmen: #3D4B58, Strichstärke 2 bei 32 × 32; Polygonsegmente: Strichstärke 2.</desc>
+
+  <!-- Identical frame stroke properties to the database symbol in ili2db.svg. -->
+  <path id="workspace"
+        d="M8 12.5V6.5A1.5 1.5 0 0 1 9.5 5H28.5A1.5 1.5 0 0 1 30 6.5V25.5A1.5 1.5 0 0 1 28.5 27H9.5A1.5 1.5 0 0 1 8 25.5V19.5"
+        fill="none" stroke="#3D4B58" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Inset fill and trimmed segments keep all vertex centers transparent.
+       Standard SVG paths only: no white backing, filters, or masks. -->
+  <g id="vector-geometry">
+    <polygon points="20.8188,11.0237 18.3646,15.1140 20.0494,21.0110 25.6588,19.4083 25.2336,13.0304"
+             fill="#A8CE94" fill-opacity="0.65" />
+    <path d="M21.2283 10.3310L25.2717 12.1690 M26.0532 13.2982L26.4468 19.2018 M25.7308 20.2198L20.2692 21.7802 M19.2802 21.2308L17.7198 15.7692 M17.9116 14.3140L20.0884 10.6860"
+          fill="none" stroke="#0D602F" stroke-width="2" stroke-linecap="butt" />
+    <g fill="none" stroke="#0D602F" stroke-width="1.1">
+      <circle cx="20.5" cy="10" r="1.25" />
+      <circle cx="26" cy="12.5" r="1.25" />
+      <circle cx="26.5" cy="20" r="1.25" />
+      <circle cx="19.5" cy="22" r="1.25" />
+      <circle cx="17.5" cy="15" r="1.25" />
+    </g>
+  </g>
+
+  <!-- The arrow crosses the left boundary; the arrowhead ends inside. -->
+  <path id="import-arrow"
+        d="M1.75 14.25H10.5V12.2Q10.5 11.75 10.85 12.08L14.75 15.65Q15.1 16 14.75 16.35L10.85 19.92Q10.5 20.25 10.5 19.8V17.75H1.75Q1 17.75 1 17V15Q1 14.25 1.75 14.25Z"
+        fill="#25833F" />
 </svg>
