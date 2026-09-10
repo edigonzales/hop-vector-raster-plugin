@@ -243,6 +243,7 @@ class RasterCoreTest {
         e -> {
           e.getResponseHeaders().set("Content-Range", "bytes 1-1024/10000");
           e.sendResponseHeaders(206, 1024);
+          e.getResponseBody().write(new byte[1024]);
           e.close();
         });
     server.start();
