@@ -1,5 +1,5 @@
 [[installation]]
-== Installation und Upgrade
+== Installation
 
 === Voraussetzungen
 
@@ -9,7 +9,7 @@
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
 
 Das Plugin-ZIP enthält seine GeoTools- und Rasterbibliotheken sowie SQLite JDBC.
-Geometry-Type und JTS sind bewusst nicht doppelt enthalten: Beide Plugins teilen die Classloader-Gruppe `sogeo-geometry`.
+Das Geometry-Type-Plugin stellt Geometry und JTS bereit. Beide Plugins teilen die Classloader-Gruppe `sogeo-geometry`.
 Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 
 === Release installieren
@@ -17,8 +17,8 @@ Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 . Beenden Sie Hop vollständig.
 . Installieren beziehungsweise aktualisieren Sie das Geometry-Type-Plugin gemäss dessen Anleitung.
 . Laden Sie aus {repo}/releases[GitHub Releases] die Datei `hop-vector-raster-plugin-<version>.zip` herunter.
-. Entfernen Sie bei einem Upgrade das bisherige Verzeichnis `plugins/transforms/vector-raster`.
-  Entfernen Sie auch das frühere Verzeichnis `plugins/transforms/geotools-vector`, falls vorhanden.
+. Stellen Sie sicher, dass genau eine Installation des Vector-Raster-Plugins vorhanden ist.
+  Verwenden Sie für einen Versionswechsel ein vollständig ersetztes Verzeichnis `plugins/transforms/vector-raster`.
 . Entpacken Sie das ZIP direkt im Hop-Hauptverzeichnis. Danach muss `plugins/transforms/vector-raster/` vorhanden sein.
 . Starten Sie Hop neu und suchen Sie unter *Geospatial* nach allen fünf Transforms.
 
@@ -33,28 +33,22 @@ HOP_HOME/
 Kopieren Sie nicht zusätzlich einzelne JTS- oder Geometry-JARs in andere Plugin-Verzeichnisse.
 Fehlende Transforms oder Fehler beim Laden von Geometry deuten oft auf eine unvollständige oder doppelte Installation hin.
 
-[[migration]]
-=== Bestehende Pipelines migrieren
+=== Plugin-Kontrolle
 
-Frühere Transform-IDs haben keine Kompatibilitätsaliasse. Sichern Sie alte Pipelines vor dem Anpassen.
+Unter *Geospatial* stehen diese Transforms zur Verfügung:
 
 [cols="2,2",options="header"]
 |===
-|Frühere ID |Aktuelle ID
-|`GEOTOOLS_VECTOR_READER` |`SOGIS_VECTOR_READER`
-|`GEOTOOLS_VECTOR_WRITER` |`SOGIS_VECTOR_WRITER`
-|`GEOTOOLS_RASTER_CLIP` |`SOGIS_RASTER_CLIP`
-|`GEOTOOLS_RASTER_ZONAL_STATS` |`SOGIS_RASTER_ZONAL_STATS`
-|`ARCINFO_GENERATE_WRITER` |`SOGIS_VECTOR_WRITER`, Format `ARCINFO_GENERATE`
+|Transform |Plugin-ID
+|Vector Reader |`SOGIS_VECTOR_READER`
+|Vector Writer |`SOGIS_VECTOR_WRITER`
+|Raster Clip (GeoTools) |`SOGIS_RASTER_CLIP`
+|Raster Reproject / Resample (GeoTools) |`SOGIS_RASTER_REPROJECT`
+|Raster Zonal Statistics (GeoTools) |`SOGIS_RASTER_ZONAL_STATS`
 |===
 
-Auch die zwischenzeitlichen `SOGEO_*`-IDs sind durch ihre `SOGIS_*`-Entsprechung zu ersetzen.
-Der neue Reproject-Transform verwendet `SOGIS_RASTER_REPROJECT`; dafür gibt es keine alte ID.
-
-Bei GENERATE heisst die frühere Einstellung `output` neu `fileName`.
-Geometrietyp, Dimension, IDs, Dezimalstellen und sonstige GENERATE-Einstellungen behalten ihre Bedeutung.
-Das Repository heisst heute `hop-vector-raster-plugin`; ein lokaler Checkout darf weiterhin `hop-geotools-plugin` heissen.
-Die vollständige Zuordnung alter Modul- und Distributionsnamen steht in den {repo}/blob/main/docs/migration.md[Migrationsnotizen].
+Die Pipeline speichert die Plugin-ID im `type`-Element des Transforms.
+Bei einem unbekannten Transform prüfen Sie diese ID und die Installation.
 
 === Für Entwickler
 

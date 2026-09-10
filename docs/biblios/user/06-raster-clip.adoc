@@ -5,6 +5,43 @@ Dieser Transform schneidet *ein ausgewähltes Band* eines Rasters aus.
 Er erhält Quell-CRS, Quellpixelraster, Rohdatentyp, Scale/Offset und NoData.
 Er reprojiziert keine Rasterpixel und ändert die Auflösung nicht. Plugin-ID: `SOGIS_RASTER_CLIP`.
 
+=== Dialogansicht
+
+Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
+`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
+`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Raster Clip (GeoTools)                                                       |
+| ============================================================================ |
+| Transform name                         [ Gelände ausschneiden ]              |
+| Input raster                           [ ${INPUT_RASTER} ] [ Browse... ]     |
+| Raster address from input field        [ ]                                   |
+| Geometry field                         [ geometry v]                         |
+| Explicit geometry CRS (empty: geometry SRID) [ EPSG:2056 ]                   |
+| Band (1 based)                         [ 1 ]                                 |
+| NoData override (empty: raster metadata) [ ]                                 |
+| Output field prefix                    [ raster_ ]                           |
+| Clip method                            [ BOUNDING_BOX v]                     |
+| Minimum X                              [ 2607400 ]                           |
+| Minimum Y                              [ 1228400 ]                           |
+| Maximum X                              [ 2607500 ]                           |
+| Maximum Y                              [ 1228500 ]                           |
+| Bounding box values from input fields  [ ]                                   |
+| Output GeoTIFF                                                               |
+|   [ ${OUTPUT_DIR}/solothurn-clip.tif ] [ Browse... ]                         |
+| Output path from input field           [ ]                                   |
+| Overwrite existing file                [ ]                                   |
+|                                                                              |
+|                                                          [ OK ] [ Cancel ]   |
++==============================================================================+
+----
+
+Setzen Sie `INPUT_RASTER` auf die COG-URL aus dem Konfigurationsbeispiel und `OUTPUT_DIR` auf einen vorhandenen lokalen Ordner.
+Bei `BOUNDING_BOX` wird der Ausschnitt über die vier Koordinaten bestimmt.
+
 === Eingabe und Einstellungen
 
 Jede Eingabezeile beschreibt einen Clip. Quelle ist eine lokale GeoTIFF-Datei oder eine öffentliche HTTP/HTTPS-COG-URL.
@@ -23,7 +60,7 @@ Zugangsdaten und eigene HTTP-Header werden nicht unterstützt.
 |Band (1 based) |`1` |Bandnummer beginnt im Dialog bei 1.
 |NoData override (empty: raster metadata) |Leer |Ersetzt den deklarierten Sentinel und wird für die Ausgabe verwendet.
 |Minimum X / Y, Maximum X / Y |Leer |Vier endliche Boxkoordinaten; Minimum jeweils kleiner als Maximum.
-|Bounding box values from input fields |Aus |Boxwerte aus Spalten statt Konstanten beziehen.
+|Bounding box values from input fields |Aus |Boxwerte aus Eingabespalten beziehen.
 |Output GeoTIFF |Leer |Lokaler Ausgabepfad.
 |Output path from input field |Aus |Ausgabepfad aus einer Spalte beziehen.
 |Overwrite existing file |Aus |Vorhandene Zieldatei nur ausdrücklich ersetzen.

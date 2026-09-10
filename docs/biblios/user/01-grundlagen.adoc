@@ -23,7 +23,7 @@ Der Vector Reader erzeugt pro Feature eine Zeile. Die Geometrie liegt als gemein
 nicht als WKT-Text. Das separate Geometry-Type-Plugin stellt diesen Typ bereit.
 
 Der Vector Writer ist ein Senken-Transform: Er schreibt die eingehenden Zeilen und gibt keine Ergebniszeilen aus.
-Raster Clip und Reproject verarbeiten dagegen *pro Eingabezeile einen Auftrag* und hängen Dateipfad und Status an.
+Raster Clip und Reproject verarbeiten *pro Eingabezeile einen Auftrag* und hängen Dateipfad und Status an.
 Zonal Statistics ergänzt pro Polygonzeile die gewünschten Kennzahlen.
 Rasterpixel werden nicht einzeln als Hop-Zeilen transportiert.
 
@@ -55,8 +55,7 @@ Die Raster-Transforms verwenden XY beziehungsweise Longitude/Latitude.
 [IMPORTANT]
 ====
 Die CRS-Einstellung des Vector Reader/Writer *weist ein CRS zu*. Sie verändert keine Koordinaten.
-Ein Datensatz wird durch Eintragen von `EPSG:4326` daher nicht aus LV95 nach WGS84 umgerechnet.
-Raster Reproject / Resample verändert dagegen tatsächlich Rastergeoreferenzierung und Pixelwerte.
+Geben Sie das CRS an, in dem die vorhandenen Koordinaten vorliegen.
 ====
 
 Eine Geometry kann eine numerische SRID tragen. Clip und Zonal Statistics verwenden eine explizite Geometrie-CRS-Angabe,
@@ -64,7 +63,7 @@ falls vorhanden; sonst benötigen sie eine SRID ungleich null. Die Eingabegeomet
 
 === Gültige Werte und NoData
 
-NoData kennzeichnet fehlende Messwerte und ist nicht mit nullwertiger Höhe gleichzusetzen: *Null ist gültig*,
+NoData kennzeichnet fehlende Messwerte. *Null ist gültig*,
 sofern sie nicht ausdrücklich als NoData deklariert wurde.
 Maskierte und nichtendliche Werte werden bei der Rasterauswertung ausgeschlossen.
 Ein NoData-Override ersetzt den deklarierten Sentinel. Details zu Interpolation und Ausgabe stehen in den Raster-Kapiteln.

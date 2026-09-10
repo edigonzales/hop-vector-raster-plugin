@@ -5,6 +5,56 @@ Dieser Transform ändert CRS und/oder Pixelgrösse eines Rasters und verarbeitet
 Eine Eingabezeile erzeugt eine GeoTIFF-Datei. Quelle ist eine lokale GeoTIFF-Datei oder ein öffentliches HTTP/HTTPS-COG.
 Plugin-ID: `SOGIS_RASTER_REPROJECT`.
 
+=== Dialogansicht
+
+Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
+`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
+`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Raster Reproject / Resample (GeoTools)                                       |
+| ============================================================================ |
+| Transform name                         [ Gelände auf 1 m resamplen ]         |
+|                                                                              |
+| Input                                                                        |
+| Raster (local GeoTIFF or public COG URL) [ ${INPUT_RASTER} ] [ Browse... ]   |
+| Raster value is an input field         [ ]                                   |
+| Source NoData override (empty: metadata) [ ]                                 |
+|                                                                              |
+| Target grid                                                                  |
+| Target CRS (empty: source CRS)         [ EPSG:2056 ]                         |
+| Target CRS is an input field           [ ]                                   |
+| Pixel size X (target CRS units)        [ 1 ]                                 |
+| Pixel size Y (target CRS units)        [ 1 ]                                 |
+| Pixel sizes are input fields           [ ]                                   |
+| Extent                                 [ BOUNDING_BOX v]                     |
+| Minimum X                              [ 2607400 ]                           |
+| Minimum Y                              [ 1228400 ]                           |
+| Maximum X                              [ 2607500 ]                           |
+| Maximum Y                              [ 1228500 ]                           |
+| Bounding box values are input fields   [ ]                                   |
+|                                                                              |
+| Resampling                                                                   |
+| Interpolation                          [ BILINEAR v]                         |
+| Numeric output type                    [ AUTO v]                             |
+|                                                                              |
+| Output                                                                       |
+| Output GeoTIFF                                                               |
+|   [ ${OUTPUT_DIR}/terrain-1m.tif ] [ Browse... ]                             |
+| Output path is an input field          [ ]                                   |
+| Output NoData (numeric / palette only) [ ]                                   |
+| Overwrite existing file                [ ]                                   |
+| Output field prefix                    [ raster_ ]                           |
+|                                                                              |
+|                                                          [ OK ] [ Cancel ]   |
++==============================================================================+
+----
+
+Die Gruppen *Input*, *Target grid*, *Resampling* und *Output* enthalten den Auftrag für ein 1-m-Zielraster.
+`INPUT_RASTER` bezeichnet die Quelle; `OUTPUT_DIR` ist ein vorhandener lokaler Ausgabeordner.
+
 === Einstellungen
 
 [cols="2,1,4",options="header"]
@@ -51,7 +101,7 @@ Ohne gültigen Beitrag entsteht NoData. Das ist keine flächenbasierte Mittelung
 
 `AUTO` erhält bei Nearest den Quelltyp, bei Bilinear entsteht Float64.
 `SOURCE` mit Integer-Werten rundet zum nächsten Integer, bei exakt halben Werten zur geraden Zahl.
-Überlauf bricht ab, statt Werte still auf Typgrenzen zu begrenzen.
+Überlauf führt zum Fehler.
 Rohwerte werden interpoliert; bandweises Scale/Offset bleibt erhalten. Reihenfolge und Anzahl numerischer Bänder bleiben unverändert.
 
 NoData, Masken und nichtendliche Werte gehen nicht als Messwerte ein; Null bleibt gültig.

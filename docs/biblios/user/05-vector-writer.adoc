@@ -5,6 +5,37 @@
 Er benötigt eine ausgewählte Geometry-Spalte und passende Attributmetadaten.
 Er ist eine Senke ohne nachfolgende Ergebniszeilen. Plugin-ID: `SOGIS_VECTOR_WRITER`.
 
+=== Dialogansicht
+
+Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
+`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
+`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Vector Writer                                                                |
+| ============================================================================ |
+| Transform name                         [ Parzellen schreiben ]               |
+| Format                                 [ FLATGEOBUF v]                       |
+| Layer (optional)                       [ parcels ]                           |
+| Output file                                                                  |
+|   [ ${PROJECT_HOME}/parcels.fgb ] [ Browse... ]                              |
+| Geometry field                         [ geometry v]                         |
+| Layer geometry type                    [ MULTIPOLYGON v]                     |
+| Layer dimension                        [ XY v]                               |
+| Assign CRS (EPSG or WKT)               [ ]                                   |
+| Overwrite existing file                [ ]                                   |
+| Spatial index (reorders features)      [x]                                   |
+| Skip NULL/EMPTY geometries with warning [ ]                                  |
+|                                                                              |
+|                                                          [ OK ] [ Cancel ]   |
++==============================================================================+
+----
+
+Die dargestellte Konfiguration schreibt Parzellen als indiziertes FlatGeobuf.
+Die Wahl unter *Format* steuert die sichtbaren Formatoptionen.
+
 === Gemeinsame Einstellungen
 
 [cols="2,1,4",options="header"]
@@ -32,6 +63,23 @@ Eine zweite Geometry-Spalte und komplexe Werte müssen vor der Ausgabe auf ein u
 
 === Shapefile: DBF-Schema
 
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Vector Writer: Format = SHAPEFILE (Formatoptionen)                           |
+| ============================================================================ |
+| DBF encoding (empty: UTF-8)            [ UTF-8 ]                             |
+| Date timezone                          [ UTC ]                               |
+|                                                                              |
+| DBF fields (double-click to edit)                            [ Get fields ]  |
+|   Source field   Target name   Width   Decimal places                        |
+|   name           NAME          80      0                                     |
+|   area           AREA          18      2                                     |
+|                                                                              |
+| [ Remove selected mapping ]  [ Preview DBF schema ]                          |
++==============================================================================+
+----
+
 *Get fields* übernimmt die eingehenden Felder in die DBF-Zuordnung.
 Die Tabelle *DBF fields (double-click to edit)* bietet Quellname, Zielname, Bytebreite und Dezimalstellen.
 `-1` verwendet die abgeleiteten Einstellungen. *Preview DBF schema* zeigt die tatsächlich resultierenden Namen und Breiten.
@@ -45,12 +93,24 @@ Namenskürzung, Zeichenersetzung, Textkürzung, Rundung und Dimensionsregeln sin
 |===
 |Einstellung |Standard |Bedeutung
 |Spatial index (reorders features) |Ein |Erstellt einen räumlichen Index und sortiert Features um.
-|Skip NULL/EMPTY geometries with warning |Aus |Bei indizierter Ausgabe fehlende Geometrien überspringen statt abbrechen.
+|Skip NULL/EMPTY geometries with warning |Aus |Bei indizierter Ausgabe fehlende Geometrien mit Warnung überspringen.
 |===
 
 Ohne Index bleibt die Eingabereihenfolge erhalten. Die <<flatgeobuf,Formatbeschreibung>> erläutert Attribute und Speicher-/Platzbedarf.
 
 === Parquet
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Vector Writer: Format = PARQUET (Formatoptionen)                             |
+| ============================================================================ |
+| Logical geometry type                  [ GEOMETRY v]                         |
+| Geography interpolation                [ SPHERICAL v]                        |
+| Compression                            [ GZIP v]                             |
+| Row group size (bytes)                 [ 134217728 ]                         |
++==============================================================================+
+----
 
 [cols="2,1,4",options="header"]
 |===
@@ -65,6 +125,22 @@ Es entsteht <<parquet,natives räumliches Parquet>>, kein GeoParquet-Metadatendo
 
 === ArcInfo GENERATE
 
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Vector Writer: Format = ARCINFO_GENERATE (Formatoptionen)                    |
+| ============================================================================ |
+| Geometry type                          [ LINE v]                             |
+| Dimension                              [ XY v]                               |
+| ID field (empty: sequential IDs)       [ ]                                   |
+| Sequential start ID                    [ 1 ]                                 |
+| Discard extra Z/M ordinates            [ ]                                   |
+| Decimal places (-1: preserve precision, 0–15: fixed) [ -1 ]                  |
+| Comma delimiter (default: space)       [ ]                                   |
+| Skip null / empty geometries           [ ]                                   |
++==============================================================================+
+----
+
 [cols="2,1,4",options="header"]
 |===
 |Einstellung |Standard |Bedeutung
@@ -74,7 +150,7 @@ Es entsteht <<parquet,natives räumliches Parquet>>, kein GeoParquet-Metadatendo
 |Sequential start ID |`1` |Beginn automatisch vergebener IDs.
 |Discard extra Z/M ordinates |Aus |Zusätzliche Ordinaten nur ausdrücklich verwerfen.
 |Decimal places (-1: preserve precision, 0–15: fixed) |`-1` |Double-Präzision erhalten; `0–15` rundet HALF_UP auf feste Dezimalstellen.
-|Comma delimiter (default: space) |Aus |Komma statt Leerzeichen zwischen Werten.
+|Comma delimiter (default: space) |Aus |Komma als Trennzeichen zwischen Werten.
 |Skip null / empty geometries |Aus |Fehlende Geometrien mit protokollierter Anzahl überspringen.
 |===
 

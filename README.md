@@ -40,13 +40,13 @@ included in this ZIP. Both plugins use classloader group `sogeo-geometry`.
 2. Install the Geometry Type plugin according to its installation instructions.
 3. Download `hop-vector-raster-plugin-<version>.zip` from
    [Releases](https://github.com/edigonzales/hop-vector-raster-plugin/releases).
-4. On upgrade, remove the old `plugins/transforms/vector-raster` directory and
-   any legacy `plugins/transforms/geotools-vector` directory.
+4. Keep exactly one Vector Raster installation. When changing versions,
+   replace the complete `plugins/transforms/vector-raster` directory.
 5. Extract the ZIP into Hop home. It creates `plugins/transforms/vector-raster/`.
 6. Restart Hop and check that the five transforms appear under **Geospatial**.
 
-Older pipeline IDs have no compatibility aliases. See the
-[migration notes](docs/migration.md) before upgrading existing pipelines.
+Check the installed transforms and their plugin IDs in the
+[installation chapter](https://edigonzales.github.io/hop-vector-raster-plugin/benutzerhandbuch/main/index.html#installation).
 
 ## First steps
 

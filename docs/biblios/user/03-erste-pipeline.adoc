@@ -2,8 +2,8 @@
 == Erste Pipeline: Vektoren konvertieren
 
 Dieses Beispiel kopiert eine Shapefile-Ebene in eine neue GeoPackage-Datei.
-Verwenden Sie eine kleine eigene Shapefile mit gültigen XY-Geometrien. Shapefile-Z/M wird unterstützt,
-GeoPackage-Ausgabe in diesem Plugin jedoch nur XY; das Beispiel soll keine Dimensionen verlieren.
+Verwenden Sie eine kleine eigene Shapefile mit gültigen XY-Geometrien.
+Die GeoPackage-Ausgabe verarbeitet XY-Geometrien.
 
 . Legen Sie eine neue Pipeline an.
 . Fügen Sie *Vector Reader* und *Vector Writer* hinzu und verbinden Sie beide.
@@ -32,4 +32,4 @@ Ein Hop-Preview mit wenigen Zeilen ersetzt keinen vollständigen Schreiblauf: De
 Wenn Sie das Geometry-Ausgabefeld im Reader leer lassen, wird der Name der Quell-Geometriespalte übernommen,
 beispielsweise `geom`. Dann müssen Sie im Writer diesen tatsächlichen Feldnamen auswählen.
 
-Für FlatGeobuf und Parquet gibt es bereits parametrisierte Pipelines im Kapitel <<beispiele,Beispiele>>.
+Parametrisierte Pipelines für FlatGeobuf und Parquet finden Sie im Kapitel <<beispiele,Beispiele>>.

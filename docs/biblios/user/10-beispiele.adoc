@@ -33,7 +33,7 @@ link:downloads/raster-clip/clip-cog.hpl[Parametrisierte Clip-Pipeline herunterla
 |OUTPUT_FILE |`/data/solothurn-clip.tif`
 |===
 
-Band ist in beiden neuen Vorlagen im Dialog auf `1` gesetzt (kein variabler Parameter).
+Band ist in den Clip- und Statistikvorlagen im Dialog auf `1` gesetzt (kein variabler Parameter).
 
 Die URL ist ein Beispiel, keine dauerhaft zugesicherte Datenversion. Dieselbe Pipeline akzeptiert lokale GeoTIFFs.
 Sie schneidet genau ein Band auf dem Quellraster aus; sie erzeugt keine neue Auflösung.
@@ -49,10 +49,10 @@ Die Parameter stehen jeweils in der HPL-Datei: `INPUT_RASTER`, `OUTPUT_FILE`, `T
 `PIXEL_SIZE_X`, `PIXEL_SIZE_Y` und gegebenenfalls `OUTPUT_NODATA`.
 Für reine Auflösungsänderung `TARGET_CRS` leer lassen. Numerisches Beispiel: lokales Höhenmodell EPSG:2056,
 Pixelgrössen `2`/`2`, neue Zieldatei. Für EPSG:4326 werden die Pixelgrössen in Grad angegeben, beispielsweise `0.00001`/`0.00001`.
-Die automatische Ausdehnung folgt der Quelle; das Höhenmodell-Beispiel besitzt dagegen eine feste Box und verlangt dazu passende CRS-Einstellungen.
+Die automatische Ausdehnung folgt der Quelle; das Höhenmodell-Beispiel besitzt eine feste Box und verlangt dazu passende CRS-Einstellungen.
 
 Bei Paletten muss ein Sentinel ein vorhandener, nicht gültig verwendeter Index sein, falls zusätzliche ungültige Bereiche entstehen.
-BILINEAR wandelt Paletten stattdessen zu RGBA16 um. Weitere Regeln stehen unter <<raster-reproject,Reproject / Resample>>.
+BILINEAR wandelt Paletten zu RGBA16 um. Weitere Regeln stehen unter <<raster-reproject,Reproject / Resample>>.
 
 === Zonale Statistik
 
@@ -62,7 +62,7 @@ Parameter: `INPUT_VECTOR`, `INPUT_LAYER`, `INPUT_RASTER`, `GEOMETRY_CRS`, `NODAT
 `GEOMETRY_CRS` darf bei korrekter Geometry-SRID leer bleiben. Beispiel: Gebäude-Polygone EPSG:2056 und
 `https://files.geo.so.ch/ch.swisstopo.lidar_2023.ndsm_buildings/aktuell/ch.swisstopo.lidar_2023.ndsm_buildings.tif`,
 Band `1`, Statistiken `mean min max` (im Dialog erweitern, etwa um `stddev sum`).
-Das Gebäude-nDSM beschreibt Höhen über Terrain: nicht nochmals ein DTM abziehen.
+Das Gebäude-nDSM beschreibt Höhen über Terrain; verwenden Sie seine Werte direkt.
 
 Die Beispielpipeline liefert Ergebniszeilen zur Vorschau; sie schreibt keine neue Vektordatei.
 Zum Speichern fügen Sie einen Vector Writer mit neuem Zielpfad hinzu.

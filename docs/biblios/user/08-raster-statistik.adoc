@@ -5,6 +5,35 @@ Dieser Transform ergänzt pro eingehender Polygonzeile Rasterstatistiken.
 Typische Pipeline: *Vector Reader → Raster Zonal Statistics (GeoTools) → Vector Writer*.
 Er schreibt selbst keine Rasterdatei. Plugin-ID: `SOGIS_RASTER_ZONAL_STATS`.
 
+=== Dialogansicht
+
+Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
+`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
+`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Raster Zonal Statistics (GeoTools)                                           |
+| ============================================================================ |
+| Transform name                         [ Gebäudehöhen berechnen ]            |
+| Input raster                           [ ${INPUT_RASTER} ] [ Browse... ]     |
+| Raster address from input field        [ ]                                   |
+| Geometry field                         [ geometry v]                         |
+| Explicit geometry CRS (empty: geometry SRID) [ EPSG:2056 ]                   |
+| Band (1 based)                         [ 1 ]                                 |
+| NoData override (empty: raster metadata) [ ]                                 |
+| Output field prefix                    [ height_ ]                           |
+| Statistics (mean min max sum stddev; count always included)                  |
+|   [ mean min max stddev ]                                                    |
+|                                                                              |
+|                                                          [ OK ] [ Cancel ]   |
++==============================================================================+
+----
+
+Setzen Sie `INPUT_RASTER` auf das Gebäude-nDSM aus dem Beispiel.
+Die Eingabezeilen liefern die Polygonspalte `geometry`; Ergebnisfelder erhalten das Präfix `height_`.
+
 === Einstellungen
 
 [cols="2,1,4",options="header"]
@@ -68,6 +97,6 @@ Wählen Sie folgendes Raster und konfigurieren Sie Band 1, Präfix `height_`, St
 https://files.geo.so.ch/ch.swisstopo.lidar_2023.ndsm_buildings/aktuell/ch.swisstopo.lidar_2023.ndsm_buildings.tif
 ----
 
-Das Raster enthält bereits Gebäudehöhen. Ziehen Sie nicht nochmals das Terrainmodell ab.
+Das Raster enthält Gebäudehöhen über Terrain. Verwenden Sie diese Werte direkt für die Statistik.
 `height_mean` ist die mittlere gültige Rasterhöhe innerhalb des Polygons, keine automatisch ermittelte First-, Trauf- oder baurechtliche Höhe.
 Die Beispieldaten wurden mit 0.25 m, EPSG:2056, Float32 und NoData -9999 beschrieben; eine `aktuell`-URL kann sich ändern.

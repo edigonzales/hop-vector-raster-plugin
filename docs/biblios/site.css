@@ -7,3 +7,6 @@
   .doc-content table.tableblock { font-size: 1rem; }
   .doc-content table.tableblock th, .doc-content table.tableblock td { min-width: 8rem; overflow-wrap: normal; }
 }
+/* ASCII dialog sketches retain their alignment and scroll within the panel. */
+.doc-content .gui-dialog pre[class*="language-"] { font-size: 13px; line-height: 1.5; }
+.doc-content .gui-dialog code[class*="language-"] { font-size: inherit; white-space: pre; }

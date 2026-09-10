@@ -4,15 +4,15 @@
 [cols="2,4",options="header"]
 |===
 |Symptom |Prüfung und Abhilfe
-|Transform fehlt / Geometry unbekannt |Geometry-Plugin und vector-raster-Ordner prüfen, alte Versionen entfernen, Hop neu starten; <<installation,Installationskontrolle>>.
+|Transform fehlt / Geometry unbekannt |Geometry-Plugin und vector-raster-Ordner prüfen, genau eine Plugin-Version installieren, Hop neu starten; <<installation,Installationskontrolle>>.
 |ClassNotFound / NoSuchMethod |Hop 2.17.0 und passende Geometry-Version verwenden; keine doppelten JTS-/GeoTools-JARs installieren.
-|Alte Pipeline erkennt IDs nicht |<<migration,Migration>> durchführen; alte IDs haben keine automatischen Aliase.
+|Unbekannte Transform-ID |Plugin-ID und installierte Transforms anhand der <<installation,Plugin-Kontrolle>> prüfen.
 |Datei oder Layer fehlt |Variablenauflösung und lokalen Pfad prüfen; Reader-Layerliste und Available fields verwenden.
 |Geometrie wird als String erkannt |WKT/WKB zuerst ausdrücklich in den gemeinsamen Geometry-Typ umwandeln.
 |CRS fehlt oder SRID widerspricht |Tatsächliches CRS ermitteln. Assign CRS beschreibt Koordinaten, reprojiziert sie nicht. Raster-CRS darf nicht fehlen.
 |Ausschnitt an falschem Ort |XY-/Longitude-Latitude-Reihenfolge, Box-CRS und Einheiten kontrollieren. Clip-Box liegt im expliziten CRS, Reproject-Box im Ziel-CRS.
 |Rasterauflösung falsch |Beide Pixelgrössen in Ziel-CRS-Einheiten eingeben. Nach aussen gerundete Ausdehnung ist beabsichtigt.
-|HTTP-Range-Fehler |Öffentliche direkte COG-URL statt HTML-Downloadseite verwenden; Server/Proxy muss Byte-Ranges mit 206 liefern. Kein Voll-Download-Fallback.
+|HTTP-Range-Fehler |Öffentliche direkte COG-URL verwenden; Server/Proxy muss Byte-Ranges mit 206 liefern. Kein Voll-Download-Fallback.
 |NoData-Sentinel fehlt / kollidiert |Darstellbaren, fachlich unbenutzten Sentinel wählen. Integer braucht einen Sentinel; gültige Null nicht pauschal als NoData erklären.
 |NO_VALID_PIXELS |Überlappung, Band, Polygonpixelzentren und NoData kontrollieren. Count ist 0; Statistik-NULL ist kein Messwert.
 |Palette nicht schreibbar |Für Nearest einen vorhandenen unbenutzten NoData-Index wählen oder BILINEAR mit RGBA-Konvertierung verwenden.

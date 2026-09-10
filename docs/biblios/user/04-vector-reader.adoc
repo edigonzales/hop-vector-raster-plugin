@@ -5,6 +5,38 @@
 Er benötigt keinen vorgelagerten Generate-Rows-Transform und erzeugt für jedes Feature eine Hop-Zeile.
 Die Plugin-ID lautet `SOGIS_VECTOR_READER`.
 
+=== Dialogansicht
+
+Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
+`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
+`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+
+[source,text,role="gui-dialog"]
+----
++==============================================================================+
+| Vector Reader                                                                |
+| ============================================================================ |
+| Transform name                         [ Gebäude lesen ]                     |
+| Format                                 [ GEOPACKAGE v]                       |
+| Vector file                                                                  |
+|   [ ${PROJECT_HOME}/buildings.gpkg ] [ Browse... ]                           |
+| Layer name (optional)                  [ buildings v]                        |
+| DBF encoding (empty: auto)             [ ]                                   |
+| Date timezone                          [ UTC ]                               |
+| Assign CRS (EPSG or WKT)               [ ]                                   |
+|                                                                              |
+| Available fields                                                             |
+|   name       String                                                          |
+|   geometry   Geometry (Polygon, XY, EPSG:2056)                               |
+|                                                                              |
+| Geometry output field                  [ geometry ]                          |
+|                                                                              |
+|                                                          [ OK ] [ Cancel ]   |
++==============================================================================+
+----
+
+Die Ansicht verwendet den Layer `buildings`; dessen Beispielschema enthält `name` und `geometry`.
+
 === Einstellungen und Vorschau
 
 [cols="2,1,4",options="header"]
