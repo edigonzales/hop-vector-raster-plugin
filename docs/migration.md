@@ -27,7 +27,7 @@ For former GENERATE transforms, rename the `output` setting to `fileName`, set `
 | Maven `hop-transform-geotools-raster-zonal-stats` | `hop-raster-zonal-stats` |
 | Maven `hop-transform-arcinfo-generate-writer` | `hop-vector-format-generate` (format library only) |
 
-Stop Hop before installing manually. Remove both the previous plugin folder and an existing `vector-raster` folder, then extract the new ZIP into Hop home. Install `hop-geometry-type-plugin` separately as before; the Vector/Raster ZIP carries its own JTS runtime for raster startup, while the Geometry type JAR remains supplied by the separate Geometry ZIP. Do not copy additional JARs manually. The development installation script performs the old-folder cleanup automatically.
+Stop Hop before installing manually. Remove both the previous plugin folder and an existing `vector-raster` folder, then extract the new ZIP into Hop home. Install `hop-geometry-type-plugin` separately as before for the shared Hop value-type registration; the Vector/Raster ZIP carries the exact Geometry runtime and JTS runtime needed by its direct vector/raster consumers. Do not copy additional JARs manually. The development installation script performs the old-folder cleanup automatically.
 
 Update distribution consumers such as `hop-distributions` to the Maven coordinates
 `ch.so.agi:hop-vector-raster-plugin:<version>` and the ZIP installation root

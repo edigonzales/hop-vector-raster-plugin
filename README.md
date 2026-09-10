@@ -31,9 +31,11 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
   **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.
 - A writable local directory for output files.
 
-The Geometry Type plugin supplies the shared Hop Geometry type and is not
-included in this ZIP. The ZIP includes JTS for raster startup; both plugins
-use classloader group `sogeo-geometry`.
+The separate Geometry Type plugin supplies the shared Hop Geometry type and is
+still required for its Hop value-type registration. This ZIP also carries the
+exact Geometry runtime JAR because vector and raster code directly use the
+curve-aware runtime while Hop may initialize the shared classloader group
+lazily. Both plugins use classloader group `sogeo-geometry`.
 
 ## Installation
 

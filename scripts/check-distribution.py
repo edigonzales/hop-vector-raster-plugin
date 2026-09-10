@@ -30,6 +30,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-raster-reproject-",
         "hop-raster-zonal-stats-",
         "hop-vector-format-generate-",
+        "hop-geometry-type-",
         "jts-core-",
         "gt-geotiff-",
         "gt-coverage-",
@@ -49,7 +50,6 @@ with zipfile.ZipFile(zip_path) as archive:
             raise SystemExit(f"{zip_path.name}: required dependency matching {fragment!r} is missing")
 
     forbidden = [
-        "hop-geometry-type",
         "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
         "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
@@ -113,5 +113,5 @@ size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
 print("  Native Java Shapefile + GeoTools 35.1 raster + EPSG runtime; GeoPackage uses SQLite JDBC")
 print("  Indriya NumberSystem service metadata is present")
-print("  hop-geometry-type remains shared via classLoaderGroup=sogeo-geometry; JTS is bundled for raster startup")
+print("  hop-geometry-type runtime is bundled for direct curve support; the separate Geometry ZIP registers the shared Hop value type")
 print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")

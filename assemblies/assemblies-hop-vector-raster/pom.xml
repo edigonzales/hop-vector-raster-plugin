@@ -78,7 +78,7 @@
       <groupId>ch.so.agi</groupId>
       <artifactId>hop-geometry-type</artifactId>
       <version>${hop.geometry.type.version}</version>
-      <scope>provided</scope>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
   <build>
