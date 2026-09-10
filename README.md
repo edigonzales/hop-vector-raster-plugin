@@ -35,6 +35,7 @@ This release deliberately changes transform IDs without compatibility aliases. E
 ## Raster transforms
 
 - **Raster Clip (GeoTools)**: local GeoTIFF or public HTTP/HTTPS COG → local tiled GeoTIFF, using a bounding box or Hop Polygon/MultiPolygon. Raster source, output path and box coordinates can be constants or input fields.
+- **Raster Reproject / Resample (GeoTools)**: reproject all bands to an aligned target pixel grid using Nearest or Bilinear; supports numeric data, RGB, palettes and alpha. Target CRS, resolution and optional bounding box can come from input fields.
 - **Raster Zonal Statistics (GeoTools)**: enrich incoming polygon rows with selected `mean`, `min`, `max`, `sum`, population `stddev`, plus valid `count` and `status`. Read the original resolution, respect NoData, and transform a copy of the input geometry into the raster CRS.
 
 See [raster usage and acceptance tests](docs/raster-transforms.md) and the [architecture decision](docs/adr/0001-java-geospatial-suite.md).

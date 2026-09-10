@@ -17,6 +17,7 @@ The modules are:
 - `hop-vector-format-geopackage`: SQLite JDBC schema, attributes, geometry headers and shared WKB/curve codecs; no GeoTools dependency.
 - `hop-raster-core`: local/HTTP COG access, bounded original-resolution windows, polygon masks, streaming statistics and GeoTIFF writing.
 - `hop-raster-clip`: one input row describes a clip; the original row receives output path/status.
+- `hop-raster-reproject`: all-band reprojection/resampling through GeoTools CoverageProcessor, bounded weighted windows, target grid alignment and color/alpha semantics.
 - `hop-raster-zonal-stats`: one input polygon row receives statistics, valid count and status.
 - `hop-vector-format-generate`: independent Java/JTS encoder and file sink, without any GeoTools dependency.
 

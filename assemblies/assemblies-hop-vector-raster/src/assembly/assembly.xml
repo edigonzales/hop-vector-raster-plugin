@@ -19,6 +19,7 @@
         <include>ch.so.agi:hop-geotools-support</include>
         <include>ch.so.agi:hop-raster-core</include>
         <include>ch.so.agi:hop-raster-clip</include>
+        <include>ch.so.agi:hop-raster-reproject</include>
         <include>ch.so.agi:hop-raster-zonal-stats</include>
         <include>ch.so.agi:hop-vector-format-generate</include><include>ch.so.agi:hop-vector-format-flatgeobuf</include><include>ch.so.agi:hop-vector-format-parquet</include>
       </includes>
@@ -35,6 +36,7 @@
         <exclude>ch.so.agi:hop-geotools-support</exclude>
         <exclude>ch.so.agi:hop-raster-core</exclude>
         <exclude>ch.so.agi:hop-raster-clip</exclude>
+        <exclude>ch.so.agi:hop-raster-reproject</exclude>
         <exclude>ch.so.agi:hop-raster-zonal-stats</exclude>
         <exclude>ch.so.agi:hop-vector-format-generate</exclude><exclude>ch.so.agi:hop-vector-format-flatgeobuf</exclude><exclude>ch.so.agi:hop-vector-format-parquet</exclude>
         <exclude>ch.so.agi:hop-geometry-type</exclude>

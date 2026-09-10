@@ -27,6 +27,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-geotools-support-",
         "hop-raster-core-",
         "hop-raster-clip-",
+        "hop-raster-reproject-",
         "hop-raster-zonal-stats-",
         "hop-vector-format-generate-",
         "gt-geotiff-",

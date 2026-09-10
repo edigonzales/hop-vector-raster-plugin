@@ -15,6 +15,10 @@ public interface RasterSource extends AutoCloseable {
 
   int bands();
 
+  default RasterColorInfo colorInfo() {
+    return RasterColorInfo.numeric();
+  }
+
   Raster read(RasterReadRequest request) throws Exception;
 
   boolean valid(double value, int band);

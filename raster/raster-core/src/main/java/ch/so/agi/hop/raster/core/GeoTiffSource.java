@@ -36,10 +36,12 @@ public final class GeoTiffSource implements RasterSource {
   private final Map<RasterReadRequest, Raster> cache = new LinkedHashMap<>(16, .75f, true);
   private long cacheBytes;
   private boolean closed;
+  private final RasterDatasetRef reference;
 
   private static final class RawReader extends GeoTiffReader {
     private Rectangle requestedWindow;
     private Double rawNoData;
+    private RasterColorInfo colorInfo;
 
     @Override
     protected void collectScaleOffset(javax.imageio.metadata.IIOMetadata metadata) {
@@ -49,6 +51,48 @@ public final class GeoTiffSource implements RasterSource {
       var decoder =
           new org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffIIOMetadataDecoder(metadata);
       rawNoData = decoder.hasNoData() ? decoder.getNoData() : null;
+      try {
+        var directory =
+            it.geosolutions.imageio.plugins.tiff.TIFFDirectory.createFromMetadata(metadata);
+        var photo = directory.getTIFFField(262);
+        var extras = directory.getTIFFField(338);
+        var samples = directory.getTIFFField(277);
+        int count = samples == null ? 1 : samples.getAsInt(0);
+        int interpretation = photo == null ? 1 : photo.getAsInt(0);
+        int alpha = -1;
+        boolean associated = false, unsupported = false;
+        if (extras != null) {
+          for (int i = 0; i < extras.getCount(); i++) {
+            int value = extras.getAsInt(i);
+            if (value == 1 || value == 2) {
+              if (alpha >= 0) unsupported = true;
+              alpha = count - extras.getCount() + i;
+              associated = value == 1;
+            } else if (value != 0) unsupported = true;
+          }
+        }
+        RasterColorInfo.Kind kind =
+            switch (interpretation) {
+              case 1 -> alpha < 0 ? RasterColorInfo.Kind.NUMERIC : RasterColorInfo.Kind.GRAY_ALPHA;
+              case 2 -> RasterColorInfo.Kind.RGB;
+              case 3 -> RasterColorInfo.Kind.PALETTE;
+              default -> RasterColorInfo.Kind.UNSUPPORTED;
+            };
+        if (kind == RasterColorInfo.Kind.RGB
+            && (count != (alpha < 0 ? 3 : 4) || (alpha >= 0 && alpha != 3))) unsupported = true;
+        if (kind == RasterColorInfo.Kind.GRAY_ALPHA && (count != 2 || alpha != 1))
+          unsupported = true;
+        if (kind == RasterColorInfo.Kind.PALETTE && count != 1) unsupported = true;
+        var palette = directory.getTIFFField(320);
+        colorInfo =
+            new RasterColorInfo(
+                unsupported ? RasterColorInfo.Kind.UNSUPPORTED : kind,
+                alpha,
+                associated,
+                palette == null ? null : palette.getAsChars());
+      } catch (javax.imageio.metadata.IIOInvalidTreeException e) {
+        throw new IllegalArgumentException("Unable to read TIFF color interpretation", e);
+      }
     }
 
     @Override
@@ -88,6 +132,7 @@ public final class GeoTiffSource implements RasterSource {
 
   public GeoTiffSource(RasterDatasetRef ref) throws IOException {
     GeoToolsRuntimeSupport.initialize();
+    reference = ref;
     Object input =
         ref.remote()
             ? new CogSourceSPIProvider(
@@ -99,6 +144,15 @@ public final class GeoTiffSource implements RasterSource {
     try (var scope = session.activate()) {
       reader = new RawReader(input);
     }
+  }
+
+  public void requireDifferentOutput(java.nio.file.Path target) throws IOException {
+    if (reference.remote()) return;
+    var input = java.nio.file.Path.of(reference.location());
+    var output = target.toAbsolutePath().normalize();
+    if (output.equals(input)
+        || (java.nio.file.Files.exists(output) && java.nio.file.Files.isSameFile(input, output)))
+      throw new IllegalArgumentException("Reproject output must differ from its input");
   }
 
   @Override
@@ -127,6 +181,11 @@ public final class GeoTiffSource implements RasterSource {
   }
 
   @Override
+  public RasterColorInfo colorInfo() {
+    return reader.colorInfo;
+  }
+
+  @Override
   public int dataType() {
     try {
       return reader.getImageLayout().getSampleModel(null).getDataType();
@@ -138,9 +197,8 @@ public final class GeoTiffSource implements RasterSource {
   @Override
   public Double noData(int band) {
     Double value = reader.rawNoData;
-    return value != null && dataType() == DataBuffer.TYPE_FLOAT
-        ? (double) value.floatValue()
-        : value;
+    if (value == null) return null;
+    return dataType() == DataBuffer.TYPE_FLOAT ? (double) value.floatValue() : value;
   }
 
   @Override

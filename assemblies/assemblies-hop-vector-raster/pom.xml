@@ -64,6 +64,10 @@
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId><artifactId>hop-raster-reproject</artifactId>
+      <version>${project.version}</version><scope>runtime</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
