@@ -10,6 +10,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferFloat;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Files;
@@ -83,6 +84,44 @@ class RasterCoreTest {
       coverage.dispose(true);
     }
     return file;
+  }
+
+  @Test
+  void localReadsReleaseFileHandlesAndKeepCopiedSamples() throws Exception {
+    Path input = fixture(dir.resolve("input.tif"));
+    Raster first;
+    Raster second;
+    try (var source = new GeoTiffSource(new RasterDatasetRef(input.toString()))) {
+      var firstRequest = new RasterReadRequest(new Rectangle(0, 0, 2, 2), 0);
+      first = source.read(firstRequest);
+      second = source.read(new RasterReadRequest(new Rectangle(2, 1, 2, 2), 0));
+      assertThat(source.read(firstRequest)).isSameAs(first);
+    }
+    Path renamed = Files.move(input, dir.resolve("renamed.tif"));
+    Files.delete(renamed);
+    assertThat(first.getSampleDouble(0, 0, 0)).isEqualTo(1);
+    assertThat(first.getSampleDouble(1, 1, 0)).isEqualTo(6);
+    assertThat(second.getSampleDouble(2, 1, 0)).isEqualTo(7);
+    assertThat(second.getSampleDouble(3, 2, 0)).isEqualTo(12);
+  }
+
+  @Test
+  void interruptedLocalReadReleasesFileHandles() throws Exception {
+    Path input = fixture(dir.resolve("interrupted.tif"));
+    try (var source = new GeoTiffSource(new RasterDatasetRef(input.toString()))) {
+      try {
+        Thread.currentThread().interrupt();
+        assertThatThrownBy(
+                () -> source.read(new RasterReadRequest(new Rectangle(0, 0, 4, 3), 0)))
+            .isInstanceOf(IOException.class)
+            .hasMessage("Raster operation interrupted");
+        assertThat(Thread.currentThread().isInterrupted()).isTrue();
+        assertThat(source.cachedBytes()).isZero();
+      } finally {
+        Thread.interrupted();
+      }
+    }
+    Files.delete(input);
   }
 
   @Test

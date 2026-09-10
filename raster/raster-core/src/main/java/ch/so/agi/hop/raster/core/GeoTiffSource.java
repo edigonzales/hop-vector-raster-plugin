@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.eclipse.imagen.PlanarImage;
 import org.eclipse.imagen.ROI;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.datum.PixelInCell;
@@ -27,6 +28,7 @@ import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.DecimationPolicy;
 import org.geotools.coverage.grid.io.OverviewPolicy;
 import org.geotools.gce.geotiff.GeoTiffReader;
+import org.geotools.image.util.ImageUtilities;
 
 /** Original-resolution, bounded reads. Instances belong to one transform copy. */
 public final class GeoTiffSource implements RasterSource {
@@ -296,7 +298,13 @@ public final class GeoTiffSource implements RasterSource {
       cacheBytes += bytes;
       return result;
     } finally {
-      coverage.dispose(true);
+      try {
+        // ImageRead owns streams beyond the coverage; release them after copying the window.
+        ImageUtilities.disposePlanarImageChain(
+            PlanarImage.wrapRenderedImage(coverage.getRenderedImage()));
+      } finally {
+        coverage.dispose(true);
+      }
     }
   }
 
