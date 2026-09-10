@@ -12,9 +12,9 @@ jobs:
     uses: ./.github/workflows/verify.yml
   publish:
     needs: verify
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@3f062b8
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@3f062b8e0a6c9c744dc0cf3e447578d6353f8ff1
     with:
-      ci-ref: 3f062b8
+      ci-ref: 3f062b8e0a6c9c744dc0cf3e447578d6353f8ff1
       repository-kind: release
       verified-artifact-name: hop-vector-raster-plugin-ubuntu-latest-jdk17
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
