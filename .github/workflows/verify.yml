@@ -37,9 +37,9 @@ jobs:
 
   build:
     needs: geometry
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@c5c104571b54c42eb9e7a2c3baaa2f45e27ca450
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@93e87da1ac5cdd11777d43b42b658761481a9e86
     with:
-      ci-ref: c5c104571b54c42eb9e7a2c3baaa2f45e27ca450
+      ci-ref: 93e87da1ac5cdd11777d43b42b658761481a9e86
       java-versions: '["21", "25"]'
       runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
       canonical-runner-os: ubuntu-latest
