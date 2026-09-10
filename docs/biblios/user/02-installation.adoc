@@ -25,11 +25,11 @@ Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 [source,text]
 ----
 HOP_HOME/
-|_ plugins/
-   |_ misc/
-   |  |_ hop-geometry-type/
-   |_ transforms/
-      |_ vector-raster/
+└── plugins/
+    ├── misc/
+    │   └── hop-geometry-type/
+    └── transforms/
+        └── vector-raster/
 ----
 
 Kopieren Sie nicht zusätzlich einzelne JTS- oder Geometry-JARs in andere Plugin-Verzeichnisse.
