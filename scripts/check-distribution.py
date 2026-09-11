@@ -2,6 +2,7 @@
 from io import BytesIO
 from pathlib import Path
 import zipfile
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
 target = root / "assemblies" / "assemblies-hop-vector-raster" / "target"
@@ -30,8 +31,6 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-raster-reproject-",
         "hop-raster-zonal-stats-",
         "hop-vector-format-generate-",
-        "hop-geometry-type-",
-        "jts-core-",
         "gt-geotiff-",
         "gt-coverage-",
         "imageio-ext-cog-reader-",
@@ -49,7 +48,13 @@ with zipfile.ZipFile(zip_path) as archive:
         if not any(fragment in name for name in names):
             raise SystemExit(f"{zip_path.name}: required dependency matching {fragment!r} is missing")
 
+    dependencies = ET.fromstring(archive.read("plugins/transforms/vector-raster/dependencies.xml"))
+    folders = {node.text for node in dependencies.findall("folder")}
+    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-geometry-type/lib"}:
+        raise SystemExit("Geometry and its lib folder must both be explicit dependencies")
+
     forbidden = [
+        "hop-geometry-type-", "jts-core-",
         "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
         "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
@@ -113,5 +118,5 @@ size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
 print("  Native Java Shapefile + GeoTools 35.1 raster + EPSG runtime; GeoPackage uses SQLite JDBC")
 print("  Indriya NumberSystem service metadata is present")
-print("  hop-geometry-type runtime is bundled for direct curve support; the separate Geometry ZIP registers the shared Hop value type")
+print("  Geometry and JTS are supplied only by the separate Geometry Type plugin")
 print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")

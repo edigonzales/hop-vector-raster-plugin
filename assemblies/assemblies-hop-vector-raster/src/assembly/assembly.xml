@@ -33,9 +33,17 @@
         <exclude>ch.so.agi:hop-raster-clip</exclude>
         <exclude>ch.so.agi:hop-raster-reproject</exclude>
         <exclude>ch.so.agi:hop-raster-zonal-stats</exclude>
+        <exclude>ch.so.agi:hop-geometry-type</exclude>
+        <exclude>org.locationtech.jts:jts-core</exclude>
         <exclude>org.apache.hop:*</exclude>
         <exclude>org.slf4j:*</exclude>
       </excludes>
     </dependencySet>
   </dependencySets>
+  <files>
+    <file>
+      <source>src/assembly/dependencies.xml</source>
+      <outputDirectory>plugins/transforms/vector-raster</outputDirectory>
+    </file>
+  </files>
 </assembly>

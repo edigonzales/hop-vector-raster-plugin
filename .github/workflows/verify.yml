@@ -30,7 +30,7 @@ jobs:
       hop-version: 2.19.0
       plugin-root: plugins/transforms/vector-raster
 
-  installed-e2e:
+  e2e-inputs:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -71,15 +71,45 @@ jobs:
               https://archive.apache.org/dist/hop/2.19.0/apache-hop-client-2.19.0.zip -o "$RUNNER_TEMP/hop.zip"
           fi
           echo "eb227ffe3386480f5ecb59e1d9fdbb16ace15b9ebd9e02da16cdca2c3cadc869f92275b0f607952fb2c5122986839a5b09b2c5762401dad128d8de6b0394643c  $RUNNER_TEMP/hop.zip" | sha512sum -c -
-      - name: Install package into clean Hop and run raster/vector smoke
-        run: |
-          set -euo pipefail
-          unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/hop"
-          zip_path="$(find .ci/verified -type f -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
-          geometry_zip="$PWD/.ci/geometry-dist/hop-geometry-type-plugin.zip"
-          test -n "$zip_path"
-          test -n "$geometry_zip"
-          python3 scripts/run-installed-e2e.py \
-            --hop-home "$RUNNER_TEMP/hop/hop" \
-            --plugin-zip "$zip_path" \
-            --geometry-zip "$geometry_zip"
+      - name: Upload shared E2E inputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-raster-e2e-inputs
+          compression-level: 0
+          path: |
+            ${{ runner.temp }}/hop.zip
+            .ci/geometry-dist/hop-geometry-type-plugin.zip
+
+  installed-e2e:
+    needs: [build, e2e-inputs]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15, windows-latest]
+        java: ['21', '25']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: hop-vector-raster-plugin-canonical
+          path: .ci/verified
+      - uses: actions/download-artifact@v4
+        with:
+          name: vector-raster-e2e-inputs
+          path: .ci/e2e-inputs
+      - name: Run installed Hop scenarios and runtime identity checks
+        run: python scripts/prepare-installed-e2e.py
+      - name: Upload E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-raster-e2e-${{ matrix.os }}-java${{ matrix.java }}
+          path: .ci/e2e-results

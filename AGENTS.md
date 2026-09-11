@@ -39,7 +39,8 @@ contain Geometry or Vector/Raster plugin directories. Set absolute paths:
 `HOP_HOME` to that installation, `PLUGIN_ZIP` to the built Vector/Raster ZIP,
 and `GEOMETRY_ZIP` to the Geometry 0.2.0-SNAPSHOT ZIP. The workflow downloads the
 latter as `ch.so.agi:hop-geometry-type-plugin:0.2.0-SNAPSHOT`, extension `zip`,
-using the shared Maven downloader. The test requires Java and `javac` plus Bash.
+using the shared Maven downloader. The test requires Java, `javac` and Python. Installed E2E runs on Java 21/25
+across Linux, macOS and Windows using the same canonical ZIP and Geometry snapshot.
 
 ```bash
 python3 scripts/run-installed-e2e.py --hop-home "$HOP_HOME" --plugin-zip "$PLUGIN_ZIP" --geometry-zip "$GEOMETRY_ZIP"

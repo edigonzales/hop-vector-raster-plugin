@@ -10,9 +10,13 @@ sources/
 └── hop-vector-raster-plugin/
 ```
 
-The GeoTools transforms and `ValueMetaGeometry` must share the Hop class-loader group `sogeo-geometry`. Install the separate Geometry ZIP for the Hop value-type registration. The Vector/Raster distribution also carries the exact `hop-geometry-type` runtime JAR because vector and raster code link directly to curve support before Hop necessarily initializes the separate Geometry plugin. It also contains `jts-core` for raster startup.
-
-The distribution includes GeoTools 35.1 raster/CRS libraries and ImageIO-Ext COG support. The distribution audit excludes unsupported GeoTools modules and GDAL bindings; the shared Geometry runtime and SQLite JDBC bundled natives are explicitly allowed.
+The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster uses
+`classLoaderGroup=sogeo-geometry` and an explicit `dependencies.xml` referencing
+both `../../misc/hop-geometry-type` and `../../misc/hop-geometry-type/lib`.
+Hop does not recursively include `lib` when resolving dependency folders.
+The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
+Install the separate Geometry Type ZIP before running Vector/Raster. On upgrade,
+replace the complete `plugins/transforms/vector-raster` folder to remove stale JARs.
 
 ## Java and Maven
 

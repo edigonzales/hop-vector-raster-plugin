@@ -31,11 +31,13 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
   **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.
 - A writable local directory for output files.
 
-The separate Geometry Type plugin supplies the shared Hop Geometry type and is
-still required for its Hop value-type registration. This ZIP also carries the
-exact Geometry runtime JAR because vector and raster code directly use the
-curve-aware runtime while Hop may initialize the shared classloader group
-lazily. Both plugins use classloader group `sogeo-geometry`.
+The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster uses
+`classLoaderGroup=sogeo-geometry` and an explicit `dependencies.xml` referencing
+both `../../misc/hop-geometry-type` and `../../misc/hop-geometry-type/lib`.
+Hop does not recursively include `lib` when resolving dependency folders.
+The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
+Install the separate Geometry Type ZIP before running Vector/Raster. On upgrade,
+replace the complete `plugins/transforms/vector-raster` folder to remove stale JARs.
 
 ## Installation
 

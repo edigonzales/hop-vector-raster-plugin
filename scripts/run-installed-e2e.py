@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import shutil
@@ -18,8 +20,21 @@ def jars(root: Path) -> list[Path]:
 
 
 def run_command(command: list[str], env: dict[str, str], timeout: int = 180) -> None:
-    print("==>", " ".join(command), flush=True)
-    subprocess.run(command, check=True, env=env, timeout=timeout)
+    print("==>", command[0], "...", flush=True)
+    if os.name == "nt" and command[0].lower().endswith(".bat"):
+        command = ["cmd.exe", "/d", "/s", "/c", subprocess.list2cmdline(command)]
+    log_dir = Path(env["E2E_LOG_DIR"])
+    log = log_dir / f"command-{len(list(log_dir.glob('command-*.log'))):02d}.log"
+    if Path(command[0]).stem in {"java", "javac"}:
+        argfile = log.with_suffix(".args")
+        argfile.write_text("\n".join(json.dumps(arg) for arg in command[1:]), encoding="utf-8")
+        command = [command[0], "@" + str(argfile)]
+    with log.open("w", encoding="utf-8") as output:
+        result = subprocess.run(command, env=env, cwd=env.get("E2E_CWD"),
+                                stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
+    if result.returncode:
+        print(log.read_text(encoding="utf-8", errors="replace")[-20000:])
+    result.check_returncode()
 
 
 def extract_plugin(zip_path: Path, hop_home: Path, plugin_root: str) -> None:
@@ -42,7 +57,9 @@ def main() -> int:
     parser.add_argument("--hop-home", required=True, type=Path)
     parser.add_argument("--plugin-zip", required=True, type=Path)
     parser.add_argument("--geometry-zip", required=True, type=Path)
+    parser.add_argument("--work-dir", type=Path, help="Retain fixtures and logs here, including on failure")
     args = parser.parse_args()
+    args.hop_home = args.hop_home.resolve()
     if not (args.hop_home / "hop-run.sh").is_file():
         raise SystemExit(f"Not an Apache Hop home: {args.hop_home}")
     if not args.plugin_zip.is_file():
@@ -56,7 +73,11 @@ def main() -> int:
         if plugin_root.exists():
             raise SystemExit(f"Hop home is not clean; plugin directory already exists: {plugin_root}")
 
-    with tempfile.TemporaryDirectory(prefix="hop-vector-raster-installed-e2e-") as temp:
+    if args.work_dir:
+        args.work_dir = args.work_dir.resolve()
+        args.work_dir.mkdir(parents=True, exist_ok=True)
+    context = nullcontext(str(args.work_dir)) if args.work_dir else tempfile.TemporaryDirectory(prefix="hop-vector-raster-installed-e2e-")
+    with context as temp:
         work = Path(temp)
         config = work / "config"
         audit = work / "audit"
@@ -77,6 +98,7 @@ def main() -> int:
             encoding="utf-8",
         )
         env = os.environ.copy()
+        env["E2E_LOG_DIR"] = str(work)
         env["HOP_CONFIG_FOLDER"] = str(config)
         env["HOP_AUDIT_FOLDER"] = str(audit)
         env["HOP_JAVA_HOME"] = env.get("JAVA_HOME", "")
@@ -95,18 +117,22 @@ def main() -> int:
             javac = Path(shutil.which("javac") or "javac")
             java = Path(shutil.which("java") or "java")
 
-        subprocess.run(
-            [str(javac), "-cp", classpath, "-d", str(classes), str(source)],
-            check=True,
-            env=env,
-        )
+        run_command([str(javac), "-proc:none", "-cp", classpath, "-d", str(classes), str(source)], env)
         java_smoke = [
             str(java), "-cp", str(classes) + os.pathsep + classpath,
             "DocumentationExamplesSmoke", str(Path(__file__).parents[1]), str(data),
         ]
         run_command(java_smoke + ["prepare"], env)
 
-        hop_run = str(args.hop_home / "hop-run.sh")
+        # Probe the real plugin classloader; never put plugin JARs on its initial classpath.
+        hop_classpath = os.pathsep.join(str(path) for path in jars(args.hop_home / "lib"))
+        probe = Path(__file__).with_name("RuntimeIdentityProbe.java")
+        run_command([str(javac), "-proc:none", "-cp", hop_classpath, "-d", str(classes), str(probe)], env)
+        probe_env = dict(env, E2E_CWD=str(args.hop_home))
+        for order in ("raster-first", "geometry-first"):
+            run_command([str(java), "-cp", str(classes) + os.pathsep + hop_classpath,
+                         "RuntimeIdentityProbe", order], probe_env)
+        hop_run = str(args.hop_home / ("hop-run.bat" if os.name == "nt" else "hop-run.sh"))
         run_command([
             hop_run, "-r", "local", "-f",
             str(Path(__file__).parents[1] / "examples/raster-clip/clip-cog.hpl"),
