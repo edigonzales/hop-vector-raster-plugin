@@ -7,40 +7,10 @@ permissions:
   contents: read
 
 jobs:
-  geometry:
-    runs-on: ubuntu-latest
-    outputs:
-      resolved_version: ${{ steps.geometry.outputs.resolved_version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-plugin-ci
-          ref: 052a98fcedb36cff4ea3fc9da24e60de26870ddc
-          path: .ci/hop-plugin-ci
-          persist-credentials: false
-      - name: Resolve published geometry snapshot
-        id: geometry
-        run: |
-          set -euo pipefail
-          mkdir -p .ci/geometry-dist
-          python3 .ci/hop-plugin-ci/scripts/resolve_maven_snapshot.py \
-            --group ch.so.agi \
-            --artifact hop-geometry-type-plugin \
-            --version 0.2.0-SNAPSHOT \
-            --output .ci/geometry-dist/hop-geometry-type-plugin-0.2.0-SNAPSHOT.zip \
-            --github-output "$GITHUB_OUTPUT"
-          grep '^resolved_version=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2- > .ci/geometry-dist/resolved-version.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: geometry-runtime
-          path: .ci/geometry-dist/*
-          if-no-files-found: error
-
   build:
-    needs: geometry
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@052a98fcedb36cff4ea3fc9da24e60de26870ddc
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@990af4813013fa8d21f6447e7545ed5499f2f202
     with:
-      ci-ref: 052a98fcedb36cff4ea3fc9da24e60de26870ddc
+      ci-ref: 990af4813013fa8d21f6447e7545ed5499f2f202
       java-versions: '["21", "25"]'
       runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
       canonical-runner-os: ubuntu-latest
@@ -53,13 +23,7 @@ jobs:
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
       zip-glob: assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip
       validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py"]'
-      dependency-artifact-name: geometry-runtime
-      dependency-artifact-path: .ci/geometry-dist
-      dependency-install: true
-      dependency-group-id: ch.so.agi
-      dependency-artifact-id: hop-geometry-type
-      dependency-version: 0.2.0-SNAPSHOT
-      dependency-jar-glob: plugins/misc/hop-geometry-type/*.jar
+      additional-verified-files: '["pom.xml"]'
       artifact-name-prefix: hop-vector-raster-plugin
       group-id: ch.so.agi
       artifact-id: hop-vector-raster-plugin
@@ -71,18 +35,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: edigonzales/hop-plugin-ci
+          ref: 990af4813013fa8d21f6447e7545ed5499f2f202
+          path: .ci/hop-plugin-ci
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+      - name: Configure common Maven repositories
+        run: |
+          python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py \
+            --output "$RUNNER_TEMP/maven-settings.xml"
       - uses: actions/download-artifact@v4
         with:
           name: hop-vector-raster-plugin-canonical
           path: .ci/verified
-      - uses: actions/download-artifact@v4
-        with:
-          name: geometry-runtime
-          path: .ci/geometry-dist
+      - name: Download current Geometry snapshot
+        run: |
+          mkdir -p .ci/geometry-dist
+          python3 .ci/hop-plugin-ci/scripts/download_maven_artifact.py \
+            --group ch.so.agi \
+            --artifact hop-geometry-type-plugin \
+            --version 0.2.0-SNAPSHOT \
+            --extension zip \
+            --maven-settings "$RUNNER_TEMP/maven-settings.xml" \
+            --output .ci/geometry-dist/hop-geometry-type-plugin.zip
       - name: Download isolated Hop 2.19.0
         run: |
           if ! curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
@@ -96,7 +76,7 @@ jobs:
           set -euo pipefail
           unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/hop"
           zip_path="$(find .ci/verified -type f -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
-          geometry_zip="$(find .ci/geometry-dist -type f -name 'hop-geometry-type-plugin-*.zip' -print | head -n 1)"
+          geometry_zip="$PWD/.ci/geometry-dist/hop-geometry-type-plugin.zip"
           test -n "$zip_path"
           test -n "$geometry_zip"
           python3 scripts/run-installed-e2e.py \

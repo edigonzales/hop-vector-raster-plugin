@@ -48,7 +48,7 @@ def main() -> int:
     if not args.plugin_zip.is_file():
         raise SystemExit(f"Plugin ZIP does not exist: {args.plugin_zip}")
     if not args.geometry_zip.is_file():
-        raise SystemExit(f"Geometry runtime ZIP does not exist: {args.geometry_zip}")
+        raise SystemExit(f"Geometry snapshot ZIP does not exist: {args.geometry_zip}")
     for plugin_root in (
         args.hop_home / "plugins/misc/hop-geometry-type",
         args.hop_home / "plugins/transforms/vector-raster",
