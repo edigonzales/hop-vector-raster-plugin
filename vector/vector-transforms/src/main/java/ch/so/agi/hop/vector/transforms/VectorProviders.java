@@ -11,6 +11,9 @@ final class VectorProviders {
       case GEOPACKAGE ->
           new ch.so.agi.hop.vector.formats.geopackage.GeoPackageProvider(
               new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+      case FILEGEODATABASE ->
+          new ch.so.agi.hop.vector.formats.filegeodatabase.FileGeodatabaseProvider(
+              new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
       case FLATGEOBUF -> new ch.so.agi.hop.vector.formats.flatgeobuf.FlatGeobufProvider();
       case PARQUET ->
           new ch.so.agi.hop.vector.formats.parquet.ParquetProvider(

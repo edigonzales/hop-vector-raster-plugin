@@ -6,6 +6,7 @@
 |Format |Lesen |Schreiben |Dimensionen |Besonderheiten
 |Shapefile |Ja |Ja |XY, XYZ, XYM, XYZM |Mehrere Dateien; DBF-Grenzen; Kurven werden linearisiert.
 |GeoPackage (Vektor) |Ja |Ja |XY |Ein Layer pro Reader/Writer; unterstützt ausgewählte Kurventypen.
+|File Geodatabase (`.gdb`) |Ja |Ja |XY, XYZ, XYM, XYZM |Reines Java über `filegdb4j`; Writer erzeugt eine neue Geodatabase mit einem Layer.
 |FlatGeobuf |Nein |Ja |XY, XYZ, XYM, XYZM |Optionaler räumlicher Index; sortiert Features um.
 |Native spatial Parquet |Nein |Ja |XY, XYZ, XYM, XYZM |GEOMETRY/GEOGRAPHY; kein GeoParquet-`geo`-Metadatendokument.
 |ArcInfo GENERATE |Nein |Ja |XY, XYZ |Homogene einfache Geometrien, keine beliebigen Attribute.
@@ -15,9 +16,23 @@
 Vector Reader/Writer verwenden lokale Dateien. HTTP-COGs gehören ausschliesslich zu den Raster-Transforms.
 Ein unbekanntes CRS darf nicht als WGS84 geraten werden. CRS-Zuweisung verändert niemals Koordinaten.
 
+[[filegeodatabase]]
+=== File Geodatabase
+
+Esri File Geodatabases (`.gdb`) werden ohne GDAL und ohne native Bibliotheken über die
+Bibliothek `filegdb4j` gelesen und geschrieben. Der Reader liest Feature Classes mit
+Punkt-, Multipoint-, Linien- und Polygon-Geometrien einschliesslich Z und M, Attribute
+und Feld-Domains; Katalogtabellen und normale Tabellen erscheinen nicht als Layer.
+
+Der Writer erzeugt eine neue Geodatabase mit genau einer Feature Class. Das Ziel darf
+nicht existieren. Die Ausgabe wird in einem temporären Verzeichnis neben dem Ziel
+aufgebaut und erst nach erfolgreichem Abschluss veröffentlicht. Append, Update und
+Löschen sind nicht Teil dieses Umfangs, ebenso wenig Kreisbögen und Bézier-Segmente.
+Ob ein Layername bereits existiert, wird aus dem Katalog gelesen; die Auswahl eines
+Layers beim Lesen entspricht Verhalten und Fehlermeldungen von GeoPackage.
+
 [[shapefile]]
 === Shapefile
-
 Unterstützt werden Point, MultiPoint, PolyLine und Polygon einschliesslich Multipart und Löchern.
 MultiPatch und heterogene GeometryCollections werden abgelehnt. Kurven werden mit der vorhandenen
 linearen Darstellung des Geometry-Typs geschrieben; Kurven mit Z/M sind nicht unterstützt.

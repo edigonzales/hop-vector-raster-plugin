@@ -63,6 +63,11 @@
     </dependency>
     <dependency>
       <groupId>ch.so.agi</groupId>
+      <artifactId>hop-vector-format-filegeodatabase</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
       <artifactId>hop-vector-format-generate</artifactId>
       <version>${project.version}</version>
     </dependency>

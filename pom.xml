@@ -12,6 +12,7 @@
     <module>vector/formats/flatgeobuf</module>
     <module>vector/formats/parquet</module>
     <module>vector/formats/geopackage</module>
+    <module>vector/formats/filegeodatabase</module>
     <module>support/geotools-support</module>
     <module>vector/vector-transforms</module>
     <module>raster/raster-core</module>
@@ -27,6 +28,7 @@
     <hop.version>2.19.0</hop.version>
     <geotools.version>35.1</geotools.version>
     <hop.geometry.type.version>0.2.0-SNAPSHOT</hop.geometry.type.version>
+    <filegdb4j.version>0.1.0-SNAPSHOT</filegdb4j.version>
     <jts.version>1.20.0</jts.version>
     <junit.version>5.12.0</junit.version>
     <assertj.version>3.27.3</assertj.version>

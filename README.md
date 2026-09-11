@@ -14,8 +14,8 @@ All transforms appear in the **Geospatial** category.
 
 | Transform | Purpose |
 |---|---|
-| Vector Reader | Read Shapefile or GeoPackage layers into typed Hop rows. |
-| Vector Writer | Write Shapefile, GeoPackage, FlatGeobuf, native spatial Parquet or ArcInfo GENERATE. |
+| Vector Reader | Read Shapefile, GeoPackage or File Geodatabase layers into typed Hop rows. |
+| Vector Writer | Write Shapefile, GeoPackage, File Geodatabase, FlatGeobuf, native spatial Parquet or ArcInfo GENERATE. |
 | Raster Clip (GeoTools) | Clip one band from a local GeoTIFF or public COG using a box or polygon. |
 | Raster Reproject / Resample (GeoTools) | Reproject and resample all bands, including color, palette and alpha rasters. |
 | Raster Zonal Statistics (GeoTools) | Add polygon statistics such as mean, min, max and valid pixel count to rows. |

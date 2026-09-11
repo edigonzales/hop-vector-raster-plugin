@@ -15,6 +15,7 @@ The modules are:
 - `hop-vector-transforms`: common Vector Reader and Writer, including GENERATE settings.
 - `hop-vector-format-shapefile`: native Java Shapefile I/O with Z/M and DBF encoding.
 - `hop-vector-format-geopackage`: SQLite JDBC schema, attributes, geometry headers and shared WKB/curve codecs; no GeoTools dependency.
+- `hop-vector-format-filegeodatabase`: pure Java Esri file geodatabase (`.gdb`) reader and writer through the standalone `filegdb4j` library; no GDAL/OGR bindings, no native code.
 - `hop-raster-core`: local/HTTP COG access, bounded original-resolution windows, polygon masks, streaming statistics and GeoTIFF writing.
 - `hop-raster-clip`: one input row describes a clip; the original row receives output path/status.
 - `hop-raster-reproject`: all-band reprojection/resampling through GeoTools CoverageProcessor, bounded weighted windows, target grid alignment and color/alpha semantics.
@@ -37,7 +38,7 @@ GeoTIFF clips preserve the selected band's raw data type and scale/offset, geore
 
 ## Vector adapter boundary
 
-Common transforms use Hop row metadata and the shared Geometry type. They never use `DataStore` or `SimpleFeature`; those remain only in independent test references. GeoPackage requests CRS definitions through `CrsDefinitionResolver`, whose GeoTools implementation stays in the support module. Native SQLite libraries remain intentionally bundled in one cross-platform ZIP. Shapefile now uses native Java with Z/M and DBF encoding support. FlatGeobuf and native spatial Parquet are implemented as separate write-only format modules behind the common Vector Writer.
+Common transforms use Hop row metadata and the shared Geometry type. They never use `DataStore` or `SimpleFeature`; those remain only in independent test references. GeoPackage requests CRS definitions through `CrsDefinitionResolver`, whose GeoTools implementation stays in the support module. Native SQLite libraries remain intentionally bundled in one cross-platform ZIP. Shapefile now uses native Java with Z/M and DBF encoding support. FlatGeobuf and native spatial Parquet are implemented as separate write-only format modules behind the common Vector Writer. The file geodatabase module supports reading feature classes and, following the existing writer model, creating a new `.gdb` with one feature class; appending layers and updates remain separate extensions.
 
 Writers publish their output only after successful EOF. Shapefile stages its sidecar bundle and removes files it published if a move fails; GeoPackage stages one transactional database; GENERATE retains its existing temporary-file lifecycle; FlatGeobuf and Parquet publish staged files with atomic rename or hard links. Reader/writer instances belong to one transform copy. No append/update or spatial-index feature is added to GeoPackage. Its current geometry contract is XY, including the existing curve types; unsupported Z/M is rejected rather than reduced.
 

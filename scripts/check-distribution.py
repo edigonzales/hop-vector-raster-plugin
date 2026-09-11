@@ -25,6 +25,10 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-vector-format-shapefile-",
         "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "flatgeobuf-", "parquet-hadoop-",
         "hop-vector-format-geopackage-",
+        "hop-vector-format-filegeodatabase-",
+        "filegdb4j-core-",
+        "filegdb4j-geometry-",
+        "filegdb4j-jts-",
         "hop-geotools-support-",
         "hop-raster-core-",
         "hop-raster-clip-",
@@ -83,7 +87,7 @@ with zipfile.ZipFile(zip_path) as archive:
         if not entry.endswith(".jar"):
             continue
         with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
-            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-transforms-")):
+            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-filegeodatabase-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-transforms-")):
                 for name in nested.namelist():
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
@@ -117,6 +121,7 @@ with zipfile.ZipFile(zip_path) as archive:
 size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
 print("  Native Java Shapefile + GeoTools 35.1 raster + EPSG runtime; GeoPackage uses SQLite JDBC")
+print("  File geodatabase support is pure Java via filegdb4j, no GDAL bindings")
 print("  Indriya NumberSystem service metadata is present")
 print("  Geometry and JTS are supplied only by the separate Geometry Type plugin")
 print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")
