@@ -27,6 +27,11 @@ final class VectorReaderDialogComposite extends Composite {
   private Text availableFieldsPreview;
   private TextVar geometryFieldName;
   private TextVar charset, timezone, crs;
+  private final TextVar[] bounds = new TextVar[4];
+
+  TextVar[] getFileGdbBounds() {
+    return bounds;
+  }
 
   TextVar getCharset() {
     return charset;
@@ -80,6 +85,15 @@ final class VectorReaderDialogComposite extends Composite {
     crs = new TextVar(variables, crsRow, SWT.BORDER);
     buildRowControl(crsRow, "Assign CRS (EPSG or WKT)", crs);
     lastRow = crsRow;
+    String[] labels = {
+      "FileGDB X min (source CRS)", "FileGDB Y min", "FileGDB X max", "FileGDB Y max"
+    };
+    for (int i = 0; i < 4; i++) {
+      Composite row = createRow(lastRow);
+      bounds[i] = new TextVar(variables, row, SWT.BORDER);
+      buildRowControl(row, labels[i], bounds[i]);
+      lastRow = row;
+    }
     Composite fieldsRow = createRow(lastRow);
     availableFieldsPreview =
         new Text(fieldsRow, SWT.MULTI | SWT.BORDER | SWT.READ_ONLY | SWT.V_SCROLL | SWT.H_SCROLL);

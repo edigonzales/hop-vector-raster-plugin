@@ -26,6 +26,30 @@ class CloudFormatsContractTest {
   }
 
   @Test
+  void fileGdbOptionsSurviveXmlAndOldPipelinesKeepLegacyPrecision() throws Exception {
+    var meta = new VectorWriterMeta();
+    assertThat(meta.getFileGdbPrecisionMode()).isEqualTo("AUTO");
+    meta.setFileName("out.gdb");
+    meta.setFormat("FILEGEODATABASE");
+    meta.setFileGdbXyResolution("0.001");
+    meta.setFileGdbXyTolerance("0.01");
+    meta.setFileGdbXOrigin("2500000");
+    meta.setFileGdbYOrigin("1100000");
+    meta.setFileGdbSpatialIndex(false);
+    var copy = new VectorWriterMeta();
+    copy.loadXml(
+        XmlHandler.loadXmlString("<transform>" + meta.getXml() + "</transform>")
+            .getDocumentElement(),
+        null);
+    assertThat(copy.options()).isEqualTo(meta.options());
+    copy.loadXml(
+        XmlHandler.loadXmlString("<transform><fileName>old.gdb</fileName></transform>")
+            .getDocumentElement(),
+        null);
+    assertThat(copy.getFileGdbPrecisionMode()).isEqualTo("LEGACY");
+  }
+
+  @Test
   void xmlOptionsAndCapabilities() throws Exception {
     for (String format : List.of("FLATGEOBUF", "PARQUET")) {
       var m = new VectorWriterMeta();

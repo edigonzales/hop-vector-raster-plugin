@@ -161,6 +161,12 @@ def main() -> int:
             "-p", f"OUTPUT_FILE={data / 'zones.parquet'}",
         ], env)
 
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "scripts/e2e/filegdb-curves.hpl"),
+            "-p", f"INPUT_VECTOR={data / 'curves.gdb'}", "-p", "INPUT_LAYER=curves",
+            "-p", f"OUTPUT_FILE={data / 'curves-copy.gdb'}",
+        ], env)
         run_command(java_smoke + ["check"], env)
         with (data / "zonal.csv").open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream, delimiter=";"))

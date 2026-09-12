@@ -29,6 +29,46 @@ public class VectorReaderMeta extends BaseTransformMeta<VectorReader, VectorRead
     setDefault();
   }
 
+  @HopMetadataProperty private String fileGdbXMin = "";
+
+  public String getFileGdbXMin() {
+    return fileGdbXMin;
+  }
+
+  public void setFileGdbXMin(String value) {
+    fileGdbXMin = value;
+  }
+
+  @HopMetadataProperty private String fileGdbYMin = "";
+
+  public String getFileGdbYMin() {
+    return fileGdbYMin;
+  }
+
+  public void setFileGdbYMin(String value) {
+    fileGdbYMin = value;
+  }
+
+  @HopMetadataProperty private String fileGdbXMax = "";
+
+  public String getFileGdbXMax() {
+    return fileGdbXMax;
+  }
+
+  public void setFileGdbXMax(String value) {
+    fileGdbXMax = value;
+  }
+
+  @HopMetadataProperty private String fileGdbYMax = "";
+
+  public String getFileGdbYMax() {
+    return fileGdbYMax;
+  }
+
+  public void setFileGdbYMax(String value) {
+    fileGdbYMax = value;
+  }
+
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String format = "AUTO";
 
@@ -180,7 +220,21 @@ public class VectorReaderMeta extends BaseTransformMeta<VectorReader, VectorRead
         resolve(vars, crsOverride),
         VectorFormat.resolve(format, Path.of(resolve(vars, fileName))) == VectorFormat.SHAPEFILE
             ? new ShapefileOptions(resolve(vars, charset), resolve(vars, timezone), List.of())
-            : new FormatOptions.None(),
+            : VectorFormat.resolve(format, Path.of(resolve(vars, fileName)))
+                    == VectorFormat.FILEGEODATABASE
+                ? new FileGeodatabaseOptions(
+                    "LEGACY",
+                    null,
+                    null,
+                    null,
+                    null,
+                    true,
+                    FileGeodatabaseOptions.bounds(
+                        resolve(vars, fileGdbXMin),
+                        resolve(vars, fileGdbYMin),
+                        resolve(vars, fileGdbXMax),
+                        resolve(vars, fileGdbYMax)))
+                : new FormatOptions.None(),
         diagnostics);
   }
 }

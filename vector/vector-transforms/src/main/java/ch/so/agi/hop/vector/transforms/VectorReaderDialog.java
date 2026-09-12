@@ -22,6 +22,7 @@ import org.eclipse.swt.widgets.Text;
 public class VectorReaderDialog extends BaseTransformDialog {
 
   private final VectorReaderMeta input;
+  private TextVar[] wBounds;
   private TextVar wFileName, wCharset, wTimezone, wCrs;
   private org.eclipse.swt.widgets.Combo wFormat;
   private Button wbFile;
@@ -81,7 +82,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
     fl.top = new FormAttachment(wTransformName, margin);
     formatLabel.setLayoutData(fl);
     wFormat = new org.eclipse.swt.widgets.Combo(shell, SWT.READ_ONLY);
-    wFormat.setItems(new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE"});
+    wFormat.setItems(new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE"});
     FormData ff = new FormData();
     ff.left = new FormAttachment(props.getMiddlePct(), 0);
     ff.right = new FormAttachment(100, 0);
@@ -104,6 +105,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
         new VectorReaderDialogComposite(shell, SWT.NONE, variables, props.getMiddlePct());
     content.setLayoutData(fdMain);
 
+    wBounds = content.getFileGdbBounds();
     wCharset = content.getCharset();
     wTimezone = content.getTimezone();
     wCrs = content.getCrs();
@@ -168,6 +170,10 @@ public class VectorReaderDialog extends BaseTransformDialog {
   private void getData() {
     suppressSchemaRefresh = true;
     try {
+      wBounds[0].setText(input.getFileGdbXMin());
+      wBounds[1].setText(input.getFileGdbYMin());
+      wBounds[2].setText(input.getFileGdbXMax());
+      wBounds[3].setText(input.getFileGdbYMax());
       wCharset.setText(input.getCharset());
       wTimezone.setText(input.getTimezone());
       wCrs.setText(input.getCrsOverride());
@@ -308,6 +314,10 @@ public class VectorReaderDialog extends BaseTransformDialog {
       return;
     }
     transformName = wTransformName.getText();
+    input.setFileGdbXMin(wBounds[0].getText());
+    input.setFileGdbYMin(wBounds[1].getText());
+    input.setFileGdbXMax(wBounds[2].getText());
+    input.setFileGdbYMax(wBounds[3].getText());
     input.setCharset(wCharset.getText());
     input.setTimezone(wTimezone.getText());
     input.setCrsOverride(wCrs.getText());

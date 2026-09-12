@@ -36,7 +36,10 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private Button wComma;
   private Button wSkipEmpty;
   private Button wOverwrite;
-  private Composite flatGeobufOptions, parquetOptions;
+  private Composite flatGeobufOptions, parquetOptions, fileGdbOptions;
+  private Combo wFileGdbMode;
+  private TextVar wFileGdbResolution, wFileGdbTolerance, wFileGdbXOrigin, wFileGdbYOrigin;
+  private Button wFileGdbIndex;
   private Button wFlatGeobufIndex, wFlatGeobufSkipEmpty;
   private Combo wParquetType, wParquetAlgorithm, wParquetCompression;
   private TextVar wParquetRowGroup;
@@ -257,6 +260,28 @@ public class VectorWriterDialog extends BaseTransformDialog {
     new Label(body, SWT.NONE).setText("Overwrite existing file");
     wOverwrite = new Button(body, SWT.CHECK);
     wOverwrite.setSelection(input.isOverwrite());
+    fileGdbOptions = optionGroup();
+    wFileGdbMode =
+        optionCombo(
+            fileGdbOptions,
+            "FileGDB precision defaults",
+            new String[] {"LEGACY", "AUTO"},
+            input.getFileGdbPrecisionMode());
+    wFileGdbResolution =
+        optionText(
+            fileGdbOptions,
+            "XY resolution (CRS units; empty: default)",
+            input.getFileGdbXyResolution());
+    wFileGdbTolerance =
+        optionText(
+            fileGdbOptions, "XY cluster tolerance (CRS units)", input.getFileGdbXyTolerance());
+    wFileGdbXOrigin =
+        optionText(fileGdbOptions, "X grid origin (optional)", input.getFileGdbXOrigin());
+    wFileGdbYOrigin =
+        optionText(fileGdbOptions, "Y grid origin (optional)", input.getFileGdbYOrigin());
+    new Label(fileGdbOptions, SWT.NONE).setText("Create native spatial index");
+    wFileGdbIndex = new Button(fileGdbOptions, SWT.CHECK);
+    wFileGdbIndex.setSelection(input.isFileGdbSpatialIndex());
     flatGeobufOptions = optionGroup();
     new Label(flatGeobufOptions, SWT.NONE).setText("Spatial index (reorders features)");
     wFlatGeobufIndex = new Button(flatGeobufOptions, SWT.CHECK);
@@ -328,6 +353,9 @@ public class VectorWriterDialog extends BaseTransformDialog {
     ((GridData) shapeOptions.getLayoutData()).exclude = !shape;
     generateOptions.setVisible(generate);
     ((GridData) generateOptions.getLayoutData()).exclude = !generate;
+    boolean filegdb = format == ch.so.agi.hop.vector.core.VectorFormat.FILEGEODATABASE;
+    fileGdbOptions.setVisible(filegdb);
+    ((GridData) fileGdbOptions.getLayoutData()).exclude = !filegdb;
     boolean fgb = format == ch.so.agi.hop.vector.core.VectorFormat.FLATGEOBUF;
     boolean parquet = format == ch.so.agi.hop.vector.core.VectorFormat.PARQUET;
     flatGeobufOptions.setVisible(fgb);
@@ -410,6 +438,12 @@ public class VectorWriterDialog extends BaseTransformDialog {
   }
 
   private void readAdditional(VectorWriterMeta meta) {
+    meta.setFileGdbPrecisionMode(wFileGdbMode.getText());
+    meta.setFileGdbXyResolution(wFileGdbResolution.getText());
+    meta.setFileGdbXyTolerance(wFileGdbTolerance.getText());
+    meta.setFileGdbXOrigin(wFileGdbXOrigin.getText());
+    meta.setFileGdbYOrigin(wFileGdbYOrigin.getText());
+    meta.setFileGdbSpatialIndex(wFileGdbIndex.getSelection());
     meta.setFlatGeobufIndex(wFlatGeobufIndex.getSelection());
     meta.setFlatGeobufSkipEmpty(wFlatGeobufSkipEmpty.getSelection());
     meta.setParquetLogicalType(wParquetType.getText());

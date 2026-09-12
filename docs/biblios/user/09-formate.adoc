@@ -27,7 +27,23 @@ und Feld-Domains; Katalogtabellen und normale Tabellen erscheinen nicht als Laye
 Der Writer erzeugt eine neue Geodatabase mit genau einer Feature Class. Das Ziel darf
 nicht existieren. Die Ausgabe wird in einem temporären Verzeichnis neben dem Ziel
 aufgebaut und erst nach erfolgreichem Abschluss veröffentlicht. Append, Update und
-Löschen sind nicht Teil dieses Umfangs, ebenso wenig Kreisbögen und Bézier-Segmente.
+Löschen sind nicht Teil dieses Umfangs. Kreisbögen werden in XY, XYZ, XYM und XYZM nativ
+geschrieben; Bézier- und Ellipsensegmente können nicht geschrieben werden.
+
+Die Writer-Optionen enthalten XY-Auflösung, XY-Toleranz, beide Ursprünge und das Erstellen
+eines räumlichen Indexes. Neue Transforms verwenden CRS-abhängige Vorgaben (`AUTO`), alte
+Pipelines ohne diese Einstellung behalten `LEGACY`. Die Auflösung bestimmt das Speicherraster;
+die Toleranz ist Metadateninformation und keine Linearisierungsgenauigkeit.
+
+Vier optionale Reader-Grenzen filtern inklusiv nach der Geometrie-Boundingbox im Quell-CRS.
+Neue FileGDB-Indizes und fremde Punktindizes werden verwendet; fremde Linien-/Polygonindizes
+führen für diese Abfragesemantik zu einem Scan. Der Schema-Dialog zeigt die gespeicherten
+XY-Einstellungen. Eine eingehende `OBJECTID` wird als `SOURCE_OBJECTID` exportiert; eine
+Namenskollision wird abgelehnt.
+
+Für explizite Linearisierung dienen `linearize_curves` beziehungsweise `coverage_linearize`
+im Geoprocessing-Plugin. Bei Coverages müssen dessen Zielraster und das Writer-Raster identisch sein.
+
 Ob ein Layername bereits existiert, wird aus dem Katalog gelesen; die Auswahl eines
 Layers beim Lesen entspricht Verhalten und Fehlermeldungen von GeoPackage.
 

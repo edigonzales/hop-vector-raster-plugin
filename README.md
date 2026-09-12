@@ -86,3 +86,36 @@ PRs validate, and successful builds on `main` publish to GitHub Pages.
 ## License
 
 [MIT](LICENSE). Third-party notices are included with the relevant format modules.
+
+## FileGDB curves, precision and filtering
+
+The FileGDB reader/writer transports CircularString, CompoundCurve, CurvePolygon, MultiCurve and
+MultiSurface through the shared Geometry Type plugin, preserving circular segments and Z/M.
+Dates are returned as Hop date values and GUIDs as strings. The generated `OBJECTID` remains a
+FileGDB row identifier: an incoming field of that name is exported as `SOURCE_OBJECTID`. An
+existing field with the resulting name causes a collision error.
+
+FileGDB writer options expose XY resolution, tolerance and both origins, plus spatial-index
+creation (enabled by default). New transforms use `AUTO`: projected CRSs use 0.0001 metre
+resolution and 0.001 metre tolerance converted to CRS units; geographic CRSs use 1e-9 degree
+resolution. Old XML pipelines without the precision option use `LEGACY`. Explicit options override
+these defaults. Unknown units in AUTO mode fail; use an explicit legacy configuration where needed.
+The source schema preview shows the stored resolution, tolerance and origins.
+
+The reader accepts four optional inclusive bounding coordinates in the source CRS. All four are
+required together. It uses compatible envelope indexes and reports a scan fallback for foreign line/polygon
+geometry-cell indexes (foreign point indexes are usable). The predicate compares geometry envelopes, not exact polygon intersection.
+Bezier/ellipse spatial queries are not supported; ordinary reads retain their existing stroked
+representation. Filtered results are currently materialized by filegdb4j.
+
+Use Geoprocessing `linearize_curves` when linear output is explicitly required, or
+`coverage_linearize` for grouped polygon boundaries. For coverage export, configure its target
+XY grid identically to the FileGDB writer. XY tolerance is not the curve approximation tolerance.
+
+The installed E2E includes a reader-to-writer FileGDB pipeline with 1,025 XYZM curves, dates,
+source OBJECTIDs, a bounding filter and explicit XY precision (`scripts/e2e/filegdb-curves.hpl`).
+
+Repeated native curve round-trips avoid introducing extra quantized midpoint vertices. A midpoint
+is stored separately only when needed for a non-linear Z/M profile. GDAL 3.11.4 may reconstruct
+synthetic arc midpoints with M=0; this upstream reader behaviour differs from the Hop adapter's
+interpolated values and should be considered when passing measured curves through GDAL.

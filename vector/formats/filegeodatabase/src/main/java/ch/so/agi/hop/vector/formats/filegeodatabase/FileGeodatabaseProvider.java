@@ -9,7 +9,6 @@ import ch.so.agi.filegdb.geometry.GeometryKind;
 import ch.so.agi.filegdb.jts.JtsGeometryReader;
 import ch.so.agi.filegdb.jts.JtsGeometryWriter;
 import ch.so.agi.filegdb.table.FileGdbField;
-import ch.so.agi.filegdb.table.FileGdbFieldType;
 import ch.so.agi.filegdb.table.FileGdbGeomField;
 import ch.so.agi.filegdb.table.FileGdbRow;
 import ch.so.agi.filegdb.table.FileGdbTable;
@@ -27,7 +26,6 @@ import ch.so.agi.hop.vector.core.VectorSource;
 import ch.so.agi.hop.vector.core.WriteRequest;
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -36,8 +34,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import org.apache.hop.core.row.IRowMeta;
-import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.core.row.IValueMeta;
+import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.core.row.value.ValueMetaBinary;
 import org.apache.hop.core.row.value.ValueMetaDate;
 import org.apache.hop.core.row.value.ValueMetaInteger;
@@ -46,8 +44,8 @@ import org.apache.hop.core.row.value.ValueMetaString;
 import org.locationtech.jts.geom.Geometry;
 
 /**
- * Vector adapter for Esri file geodatabases, based on the standalone
- * {@code filegdb4j} library. No GDAL runtime is required.
+ * Vector adapter for Esri file geodatabases, based on the standalone {@code filegdb4j} library. No
+ * GDAL runtime is required.
  */
 public final class FileGeodatabaseProvider implements VectorProvider {
 
@@ -102,11 +100,29 @@ public final class FileGeodatabaseProvider implements VectorProvider {
       LayerSchema output = schema(dataset, table, request);
       int geometryIndex = table.geomFieldIndex();
       int srid = output.srid();
-      JtsGeometryReader jts = new JtsGeometryReader(srid);
-      var iterator = table.iterator();
+      HopCurveAdapter jts = new HopCurveAdapter(srid);
+      java.util.Iterator<FileGdbRow> iterator;
+      if (request.options() instanceof ch.so.agi.hop.vector.core.FileGeodatabaseOptions options
+          && options.filter() != null) {
+        var b = options.filter();
+        var query =
+            table.query(
+                new ch.so.agi.filegdb.geometry.Envelope(b.xMin(), b.yMin(), b.xMax(), b.yMax()));
+        request
+            .diagnostics()
+            .warning(
+                "",
+                "SPATIAL_FILTER",
+                query.indexUsed()
+                    ? "Using FileGDB spatial index"
+                    : "Scanning: no compatible envelope spatial index");
+        iterator = query.iterator();
+      } else iterator = table.iterator();
       FileGdbTable sourceTable = table;
       FileGeodatabase sourceDatabase = database;
       return new VectorSource() {
+        private boolean warnedCurveFallback;
+
         @Override
         public LayerSchema schema() {
           return output;
@@ -117,9 +133,45 @@ public final class FileGeodatabaseProvider implements VectorProvider {
           while (iterator.hasNext()) {
             FileGdbRow row = iterator.next();
             Object[] values = row.values();
+            for (int i = 0; i < values.length; i++) {
+              Object v = values[i];
+              if (v instanceof java.time.LocalDateTime d)
+                values[i] = java.util.Date.from(d.toInstant(java.time.ZoneOffset.UTC));
+              else if (v instanceof java.time.LocalDate d)
+                values[i] =
+                    java.util.Date.from(d.atStartOfDay().toInstant(java.time.ZoneOffset.UTC));
+              else if (v instanceof java.time.LocalTime d)
+                values[i] =
+                    java.util.Date.from(
+                        d.atDate(java.time.LocalDate.of(1970, 1, 1))
+                            .toInstant(java.time.ZoneOffset.UTC));
+              else if (v instanceof java.time.OffsetDateTime d)
+                values[i] = java.util.Date.from(d.toInstant());
+              else if (v instanceof java.util.UUID id) values[i] = id.toString();
+            }
             Object geometry = values[geometryIndex];
             if (geometry != null) {
-              Geometry jtsGeometry = jts.read((FileGdbGeometry) geometry);
+              FileGdbGeometry nativeGeometry = (FileGdbGeometry) geometry;
+              var parts =
+                  nativeGeometry instanceof ch.so.agi.filegdb.geometry.FileGdbPolyline l
+                      ? l.parts()
+                      : nativeGeometry instanceof ch.so.agi.filegdb.geometry.FileGdbPolygon p
+                          ? p.parts()
+                          : java.util.List.<ch.so.agi.filegdb.geometry.FileGdbPart>of();
+              if (!warnedCurveFallback
+                  && parts.stream()
+                      .flatMap(p -> p.segments().stream())
+                      .anyMatch(
+                          s -> !(s instanceof ch.so.agi.filegdb.geometry.CircularArcSegment))) {
+                request
+                    .diagnostics()
+                    .warning(
+                        "",
+                        "CURVE_LINEARIZED",
+                        "Bezier/ellipse curves were linearized by the FileGDB reader");
+                warnedCurveFallback = true;
+              }
+              Geometry jtsGeometry = jts.read(nativeGeometry);
               jtsGeometry.setSRID(srid);
               values[geometryIndex] = jtsGeometry;
             }
@@ -176,6 +228,10 @@ public final class FileGeodatabaseProvider implements VectorProvider {
           attributeMetas.add(rowMeta.getValueMeta(i));
         }
       }
+      int[] attributePositions =
+          java.util.stream.IntStream.range(0, rowMeta.size())
+              .filter(i -> i != geometryIndex)
+              .toArray();
       return new VectorSink() {
         private boolean finished;
         private boolean failed;
@@ -186,31 +242,20 @@ public final class FileGeodatabaseProvider implements VectorProvider {
           try {
             Object[] attributes = new Object[attributeMetas.size()];
             for (int i = 0; i < attributeMetas.size(); i++) {
-              attributes[i] = convert(attributeMetas.get(i), row[indexOf(i)]);
+              attributes[i] = convert(attributeMetas.get(i), row[attributePositions[i]]);
             }
-            Geometry geometry =
-                row[geometryIndex] instanceof Geometry g && !g.isEmpty() ? g : null;
-            FileGdbGeometry value = geometry == null ? null : jtsWriter.write(geometry);
+            Geometry geometry = row[geometryIndex] instanceof Geometry g && !g.isEmpty() ? g : null;
+            FileGdbGeometry value =
+                geometry == null
+                    ? null
+                    : new HopCurveAdapter(geometry == null ? 0 : geometry.getSRID())
+                        .write(geometry);
             sinkWriter.write(attributes, value);
             return true;
           } catch (Exception e) {
             failed = true;
             throw e;
           }
-        }
-
-        private int indexOf(int attributeIndex) {
-          int seen = -1;
-          for (int i = 0; i < rowMeta.size(); i++) {
-            if (i == geometryIndex) {
-              continue;
-            }
-            seen++;
-            if (seen == attributeIndex) {
-              return i;
-            }
-          }
-          throw new IllegalStateException("Attribute index out of range");
         }
 
         @Override
@@ -294,7 +339,19 @@ public final class FileGeodatabaseProvider implements VectorProvider {
             geomField.geometry().hasZ() ? Ordinate.REQUIRED : Ordinate.ABSENT,
             geomField.geometry().hasM() ? Ordinate.OPTIONAL : Ordinate.ABSENT,
             definition);
-    return new LayerSchema(dataset.name(), geometryColumn, geometry, rowMeta);
+    var precision = geomField == null ? null : geomField.geometry().precision();
+    return new LayerSchema(
+        dataset.name(),
+        geometryColumn,
+        geometry,
+        rowMeta,
+        precision == null
+            ? null
+            : new LayerSchema.XYPrecision(
+                precision.xyResolution(),
+                precision.xyTolerance(),
+                precision.xOrigin(),
+                precision.yOrigin()));
   }
 
   private CrsDefinitionResolver.Definition definition(Dataset dataset, FileGdbGeomField geomField) {
@@ -354,11 +411,15 @@ public final class FileGeodatabaseProvider implements VectorProvider {
       case GEOMETRY -> new ValueMetaGeometry(field.name());
       default ->
           throw new IllegalArgumentException(
-              "Unsupported file geodatabase field type: " + field.type() + " (" + field.name() + ")");
+              "Unsupported file geodatabase field type: "
+                  + field.type()
+                  + " ("
+                  + field.name()
+                  + ")");
     };
   }
 
-  private FeatureClassDefinition definition(WriteRequest request) {
+  private FeatureClassDefinition definition(WriteRequest request) throws Exception {
     List<FileGdbField> fields = new ArrayList<>();
     for (int i = 0; i < request.rowMeta().size(); i++) {
       if (i == request.geometryIndex()) {
@@ -378,10 +439,44 @@ public final class FileGeodatabaseProvider implements VectorProvider {
     if (request.geometry().m() != Ordinate.ABSENT) {
       geometry = geometry.withM();
     }
+    var options =
+        request.options() instanceof ch.so.agi.hop.vector.core.FileGeodatabaseOptions o
+            ? o
+            : ch.so.agi.hop.vector.core.FileGeodatabaseOptions.defaults();
+    var precision = geometry.precision();
+    double resolution = precision.xyResolution(),
+        tolerance = precision.xyTolerance(),
+        x = precision.xOrigin(),
+        y = precision.yOrigin();
+    if (options.precisionMode().equals("AUTO")) {
+      if (options.xyResolution() == null) {
+        if (crs.isGeographic(request.geometry().crs())) {
+          resolution = 1e-9;
+          tolerance = 8.983153e-9;
+          x = -400;
+          y = -400;
+        } else {
+          double unit = crs.linearUnitToMetres(request.geometry().crs());
+          resolution = 0.0001 / unit;
+          tolerance = 0.001 / unit;
+        }
+      }
+    }
+    if (options.xyResolution() != null) {
+      resolution = options.xyResolution();
+      tolerance = 10 * resolution;
+    }
+    if (options.xyTolerance() != null) tolerance = options.xyTolerance();
+    if (options.xOrigin() != null) {
+      x = options.xOrigin();
+      y = options.yOrigin();
+    }
+    geometry = geometry.withPrecision(precision.withXY(resolution, tolerance, x, y));
     int srid = request.geometry().srid();
     FeatureClassDefinition.Builder builder =
         FeatureClassDefinition.builder(request.layer())
             .geometry(geometry)
+            .spatialIndex(options.spatialIndex())
             .crs(new CrsDefinition(srid, srid > 0 ? srid : null, crsWkt(request.geometry())));
     for (FileGdbField field : fields) {
       builder.field(field);
@@ -397,15 +492,23 @@ public final class FileGeodatabaseProvider implements VectorProvider {
     return switch (type.toUpperCase(Locale.ROOT)) {
       case "POINT" -> GeometryKind.POINT;
       case "MULTIPOINT" -> GeometryKind.MULTIPOINT;
-      case "LINESTRING", "MULTILINESTRING", "LINEARRING", "LINE", "POLYLINE" ->
+      case "LINESTRING",
+              "MULTILINESTRING",
+              "LINEARRING",
+              "LINE",
+              "POLYLINE",
+              "CIRCULARSTRING",
+              "COMPOUNDCURVE",
+              "MULTICURVE" ->
           GeometryKind.LINE;
-      case "POLYGON", "MULTIPOLYGON" -> GeometryKind.POLYGON;
+      case "POLYGON", "MULTIPOLYGON", "CURVEPOLYGON", "MULTISURFACE" -> GeometryKind.POLYGON;
       default -> throw new IllegalArgumentException("Unsupported geometry type: " + type);
     };
   }
 
   private static FileGdbField field(IValueMeta valueMeta) {
-    String name = valueMeta.getName();
+    String name =
+        valueMeta.getName().equalsIgnoreCase("OBJECTID") ? "SOURCE_OBJECTID" : valueMeta.getName();
     int width = valueMeta.getLength() > 0 ? Math.min(65535, valueMeta.getLength()) : 255;
     return switch (valueMeta.getType()) {
       case IValueMeta.TYPE_BOOLEAN -> FileGdbField.smallInteger(name).asNullable();

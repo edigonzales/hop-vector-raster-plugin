@@ -8,6 +8,11 @@ public interface CrsDefinitionResolver {
     return false;
   }
 
+  default double linearUnitToMetres(Definition crs) throws Exception {
+    throw new IllegalArgumentException(
+        "Unknown CRS units: specify FileGDB resolution and tolerance");
+  }
+
   Definition resolve(int srid) throws Exception;
 
   default Definition parse(String value) throws Exception {

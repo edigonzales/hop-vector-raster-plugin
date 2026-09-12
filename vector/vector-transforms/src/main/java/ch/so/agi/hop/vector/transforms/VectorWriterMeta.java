@@ -29,6 +29,67 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     setDefault();
   }
 
+  @HopMetadataProperty private String fileGdbPrecisionMode = "AUTO";
+
+  public String getFileGdbPrecisionMode() {
+    return fileGdbPrecisionMode;
+  }
+
+  public void setFileGdbPrecisionMode(String value) {
+    fileGdbPrecisionMode = value;
+  }
+
+  @HopMetadataProperty private String fileGdbXyResolution = "";
+
+  public String getFileGdbXyResolution() {
+    return fileGdbXyResolution;
+  }
+
+  public void setFileGdbXyResolution(String value) {
+    fileGdbXyResolution = value;
+  }
+
+  @HopMetadataProperty private String fileGdbXyTolerance = "";
+
+  public String getFileGdbXyTolerance() {
+    return fileGdbXyTolerance;
+  }
+
+  public void setFileGdbXyTolerance(String value) {
+    fileGdbXyTolerance = value;
+  }
+
+  @HopMetadataProperty private String fileGdbXOrigin = "";
+
+  public String getFileGdbXOrigin() {
+    return fileGdbXOrigin;
+  }
+
+  public void setFileGdbXOrigin(String value) {
+    fileGdbXOrigin = value;
+  }
+
+  @HopMetadataProperty private String fileGdbYOrigin = "";
+
+  public String getFileGdbYOrigin() {
+    return fileGdbYOrigin;
+  }
+
+  public void setFileGdbYOrigin(String value) {
+    fileGdbYOrigin = value;
+  }
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean fileGdbSpatialIndex = true;
+
+  public boolean isFileGdbSpatialIndex() {
+    return fileGdbSpatialIndex;
+  }
+
+  public void setFileGdbSpatialIndex(boolean value) {
+    fileGdbSpatialIndex = value;
+  }
+
   @HopMetadataProperty private boolean flatGeobufIndex = true;
 
   public boolean isFlatGeobufIndex() {
@@ -175,7 +236,17 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   }
 
   @Override
+  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
+      throws org.apache.hop.core.exception.HopXmlException {
+    super.loadXml(node, provider);
+    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "fileGdbPrecisionMode") == null)
+      fileGdbPrecisionMode = "LEGACY";
+  }
+
+  @Override
   public void setDefault() {
+    fileGdbPrecisionMode = "AUTO";
+    fileGdbSpatialIndex = true;
     parquetRowGroupSize = 128L * 1024 * 1024;
     parquetCompression = "GZIP";
     parquetAlgorithm = "SPHERICAL";
@@ -388,6 +459,15 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   public FormatOptions options(VectorFormat f, IVariables vars) {
     java.util.function.Function<String, String> resolve = v -> vars == null ? v : vars.resolve(v);
+    if (f == VectorFormat.FILEGEODATABASE)
+      return new FileGeodatabaseOptions(
+          fileGdbPrecisionMode,
+          FileGeodatabaseOptions.optional(resolve.apply(fileGdbXyResolution)),
+          FileGeodatabaseOptions.optional(resolve.apply(fileGdbXyTolerance)),
+          FileGeodatabaseOptions.optional(resolve.apply(fileGdbXOrigin)),
+          FileGeodatabaseOptions.optional(resolve.apply(fileGdbYOrigin)),
+          fileGdbSpatialIndex,
+          null);
     if (f == VectorFormat.FLATGEOBUF)
       return new FlatGeobufOptions(flatGeobufIndex, flatGeobufSkipEmpty, overwrite);
     if (f == VectorFormat.PARQUET)

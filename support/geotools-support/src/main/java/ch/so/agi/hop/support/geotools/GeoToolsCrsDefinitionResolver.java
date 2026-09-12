@@ -32,6 +32,27 @@ public final class GeoToolsCrsDefinitionResolver implements CrsDefinitionResolve
     return crs instanceof org.geotools.api.referencing.crs.GeographicCRS;
   }
 
+  @Override
+  public double linearUnitToMetres(Definition definition) throws Exception {
+    GeoToolsRuntimeSupport.initialize();
+    var crs =
+        definition.wkt() != null
+                && !definition.wkt().isBlank()
+                && !definition.wkt().equals("undefined")
+            ? org.geotools.referencing.CRS.parseWKT(definition.wkt())
+            : definition.srid() > 0
+                ? org.geotools.referencing.CRS.decode("EPSG:" + definition.srid(), true)
+                : null;
+    if (crs == null)
+      throw new IllegalArgumentException(
+          "Unknown CRS units: specify FileGDB resolution and tolerance");
+    return crs.getCoordinateSystem()
+        .getAxis(0)
+        .getUnit()
+        .getConverterToAny(tech.units.indriya.unit.Units.METRE)
+        .convert(1);
+  }
+
   public Definition resolve(int srid) throws Exception {
     if (srid <= 0)
       return new Definition(

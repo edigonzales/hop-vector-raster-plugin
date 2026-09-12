@@ -19,7 +19,18 @@ final class VectorSchemaProbe {
       String geometryType,
       List<FieldDefinition> fields,
       String dimension,
-      int srid) {
+      int srid,
+      ch.so.agi.hop.vector.core.LayerSchema.XYPrecision xyPrecision) {
+    LayerDefinition(
+        String name,
+        String field,
+        String type,
+        List<FieldDefinition> fields,
+        String dimension,
+        int srid) {
+      this(name, field, type, fields, dimension, srid, null);
+    }
+
     LayerDefinition(String name, String field, String type, List<FieldDefinition> fields) {
       this(name, field, type, fields, "XY", 0);
     }
@@ -63,7 +74,8 @@ final class VectorSchemaProbe {
                 schema.geometryType(),
                 fields,
                 schema.geometry().dimension(),
-                schema.srid()));
+                schema.srid(),
+                schema.xyPrecision()));
       }
       return List.copyOf(result);
     } catch (Exception e) {
@@ -108,6 +120,19 @@ final class VectorSchemaProbe {
         .append("\nCRS: ")
         .append(layer.srid())
         .append("\n");
+    if (layer.xyPrecision() != null) {
+      var p = layer.xyPrecision();
+      preview
+          .append("XY resolution: ")
+          .append(p.resolution())
+          .append("\nXY tolerance: ")
+          .append(p.tolerance())
+          .append("\nXY origin: ")
+          .append(p.xOrigin())
+          .append(", ")
+          .append(p.yOrigin())
+          .append('\n');
+    }
     preview.append("Fields:");
     if (layer.fields().isEmpty()) {
       preview.append("\n- (none)");
