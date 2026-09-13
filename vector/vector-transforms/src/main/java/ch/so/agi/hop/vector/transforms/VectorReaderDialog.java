@@ -278,8 +278,13 @@ public class VectorReaderDialog extends BaseTransformDialog {
           suppressSchemaRefresh = false;
         }
       }
-      wAvailableFieldsPreview.setText(VectorSchemaProbe.formatFieldPreview(layer));
-    } catch (IllegalArgumentException e) {
+      String preview = VectorSchemaProbe.formatFieldPreview(layer);
+      var path = java.nio.file.Path.of(variables.resolve(wFileName.getText()));
+      if (ch.so.agi.hop.vector.core.VectorFormat.resolve(wFormat.getText(), path)
+          == ch.so.agi.hop.vector.core.VectorFormat.FILEGEODATABASE)
+        preview += ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbCatalog.preview(path);
+      wAvailableFieldsPreview.setText(preview);
+    } catch (Exception e) {
       resetAvailableFieldsPreview(e.getMessage());
     }
   }

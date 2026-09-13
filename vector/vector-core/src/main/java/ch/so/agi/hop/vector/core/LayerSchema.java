@@ -28,18 +28,18 @@ public record LayerSchema(
   }
 
   public String geometryType() {
-    return geometry.type();
+    return geometry == null ? "" : geometry.type();
   }
 
   public int srid() {
-    return geometry.srid();
+    return geometry == null ? 0 : geometry.srid();
   }
 
   public Ordinate z() {
-    return geometry.z();
+    return geometry == null ? Ordinate.ABSENT : geometry.z();
   }
 
   public Ordinate m() {
-    return geometry.m();
+    return geometry == null ? Ordinate.ABSENT : geometry.m();
   }
 }

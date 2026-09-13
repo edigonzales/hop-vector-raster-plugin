@@ -73,7 +73,7 @@ final class VectorSchemaProbe {
                 schema.geometryColumn(),
                 schema.geometryType(),
                 fields,
-                schema.geometry().dimension(),
+                schema.geometry() == null ? "" : schema.geometry().dimension(),
                 schema.srid(),
                 schema.xyPrecision()));
       }

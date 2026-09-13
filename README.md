@@ -119,3 +119,10 @@ Repeated native curve round-trips avoid introducing extra quantized midpoint ver
 is stored separately only when needed for a non-linear Z/M profile. GDAL 3.11.4 may reconstruct
 synthetic arc midpoints with M=0; this upstream reader behaviour differs from the Hop adapter's
 interpolated values and should be considered when passing measured curves through GDAL.
+
+### FileGDB catalog and schema export
+
+FileGDB Catalog Reader exposes domains, field assignments and relationship metadata.
+FileGDB Writer exports multiple named inputs to one new geodatabase using a versioned
+JSON schema. Vector Reader also reads ordinary FileGDB tables. See the
+[complete example and supported scope](docs/examples/filegdb/README.md).

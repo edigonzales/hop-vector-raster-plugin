@@ -1,0 +1,392 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/domain"
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataset"
+      },
+      "minItems": 1
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "datasets"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "label"
+      ]
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "CODED",
+            "RANGE"
+          ]
+        },
+        "fieldType": {
+          "enum": [
+            "INT16",
+            "INT32",
+            "INT64",
+            "FLOAT32",
+            "FLOAT64",
+            "STRING",
+            "DATETIME",
+            "DATE",
+            "TIME"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/code"
+          }
+        },
+        "minValue": {
+          "type": "string"
+        },
+        "maxValue": {
+          "type": "string"
+        },
+        "splitPolicy": {
+          "enum": [
+            "DEFAULT_VALUE",
+            "DUPLICATE",
+            "GEOMETRY_RATIO"
+          ]
+        },
+        "mergePolicy": {
+          "enum": [
+            "DEFAULT_VALUE",
+            "SUM_VALUES",
+            "AREA_WEIGHTED"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "fieldType"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "CODED"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "values"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "minValue"
+                  ]
+                },
+                {
+                  "required": [
+                    "maxValue"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "minValue",
+              "maxValue"
+            ],
+            "not": {
+              "required": [
+                "values"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "enum": [
+            "INT16",
+            "INT32",
+            "INT64",
+            "FLOAT32",
+            "FLOAT64",
+            "STRING",
+            "GUID",
+            "XML",
+            "BINARY",
+            "DATETIME",
+            "DATE",
+            "TIME",
+            "DATETIME_WITH_OFFSET"
+          ]
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": false
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "enum": [
+            "Point",
+            "MultiPoint",
+            "LineString",
+            "MultiLineString",
+            "Polygon",
+            "MultiPolygon",
+            "CircularString",
+            "CompoundCurve",
+            "MultiCurve",
+            "CurvePolygon",
+            "MultiSurface"
+          ]
+        },
+        "dimension": {
+          "enum": [
+            "XY",
+            "XYZ",
+            "XYM",
+            "XYZM"
+          ]
+        },
+        "crs": {
+          "type": "string"
+        },
+        "precisionMode": {
+          "enum": [
+            "AUTO",
+            "LEGACY"
+          ]
+        },
+        "xyResolution": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "xyTolerance": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "xOrigin": {
+          "type": "number"
+        },
+        "yOrigin": {
+          "type": "number"
+        },
+        "spatialIndex": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "source",
+        "name",
+        "type",
+        "dimension",
+        "crs"
+      ],
+      "dependentRequired": {
+        "xOrigin": [
+          "yOrigin"
+        ],
+        "yOrigin": [
+          "xOrigin"
+        ]
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "kind": {
+          "enum": [
+            "TABLE",
+            "FEATURE_CLASS"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "geometry": {
+          "$ref": "#/$defs/geometry"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "fields"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "FEATURE_CLASS"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "geometry"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "geometry"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "destination": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "originKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "foreignKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "cardinality": {
+          "enum": [
+            "ONE_TO_ONE",
+            "ONE_TO_MANY"
+          ]
+        },
+        "forwardLabel": {
+          "type": "string"
+        },
+        "backwardLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "origin",
+        "destination",
+        "originKey",
+        "foreignKey",
+        "cardinality"
+      ]
+    }
+  },
+  "title": "FileGDB export schema version 1"
+}

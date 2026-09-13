@@ -67,9 +67,6 @@ public final class FileGeodatabaseProvider implements VectorProvider {
     try (FileGeodatabase database = FileGeodatabase.open(file)) {
       List<LayerSchema> layers = new ArrayList<>();
       for (Dataset dataset : database.datasets()) {
-        if (!dataset.isFeatureClass()) {
-          continue;
-        }
         try (FileGdbTable table = database.table(dataset.name())) {
           layers.add(schema(dataset, table, request));
         }
@@ -93,9 +90,6 @@ public final class FileGeodatabaseProvider implements VectorProvider {
                   () ->
                       new IllegalArgumentException(
                           "Layer '" + request.layer() + "' not found in " + request.file()));
-      if (!dataset.isFeatureClass()) {
-        throw new IllegalArgumentException("Dataset is not a feature class: " + dataset.name());
-      }
       table = database.table(dataset.name());
       LayerSchema output = schema(dataset, table, request);
       int geometryIndex = table.geomFieldIndex();
@@ -104,6 +98,8 @@ public final class FileGeodatabaseProvider implements VectorProvider {
       java.util.Iterator<FileGdbRow> iterator;
       if (request.options() instanceof ch.so.agi.hop.vector.core.FileGeodatabaseOptions options
           && options.filter() != null) {
+        if (geometryIndex < 0)
+          throw new IllegalArgumentException("Spatial filtering requires a feature class");
         var b = options.filter();
         var query =
             table.query(
@@ -149,7 +145,7 @@ public final class FileGeodatabaseProvider implements VectorProvider {
                 values[i] = java.util.Date.from(d.toInstant());
               else if (v instanceof java.util.UUID id) values[i] = id.toString();
             }
-            Object geometry = values[geometryIndex];
+            Object geometry = geometryIndex < 0 ? null : values[geometryIndex];
             if (geometry != null) {
               FileGdbGeometry nativeGeometry = (FileGdbGeometry) geometry;
               var parts =
@@ -312,13 +308,12 @@ public final class FileGeodatabaseProvider implements VectorProvider {
   private LayerSchema schema(Dataset dataset, FileGdbTable table, ReadRequest request)
       throws Exception {
     FileGdbGeomField geomField = table.geomField();
-    if (geomField == null) {
-      throw new IllegalArgumentException("Dataset has no geometry field: " + dataset.name());
-    }
     IRowMeta rowMeta = new RowMeta();
     for (FileGdbField field : table.fields()) {
       rowMeta.addValueMeta(valueMeta(field));
     }
+    if (geomField == null)
+      return new LayerSchema(dataset.name(), "", (GeometrySchema) null, rowMeta);
     int geometryIndex = table.geomFieldIndex();
     String geometryColumn = rowMeta.getValueMeta(geometryIndex).getName();
     if (!request.geometryField().isBlank()) {

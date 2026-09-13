@@ -1,0 +1,24 @@
+<pipeline>
+  <info>
+    <name>Inspect FileGDB domains</name>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+      <parameter>
+        <name>INPUT_FILE</name>
+        <default_value />
+      </parameter>
+    </parameters>
+  </info>
+  <transform>
+    <name>Domain values</name>
+    <type>SOGIS_FILEGDB_CATALOG_READER</type>
+    <copies>1</copies>
+    <fileName>${INPUT_FILE}</fileName>
+    <mode>DOMAIN_VALUES</mode>
+    <nameFilter>status</nameFilter>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>120</yloc>
+    </GUI>
+  </transform>
+</pipeline>

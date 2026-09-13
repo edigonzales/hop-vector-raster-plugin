@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "domains": [
+    {
+      "name": "status",
+      "description": "Building status",
+      "type": "CODED",
+      "fieldType": "INT32",
+      "values": [
+        {
+          "code": "1",
+          "label": "planned"
+        },
+        {
+          "code": "2",
+          "label": "existing"
+        }
+      ],
+      "splitPolicy": "DUPLICATE",
+      "mergePolicy": "DEFAULT_VALUE"
+    },
+    {
+      "name": "height",
+      "description": "Height in metres",
+      "type": "RANGE",
+      "fieldType": "FLOAT64",
+      "minValue": "0",
+      "maxValue": "1000"
+    }
+  ],
+  "datasets": [
+    {
+      "name": "buildings",
+      "kind": "FEATURE_CLASS",
+      "fields": [
+        {
+          "source": "id",
+          "name": "id",
+          "type": "INT32",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "INT32",
+          "nullable": false,
+          "domain": "status"
+        },
+        {
+          "name": "height",
+          "type": "FLOAT64",
+          "nullable": true,
+          "domain": "height"
+        }
+      ],
+      "geometry": {
+        "source": "geometry",
+        "name": "shape",
+        "type": "Point",
+        "dimension": "XY",
+        "crs": "EPSG:2056",
+        "precisionMode": "AUTO",
+        "xyResolution": 0.001,
+        "xyTolerance": 0.01,
+        "spatialIndex": true
+      }
+    },
+    {
+      "name": "entrances",
+      "kind": "TABLE",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INT32",
+          "nullable": false
+        },
+        {
+          "name": "building_id",
+          "type": "INT32",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "STRING",
+          "length": 80,
+          "nullable": true
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "building_entrances",
+      "origin": "buildings",
+      "destination": "entrances",
+      "originKey": "id",
+      "foreignKey": "building_id",
+      "cardinality": "ONE_TO_MANY",
+      "forwardLabel": "entrances",
+      "backwardLabel": "building"
+    }
+  ]
+}

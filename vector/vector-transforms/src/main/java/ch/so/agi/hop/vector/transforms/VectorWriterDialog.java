@@ -36,6 +36,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private Button wComma;
   private Button wSkipEmpty;
   private Button wOverwrite;
+  private TextVar wFileGdbSchema;
   private Composite flatGeobufOptions, parquetOptions, fileGdbOptions;
   private Combo wFileGdbMode;
   private TextVar wFileGdbResolution, wFileGdbTolerance, wFileGdbXOrigin, wFileGdbYOrigin;
@@ -261,6 +262,11 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wOverwrite = new Button(body, SWT.CHECK);
     wOverwrite.setSelection(input.isOverwrite());
     fileGdbOptions = optionGroup();
+    wFileGdbSchema =
+        optionText(
+            fileGdbOptions,
+            "JSON schema file (optional; overrides schema/XY options)",
+            input.getFileGdbSchemaFile());
     wFileGdbMode =
         optionCombo(
             fileGdbOptions,
@@ -438,6 +444,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   }
 
   private void readAdditional(VectorWriterMeta meta) {
+    meta.setFileGdbSchemaFile(wFileGdbSchema.getText());
     meta.setFileGdbPrecisionMode(wFileGdbMode.getText());
     meta.setFileGdbXyResolution(wFileGdbResolution.getText());
     meta.setFileGdbXyTolerance(wFileGdbTolerance.getText());

@@ -22,9 +22,17 @@ Ein unbekanntes CRS darf nicht als WGS84 geraten werden. CRS-Zuweisung veränder
 Esri File Geodatabases (`.gdb`) werden ohne GDAL und ohne native Bibliotheken über die
 Bibliothek `filegdb4j` gelesen und geschrieben. Der Reader liest Feature Classes mit
 Punkt-, Multipoint-, Linien- und Polygon-Geometrien einschliesslich Z und M, Attribute
-und Feld-Domains; Katalogtabellen und normale Tabellen erscheinen nicht als Layer.
+als gespeicherte Werte. Normale Attributtabellen sind ohne Geometriespalte lesbar.
+Der Schema-Dialog zeigt Domains, Feldzuordnungen und Relationship Classes. Diese
+Definitionen werden nicht automatisch in die Hop-Feldmetadaten übernommen.
+Der separate FileGDB Catalog Reader gibt sie als normale Metadatenzeilen aus.
 
-Der Writer erzeugt eine neue Geodatabase mit genau einer Feature Class. Das Ziel darf
+Der bisherige Vector Writer erzeugt eine neue Geodatabase mit einer Feature Class;
+mit optionaler JSON-Schemadatei unterstützt er auch eine einzelne Attributtabelle und Domains.
+Der neue FileGDB Writer schreibt mehrere benannte Eingangsströme gemeinsam und erzeugt
+einfache 1:1-/1:n-Beziehungen anhand einer JSON-Schemadatei. Beispiele und das Schema
+stehen unter `docs/examples/filegdb`. Domainwerte werden geprüft; Eindeutigkeit und
+referenzielle Integrität müssen bei Bedarf in der Pipeline geprüft werden. Das Ziel darf
 nicht existieren. Die Ausgabe wird in einem temporären Verzeichnis neben dem Ziel
 aufgebaut und erst nach erfolgreichem Abschluss veröffentlicht. Append, Update und
 Löschen sind nicht Teil dieses Umfangs. Kreisbögen werden in XY, XYZ, XYM und XYZM nativ

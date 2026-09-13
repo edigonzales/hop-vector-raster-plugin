@@ -91,6 +91,21 @@ with zipfile.ZipFile(zip_path) as archive:
                 for name in nested.namelist():
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
+            required_content = []
+            if Path(entry).name.startswith("hop-vector-transforms-"):
+                required_content = [
+                    "ch/so/agi/hop/vector/transforms/FileGdbWriter.class",
+                    "ch/so/agi/hop/vector/transforms/FileGdbWriterDialog.class",
+                    "ch/so/agi/hop/vector/transforms/FileGdbCatalogReader.class",
+                    "ch/so/agi/hop/vector/transforms/FileGdbCatalogReaderDialog.class",
+                ]
+            elif Path(entry).name.startswith("hop-vector-format-filegeodatabase-"):
+                required_content = [
+                    "ch/so/agi/hop/vector/formats/filegeodatabase/export-schema-v1.json",
+                ]
+            for name in required_content:
+                if name not in nested.namelist():
+                    raise SystemExit(f"Missing FileGDB content in {entry}: {name}")
             if any("ArcInfoGenerateWriter" in name for name in nested.namelist()):
                 raise SystemExit(f"Legacy separate GENERATE transform in {entry}")
             natives = [n for n in nested.namelist() if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]

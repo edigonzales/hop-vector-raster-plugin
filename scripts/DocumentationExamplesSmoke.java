@@ -19,10 +19,66 @@ public class DocumentationExamplesSmoke {
     if (args.length < 3) throw new IllegalArgumentException("Expected prepare or check");
     Path temp = Path.of(args[1]);
     switch (args[2]) {
-      case "prepare" -> prepare(temp);
-      case "check" -> check(temp);
+      case "prepare" -> {
+        prepare(temp);
+        prepareCatalog(Path.of(args[0]), temp);
+      }
+      case "check" -> {
+        check(temp);
+        checkCatalog(temp);
+      }
       default -> throw new IllegalArgumentException("Unknown mode: " + args[2]);
     }
+  }
+
+  static void prepareCatalog(Path repo, Path temp) throws Exception {
+    var schema =
+        ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSchema.read(
+            repo.resolve("docs/examples/filegdb/buildings.json"));
+    var buildings = new RowMeta();
+    buildings.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("id"));
+    buildings.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("status"));
+    buildings.addValueMeta(new org.apache.hop.core.row.value.ValueMetaNumber("height"));
+    buildings.addValueMeta(new ValueMetaGeometry("geometry"));
+    var entrances = new RowMeta();
+    entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("id"));
+    entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("building_id"));
+    entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("label"));
+    try (var session =
+        new ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession(
+            temp.resolve("catalog-input.gdb"),
+            schema,
+            java.util.Map.of("buildings", buildings, "entrances", entrances),
+            new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver())) {
+      var point =
+          new GeometryFactory(new PrecisionModel(), 2056)
+              .createPoint(new Coordinate(2600000, 1200000));
+      for (long i = 1; i <= 100; i++) {
+        session.write("buildings", new Object[] {i, 2L, 20.0, point});
+        session.write("entrances", new Object[] {i, i, "Entrance " + i});
+      }
+      session.finish();
+    }
+  }
+
+  static void checkCatalog(Path temp) throws Exception {
+    try (var db = ch.so.agi.filegdb.FileGeodatabase.open(temp.resolve("catalog-output.gdb"))) {
+      if (db.domains().size() != 2 || db.relationships().size() != 1)
+        throw new AssertionError("Missing domain or relationship");
+      try (var a = db.table("buildings");
+          var b = db.table("entrances")) {
+        if (a.rowCount() != 100 || b.rowCount() != 100)
+          throw new AssertionError("Lost catalog export rows");
+        if (!"status".equals(a.field("status").orElseThrow().domain()))
+          throw new AssertionError("Lost field domain");
+      }
+    }
+    var rows =
+        ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbCatalog.read(
+            temp.resolve("catalog-output.gdb"),
+            ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbCatalog.Mode.DOMAIN_VALUES,
+            "status");
+    if (rows.size() != 2) throw new AssertionError("Lost domain codes");
   }
 
   static void prepare(Path temp) throws Exception {

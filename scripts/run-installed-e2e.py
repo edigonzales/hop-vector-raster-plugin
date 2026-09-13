@@ -167,7 +167,25 @@ def main() -> int:
             "-p", f"INPUT_VECTOR={data / 'curves.gdb'}", "-p", "INPUT_LAYER=curves",
             "-p", f"OUTPUT_FILE={data / 'curves-copy.gdb'}",
         ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "docs/examples/filegdb/export.hpl"),
+            "-p", f"INPUT_FILE={data / 'catalog-input.gdb'}",
+            "-p", f"OUTPUT_FILE={data / 'catalog-output.gdb'}",
+            "-p", f"SCHEMA_FILE={Path(__file__).parents[1] / 'docs/examples/filegdb/buildings.json'}",
+        ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "docs/examples/filegdb/catalog.hpl"),
+            "-p", f"INPUT_FILE={data / 'catalog-output.gdb'}",
+        ], env)
         run_command(java_smoke + ["check"], env)
+        if os.environ.get("GDAL_PREFIX"):
+            run_command([
+                str(Path(os.environ["GDAL_PREFIX"]) / "bin/python3"),
+                str(Path(__file__).with_name("check-filegdb-catalog.py")),
+                str(data / "catalog-output.gdb"),
+            ], env)
         with (data / "zonal.csv").open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream, delimiter=";"))
         if len(rows) != 1:

@@ -29,6 +29,16 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     setDefault();
   }
 
+  @HopMetadataProperty private String fileGdbSchemaFile = "";
+
+  public String getFileGdbSchemaFile() {
+    return fileGdbSchemaFile;
+  }
+
+  public void setFileGdbSchemaFile(String value) {
+    fileGdbSchemaFile = value == null ? "" : value;
+  }
+
   @HopMetadataProperty private String fileGdbPrecisionMode = "AUTO";
 
   public String getFileGdbPrecisionMode() {
@@ -245,6 +255,7 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   @Override
   public void setDefault() {
+    fileGdbSchemaFile = "";
     fileGdbPrecisionMode = "AUTO";
     fileGdbSpatialIndex = true;
     parquetRowGroupSize = 128L * 1024 * 1024;
@@ -442,7 +453,9 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   }
 
   public void validateSettings() {
-    if (fileName == null || fileName.isBlank() || geometryField == null || geometryField.isBlank())
+    if (fileName == null
+        || fileName.isBlank()
+        || (fileGdbSchemaFile.isBlank() && (geometryField == null || geometryField.isBlank())))
       throw new IllegalArgumentException("Output and geometry field are required");
     if (("AUTO".equals(format) || format == null || format.isBlank()) && fileName.contains("${"))
       return;

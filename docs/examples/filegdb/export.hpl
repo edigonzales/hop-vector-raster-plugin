@@ -1,0 +1,87 @@
+<pipeline>
+  <info>
+    <name>FileGDB domains and relationships</name>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+      <parameter>
+        <name>INPUT_FILE</name>
+        <default_value />
+        <description>INPUT_FILE</description>
+      </parameter>
+      <parameter>
+        <name>OUTPUT_FILE</name>
+        <default_value />
+        <description>OUTPUT_FILE</description>
+      </parameter>
+      <parameter>
+        <name>SCHEMA_FILE</name>
+        <default_value />
+        <description>SCHEMA_FILE</description>
+      </parameter>
+    </parameters>
+  </info>
+  <order>
+    <hop>
+      <from>Read buildings</from>
+      <to>Write database</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Read entrances</from>
+      <to>Write database</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>Read buildings</name>
+    <type>SOGIS_VECTOR_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${INPUT_FILE}</fileName>
+    <format>FILEGEODATABASE</format>
+    <layerName>buildings</layerName>
+    <geometryFieldName>geometry</geometryFieldName>
+    <timezone>UTC</timezone>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>100</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Read entrances</name>
+    <type>SOGIS_VECTOR_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${INPUT_FILE}</fileName>
+    <format>FILEGEODATABASE</format>
+    <layerName>entrances</layerName>
+    <geometryFieldName>geometry</geometryFieldName>
+    <timezone>UTC</timezone>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>260</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Write database</name>
+    <type>SOGIS_FILEGDB_WRITER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${OUTPUT_FILE}</fileName>
+    <schemaFile>${SCHEMA_FILE}</schemaFile>
+    <inputs>
+      <input>
+        <dataset>buildings</dataset>
+        <transform>Read buildings</transform>
+      </input>
+      <input>
+        <dataset>entrances</dataset>
+        <transform>Read entrances</transform>
+      </input>
+    </inputs>
+    <GUI>
+      <xloc>440</xloc>
+      <yloc>180</yloc>
+    </GUI>
+  </transform>
+</pipeline>

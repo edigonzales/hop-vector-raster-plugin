@@ -105,6 +105,19 @@ jobs:
         with:
           name: vector-raster-e2e-inputs
           path: .ci/e2e-inputs
+      - name: Set up independent FileGDB reader
+        if: matrix.os == 'ubuntu-latest' && matrix.java == '21'
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: gdal-reference
+          create-args: >-
+            python=3.12
+            gdal=3.12
+          cache-environment: true
+      - name: Configure independent FileGDB check
+        if: matrix.os == 'ubuntu-latest' && matrix.java == '21'
+        shell: micromamba-shell {0}
+        run: echo "GDAL_PREFIX=$CONDA_PREFIX" >> "$GITHUB_ENV"
       - name: Run installed Hop scenarios and runtime identity checks
         run: python scripts/prepare-installed-e2e.py
       - name: Upload E2E diagnostics

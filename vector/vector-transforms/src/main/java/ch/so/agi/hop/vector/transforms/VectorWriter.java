@@ -32,6 +32,52 @@ public class VectorWriter
       if (getTransformMeta().getCopies(this) > 1)
         throw new IllegalArgumentException(
             "Vector Writer requires one transform copy per output file");
+      if (format == VectorFormat.FILEGEODATABASE && !meta.getFileGdbSchemaFile().isBlank()) {
+        if (data.sink == null) {
+          var schema =
+              ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSchema.read(
+                  Path.of(resolve(meta.getFileGdbSchemaFile())));
+          if (schema.datasets().size() != 1 || !schema.relationships().isEmpty())
+            throw new IllegalArgumentException(
+                "Use FileGDB Writer for multiple datasets or relationships");
+          String dataset = resolve(meta.getLayerName());
+          if (dataset.isBlank()) dataset = defaultLayerName(file);
+          schema.dataset(dataset);
+          var rm = getInputRowMeta();
+          if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());
+          var session =
+              new ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession(
+                  file,
+                  schema,
+                  java.util.Map.of(dataset, rm),
+                  new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+          final String selected = dataset;
+          data.sink =
+              new VectorSink() {
+                public boolean write(Object[] value) throws Exception {
+                  session.write(selected, value);
+                  return true;
+                }
+
+                public void finish() throws Exception {
+                  session.finish();
+                }
+
+                public void close() throws Exception {
+                  session.close();
+                }
+              };
+        }
+        if (row == null) {
+          data.sink.finish();
+          closeSink();
+          setOutputDone();
+          return false;
+        }
+        data.sink.write(row);
+        incrementLinesOutput();
+        return true;
+      }
       if (data.sink == null) {
         var rm = getInputRowMeta();
         if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());
