@@ -111,10 +111,26 @@ SQLite REAL garantiert keine exakten Dezimalwerte; bei entsprechenden Anforderun
 Datumswerte verwenden UTC. Ein Integer-Primärschlüssel ist Feature-ID und erscheint nicht nochmals als gewöhnliches Attribut.
 Bei einer Namenskollision mit `fid` wählt der Writer einen anderen internen Schlüsselspaltennamen.
 
-Der Writer erzeugt eine neue Datei mit einem Layer. Die erste nicht-NULL-Geometrie bestimmt Typ und SRID;
-rein NULL-haltige Streams können dieses Schema nicht liefern. Nach erfolgreichem EOF wird die Transaktion abgeschlossen,
-die Datenbank geschlossen und die temporäre Datei veröffentlicht.
-Kein Überschreiben, Append, Update oder konfigurierbarer räumlicher Index; keine Raster-Tile-Unterstützung.
+Der Vector Writer bietet drei GeoPackage-Schreibmodi: neue Datei erstellen (`CREATE_FILE`),
+neuen Layer in einer bestehenden Datei anlegen (`ADD_LAYER`) und Features an einen bestehenden Layer anhängen (`APPEND_FEATURES`).
+Bei Neuanlage kann das Geometrieschema explizit angegeben oder aus der ersten Geometrie ermittelt werden.
+Beim Anhängen gilt das vorhandene Zielschema; dies funktioniert auch mit leeren Eingängen.
+Attribute werden ohne Beachtung der Gross-/Kleinschreibung nach Namen zugeordnet. Die ausgewählte Quellgeometrie
+wird der Zielgeometriespalte zugeordnet. Fehlende Attribute benötigen Nullable oder einen Datenbank-Default;
+unbekannte Eingangsattribute, Typkonflikte und Eingaben für den generierten Primärschlüssel werden abgelehnt.
+Bekannte abweichende CRS werden abgelehnt; SRID 0 wird beim Anhängen dem Ziel-CRS zugeordnet, ohne Reprojektion.
+
+Im GeoPackage-Optionsbereich lassen sich bestehende Layer laden und das Eingangsschema prüfen.
+Beim Anhängen werden Zielschema und Indexstatus angezeigt; Geometrietyp, Dimension und Ziel-CRS sind nicht editierbar.
+Datei- und Layernamen sind variablenfähig. Der Overwrite-Schalter gilt nicht für GeoPackage.
+
+Ein räumlicher RTree-Index wird standardmässig erstellt, falls er fehlt, einschliesslich bereits vorhandener Features.
+Vorhandene Indizes werden immer nachgeführt. Index, Layer-Ausdehnung und Änderungszeit werden zusammen mit den
+Features in derselben Transaktion aktualisiert. Kurvenextrema werden berücksichtigt; NULL und EMPTY werden nicht indiziert.
+Fehler und Abbruch rollen diesen Writer-Lauf vollständig zurück. Neue Dateien werden nach Erfolg aus einer temporären Datei veröffentlicht.
+Pro Datei ist nur ein aktiver Writer erlaubt; mehrere Writer müssen nacheinander laufen. Externe Schreibsperren führen nach fünf Sekunden zum Fehler.
+Beispielpipelines stehen unter `docs/examples/geopackage-append`.
+Keine Updates, Upserts, Layerersetzung, automatische Schemaänderung oder Raster-Tile-Unterstützung.
 SQLite JDBC bringt seine plattformspezifischen Bibliotheken im gemeinsamen ZIP mit; eine separate Installation ist nicht nötig.
 
 [[flatgeobuf]]

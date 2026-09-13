@@ -17,7 +17,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private final VectorWriterMeta input;
   private TextVar wFileName;
   private Combo wFormat;
-  private TextVar wLayer;
+  private ComboVar wLayer;
   private Composite generateOptions, layerOptions, shapeOptions;
   private TextVar wCrs, wCharset, wTimezone;
   private Combo wLayerType, wLayerDimension;
@@ -36,6 +36,12 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private Button wComma;
   private Button wSkipEmpty;
   private Button wOverwrite;
+  private Label wOverwriteLabel;
+  private Composite geoPackageOptions;
+  private Combo wGeoPackageMode;
+  private Button wGeoPackageIndex, wGeoPackageLoad, wGeoPackageCheck;
+  private Text wGeoPackagePreview;
+  private static final String[] GPKG_MODES = {"CREATE_FILE", "ADD_LAYER", "APPEND_FEATURES"};
   private TextVar wFileGdbSchema;
   private Composite flatGeobufOptions, parquetOptions, fileGdbOptions;
   private Combo wFileGdbMode;
@@ -85,7 +91,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
         });
     wFormat.setText(input.getFormat());
     new Label(body, SWT.NONE).setText("Layer (optional)");
-    wLayer = new TextVar(variables, body, SWT.BORDER);
+    wLayer = new ComboVar(variables, body, SWT.BORDER);
     wLayer.setText(input.getLayerName() == null ? "" : input.getLayerName());
     wLayer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Output file");
@@ -258,9 +264,39 @@ public class VectorWriterDialog extends BaseTransformDialog {
     new Label(generateOptions, SWT.NONE).setText("Skip null / empty geometries");
     wSkipEmpty = new Button(generateOptions, SWT.CHECK);
     wSkipEmpty.setSelection(input.isSkipEmpty());
-    new Label(body, SWT.NONE).setText("Overwrite existing file");
+    wOverwriteLabel = new Label(body, SWT.NONE);
+    wOverwriteLabel.setText("Overwrite existing file");
+    wOverwriteLabel.setLayoutData(new GridData());
     wOverwrite = new Button(body, SWT.CHECK);
     wOverwrite.setSelection(input.isOverwrite());
+    wOverwrite.setLayoutData(new GridData());
+    geoPackageOptions = optionGroup();
+    new Label(geoPackageOptions, SWT.NONE).setText("Schreibmodus");
+    wGeoPackageMode = new Combo(geoPackageOptions, SWT.READ_ONLY);
+    wGeoPackageMode.setItems(
+        new String[] {"Neue Datei erstellen", "Neuen Layer hinzufügen", "Features hinzufügen"});
+    int selected = java.util.Arrays.asList(GPKG_MODES).indexOf(input.getGeoPackageWriteMode());
+    wGeoPackageMode.select(Math.max(0, selected));
+    new Label(geoPackageOptions, SWT.NONE)
+        .setText("Räumlichen Index erstellen, falls nicht vorhanden");
+    wGeoPackageIndex = new Button(geoPackageOptions, SWT.CHECK);
+    wGeoPackageIndex.setSelection(input.isGeoPackageCreateSpatialIndex());
+    wGeoPackageIndex.setToolTipText("Vorhandene räumliche Indizes werden immer nachgeführt.");
+    wGeoPackageLoad = new Button(geoPackageOptions, SWT.PUSH);
+    wGeoPackageLoad.setText("Layer laden");
+    wGeoPackageCheck = new Button(geoPackageOptions, SWT.PUSH);
+    wGeoPackageCheck.setText("Eingangsschema prüfen");
+    wGeoPackagePreview =
+        new Text(
+            geoPackageOptions,
+            SWT.MULTI | SWT.READ_ONLY | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+    var previewData = new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1);
+    previewData.heightHint = 130;
+    wGeoPackagePreview.setLayoutData(previewData);
+    wGeoPackageLoad.addListener(SWT.Selection, e -> loadGeoPackageLayers());
+    wGeoPackageCheck.addListener(SWT.Selection, e -> previewGeoPackage(true));
+    wLayer.addListener(SWT.Selection, e -> previewGeoPackage(false));
+    wGeoPackageMode.addListener(SWT.Selection, e -> updateFormat());
     fileGdbOptions = optionGroup();
     wFileGdbSchema =
         optionText(
@@ -323,7 +359,16 @@ public class VectorWriterDialog extends BaseTransformDialog {
     scroll.setContent(body);
     scroll.setMinSize(body.computeSize(760, SWT.DEFAULT));
     wFormat.addListener(SWT.Selection, e -> updateFormat());
-    wFileName.addModifyListener(e -> updateFormat());
+    wFileName.addModifyListener(
+        e -> {
+          updateFormat();
+          wGeoPackagePreview.setText(
+              "Layer laden, um die Vorschau für diese Datei zu aktualisieren.");
+        });
+    wLayer.addModifyListener(
+        e ->
+            wGeoPackagePreview.setText(
+                "Layer laden oder Eingangsschema prüfen, um die Vorschau zu aktualisieren."));
     updateFormat();
     Composite buttons = new Composite(shell, SWT.NONE);
     org.eclipse.swt.layout.FormData buttonData = new org.eclipse.swt.layout.FormData();
@@ -370,8 +415,80 @@ public class VectorWriterDialog extends BaseTransformDialog {
     ((GridData) parquetOptions.getLayoutData()).exclude = !parquet;
     wParquetAlgorithm.setEnabled(wParquetType.getText().equals("GEOGRAPHY"));
     wLayer.setEnabled(!generate);
+    boolean gpkg = format == ch.so.agi.hop.vector.core.VectorFormat.GEOPACKAGE;
+    geoPackageOptions.setVisible(gpkg);
+    ((GridData) geoPackageOptions.getLayoutData()).exclude = !gpkg;
+    boolean append = gpkg && wGeoPackageMode.getSelectionIndex() == 2;
+    wLayerType.setEnabled(!append);
+    wLayerDimension.setEnabled(!append);
+    wCrs.setEnabled(!append);
+    wGeoPackageLoad.setEnabled(wGeoPackageMode.getSelectionIndex() != 0);
+    wGeoPackageCheck.setEnabled(append);
+    wOverwrite.setVisible(!gpkg);
+    ((GridData) wOverwrite.getLayoutData()).exclude = gpkg;
+    wOverwriteLabel.setVisible(!gpkg);
+    ((GridData) wOverwriteLabel.getLayoutData()).exclude = gpkg;
     body.layout(true, true);
     scroll.setMinSize(body.computeSize(760, SWT.DEFAULT));
+  }
+
+  private ch.so.agi.hop.vector.formats.geopackage.GeoPackageProvider geoPackageProvider() {
+    return new ch.so.agi.hop.vector.formats.geopackage.GeoPackageProvider(
+        new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+  }
+
+  private java.nio.file.Path geoPackagePath() {
+    String path = variables.resolve(wFileName.getText());
+    if (path.contains("${"))
+      throw new IllegalArgumentException(
+          "Vorschau nicht verfügbar: Dateipfad enthält ungelöste Variablen.");
+    return java.nio.file.Path.of(path);
+  }
+
+  private void loadGeoPackageLayers() {
+    try {
+      var layers =
+          geoPackageProvider()
+              .layers(new ch.so.agi.hop.vector.core.ReadRequest(geoPackagePath(), "", ""));
+      String current = wLayer.getText();
+      wLayer.setItems(
+          layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toArray(String[]::new));
+      if (current.isBlank() && wGeoPackageMode.getSelectionIndex() == 2 && !layers.isEmpty())
+        current = layers.getFirst().name();
+      wLayer.setText(current);
+      if (wGeoPackageMode.getSelectionIndex() == 2) previewGeoPackage(false);
+      else
+        wGeoPackagePreview.setText(
+            "Vorhandene Layer: "
+                + String.join(
+                    ", ",
+                    layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toList()));
+    } catch (Exception e) {
+      wGeoPackagePreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
+    }
+  }
+
+  private void previewGeoPackage(boolean check) {
+    if (wGeoPackageMode.getSelectionIndex() != 2) return;
+    try {
+      String layer = variables.resolve(wLayer.getText());
+      if (layer.contains("${"))
+        throw new IllegalArgumentException(
+            "Vorschau nicht verfügbar: Layer enthält ungelöste Variablen.");
+      var rm = check ? pipelineMeta.getPrevTransformFields(variables, transformName) : null;
+      if (check && rm == null)
+        throw new IllegalArgumentException("Eingangsschema nicht verfügbar.");
+      String text =
+          geoPackageProvider()
+              .preview(
+                  geoPackagePath(),
+                  layer,
+                  rm,
+                  rm == null ? -1 : rm.indexOfValue(variables.resolve(wGeometryField.getText())));
+      wGeoPackagePreview.setText((check ? "Eingangsschema kompatibel.\n" : "") + text);
+    } catch (Exception e) {
+      wGeoPackagePreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
+    }
   }
 
   private void ok() {
@@ -447,6 +564,8 @@ public class VectorWriterDialog extends BaseTransformDialog {
     meta.setFileGdbSchemaFile(wFileGdbSchema.getText());
     meta.setFileGdbPrecisionMode(wFileGdbMode.getText());
     meta.setFileGdbXyResolution(wFileGdbResolution.getText());
+    meta.setGeoPackageWriteMode(GPKG_MODES[wGeoPackageMode.getSelectionIndex()]);
+    meta.setGeoPackageCreateSpatialIndex(wGeoPackageIndex.getSelection());
     meta.setFileGdbXyTolerance(wFileGdbTolerance.getText());
     meta.setFileGdbXOrigin(wFileGdbXOrigin.getText());
     meta.setFileGdbYOrigin(wFileGdbYOrigin.getText());
@@ -492,7 +611,13 @@ public class VectorWriterDialog extends BaseTransformDialog {
     browse.addListener(
         SWT.Selection,
         e -> {
-          FileDialog dialog = new FileDialog(shell, save ? SWT.SAVE : SWT.OPEN);
+          boolean existingGeoPackage =
+              geoPackageOptions != null
+                  && geoPackageOptions.getVisible()
+                  && wGeoPackageMode.getSelectionIndex() > 0;
+          FileDialog dialog =
+              new FileDialog(shell, save && !existingGeoPackage ? SWT.SAVE : SWT.OPEN);
+          if (existingGeoPackage) dialog.setText("Bestehendes GeoPackage auswählen");
           dialog.setFilterExtensions(new String[] {extensions, "*.*"});
           String selected = dialog.open();
           if (selected != null) text.setText(selected);

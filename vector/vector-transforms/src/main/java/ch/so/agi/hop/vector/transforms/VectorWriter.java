@@ -78,6 +78,39 @@ public class VectorWriter
         incrementLinesOutput();
         return true;
       }
+      if (format == VectorFormat.GEOPACKAGE
+          && meta.getGeoPackageWriteMode().equals("APPEND_FEATURES")) {
+        if (data.sink == null) {
+          var rm = getInputRowMeta();
+          if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());
+          if (rm == null) throw new IllegalArgumentException("Upstream schema unavailable");
+          String layer = resolve(meta.getLayerName());
+          if (layer.isBlank())
+            throw new IllegalArgumentException("Select a target layer for appending");
+          data.sink =
+              VectorProviders.get(format)
+                  .create(
+                      new WriteRequest(
+                          file,
+                          layer,
+                          rm,
+                          rm.indexOfValue(resolve(meta.getGeometryField())),
+                          null,
+                          null,
+                          meta.options(format, this),
+                          diagnostics,
+                          this::isStopped));
+        }
+        if (row == null) {
+          data.sink.finish();
+          closeSink();
+          setOutputDone();
+          return false;
+        }
+        data.sink.write(row);
+        incrementLinesOutput();
+        return true;
+      }
       if (data.sink == null) {
         var rm = getInputRowMeta();
         if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());

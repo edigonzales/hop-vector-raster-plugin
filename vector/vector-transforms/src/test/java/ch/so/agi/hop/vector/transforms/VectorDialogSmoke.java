@@ -71,6 +71,50 @@ public class VectorDialogSmoke {
                 if (!((Button) field(dialog, "wOverwrite")).getVisible())
                   throw new AssertionError("Overwrite hidden");
               }
+              // GeoPackage has its own non-destructive modes and target schema preview.
+              java.nio.file.Path gpkg = java.nio.file.Files.createTempFile("hop-dialog-", ".gpkg");
+              java.nio.file.Files.delete(gpkg);
+              var rows = new org.apache.hop.core.row.RowMeta();
+              rows.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("name"));
+              rows.addValueMeta(new com.atolcd.hop.core.row.value.ValueMetaGeometry("geom"));
+              var point =
+                  new org.locationtech.jts.geom.GeometryFactory(
+                          new org.locationtech.jts.geom.PrecisionModel(), 2056)
+                      .createPoint();
+              var provider =
+                  new ch.so.agi.hop.vector.formats.geopackage.GeoPackageProvider(
+                      new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+              try (var sink =
+                  provider.create(
+                      new ch.so.agi.hop.vector.core.WriteRequest(
+                          gpkg, "places", rows, 1, point, null, null, null))) {
+                sink.finish();
+              }
+              format.setText("GEOPACKAGE");
+              ((org.apache.hop.ui.core.widget.TextVar) field(dialog, "wFileName"))
+                  .setText(gpkg.toString());
+              format.notifyListeners(SWT.Selection, new Event());
+              if (((Button) field(dialog, "wOverwrite")).getVisible())
+                throw new AssertionError("GeoPackage overwrite must be hidden");
+              Combo mode = (Combo) field(dialog, "wGeoPackageMode");
+              mode.select(2);
+              mode.notifyListeners(SWT.Selection, new Event());
+              if (((Combo) field(dialog, "wLayerType")).getEnabled())
+                throw new AssertionError("Append schema controls must be disabled");
+              ((org.apache.hop.ui.core.widget.ComboVar) field(dialog, "wLayer")).setText("places");
+              ((Button) field(dialog, "wGeoPackageLoad"))
+                  .notifyListeners(SWT.Selection, new Event());
+              if (!((Text) field(dialog, "wGeoPackagePreview"))
+                  .getText()
+                  .contains("Spatial index: true"))
+                throw new AssertionError("Missing target preview");
+              mode.select(1);
+              mode.notifyListeners(SWT.Selection, new Event());
+              if (!((Combo) field(dialog, "wLayerType")).getEnabled())
+                throw new AssertionError("New layer schema must be editable");
+              java.nio.file.Files.delete(gpkg);
+              format.setText("PARQUET");
+              format.notifyListeners(SWT.Selection, new Event());
               ((Combo) field(dialog, "wParquetType")).setText("GEOGRAPHY");
               ((Combo) field(dialog, "wParquetType")).notifyListeners(SWT.Selection, new Event());
               if (!((Combo) field(dialog, "wParquetAlgorithm")).getEnabled())
@@ -103,7 +147,8 @@ public class VectorDialogSmoke {
             try {
               Combo formats = (Combo) field(rd, "wFormat");
               if (!java.util.Arrays.equals(
-                  formats.getItems(), new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE"}))
+                  formats.getItems(),
+                  new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE"}))
                 throw new AssertionError("Wrong reader formats");
               System.out.println("Reader dialog format selection OK");
               rd.dispose();

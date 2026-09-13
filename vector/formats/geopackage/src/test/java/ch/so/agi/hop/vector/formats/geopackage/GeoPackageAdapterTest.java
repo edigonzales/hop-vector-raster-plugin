@@ -152,7 +152,9 @@ class GeoPackageAdapterTest {
     try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file);
         Statement s = c.createStatement();
         ResultSet rs =
-            s.executeQuery("SELECT extension_name FROM gpkg_extensions ORDER BY extension_name")) {
+            s.executeQuery(
+                "SELECT extension_name FROM gpkg_extensions WHERE extension_name LIKE 'gpkg_geom_%'"
+                    + " ORDER BY extension_name")) {
       List<String> names = new ArrayList<>();
       while (rs.next()) names.add(rs.getString(1));
       assertThat(names).containsExactly("gpkg_geom_CIRCULARSTRING", "gpkg_geom_COMPOUNDCURVE");

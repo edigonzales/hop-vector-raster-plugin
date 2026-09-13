@@ -26,8 +26,22 @@ public class DocumentationExamplesSmoke {
       case "check" -> {
         check(temp);
         checkCatalog(temp);
+        checkGeoPackageAppend(temp);
       }
       default -> throw new IllegalArgumentException("Unknown mode: " + args[2]);
+    }
+  }
+
+  static void checkGeoPackageAppend(Path temp) throws Exception {
+    var provider =
+        new GeoPackageProvider(new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+    for (String layer : java.util.List.of("zones", "zones_copy")) {
+      try (var source = provider.open(temp.resolve("gpkg-append.gpkg"), layer, "")) {
+        int count = 0;
+        while (source.read() != null) count++;
+        if (count != (layer.equals("zones") ? 2 : 1))
+          throw new AssertionError("Wrong appended feature count: " + layer);
+      }
     }
   }
 

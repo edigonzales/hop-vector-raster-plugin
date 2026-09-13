@@ -123,6 +123,9 @@ def main() -> int:
             "DocumentationExamplesSmoke", str(Path(__file__).parents[1]), str(data),
         ]
         run_command(java_smoke + ["prepare"], env)
+        gdal_python = str(Path(os.environ["GDAL_PREFIX"]) / "bin/python3") if os.environ.get("GDAL_PREFIX") else None
+        if gdal_python:
+            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "prepare", str(data)], env)
 
         # Probe the real plugin classloader; never put plugin JARs on its initial classpath.
         hop_classpath = os.pathsep.join(str(path) for path in jars(args.hop_home / "lib"))
@@ -179,6 +182,23 @@ def main() -> int:
             str(Path(__file__).parents[1] / "docs/examples/filegdb/catalog.hpl"),
             "-p", f"INPUT_FILE={data / 'catalog-output.gdb'}",
         ], env)
+        for filename in ("01-create_file.hpl", "02-add_layer.hpl", "03-append_features.hpl"):
+            run_command([
+                hop_run, "-r", "local", "-f",
+                str(Path(__file__).parents[1] / "docs/examples/geopackage-append" / filename),
+                "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
+                "-p", f"OUTPUT_FILE={data / 'gpkg-append.gpkg'}",
+            ], env)
+        if gdal_python:
+            for target in ("gdal-indexed.gpkg", "gdal-unindexed.gpkg"):
+                for pipeline in ("02-add_layer.hpl", "03-append_features.hpl"):
+                    run_command([
+                        hop_run, "-r", "local", "-f",
+                        str(Path(__file__).parents[1] / "docs/examples/geopackage-append" / pipeline),
+                        "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
+                        "-p", f"OUTPUT_FILE={data / target}",
+                    ], env)
+            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "check", str(data)], env)
         run_command(java_smoke + ["check"], env)
         if os.environ.get("GDAL_PREFIX"):
             run_command([

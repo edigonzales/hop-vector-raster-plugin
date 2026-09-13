@@ -260,33 +260,52 @@ public final class GeoPackageProvider implements VectorProvider {
     };
   }
 
-  public VectorSink create(WriteRequest r) throws Exception {
-    Geometry sample = r.sample();
-    boolean assignUnknownCrs =
-        sample != null && sample.getSRID() == 0 && r.geometry() != null && r.geometry().srid() > 0;
-    if (sample != null && r.geometry() != null) {
-      if (!r.geometry().type().equalsIgnoreCase(sample.getGeometryType()))
-        throw new IllegalArgumentException("Geometry type differs from output schema");
-      if (sample.getSRID() > 0
-          && r.geometry().srid() > 0
-          && sample.getSRID() != r.geometry().srid())
-        throw new IllegalArgumentException("Geometry SRID differs from output schema");
-      if (sample.getSRID() != r.geometry().srid()) {
-        sample = com.atolcd.hop.gis.geometry.curve.CurveGeometrySupport.copy(sample);
-        sample.setSRID(r.geometry().srid());
-      }
-      r =
-          new WriteRequest(
-              r.file(),
-              r.layer(),
-              r.rowMeta(),
-              r.geometryIndex(),
-              sample,
-              r.geometry(),
-              r.options(),
-              r.diagnostics());
+  public VectorSink create(WriteRequest request) throws Exception {
+    return new Sink(request, crs);
+  }
+
+  public String preview(Path path, String layer, IRowMeta input, int geometryIndex)
+      throws Exception {
+    try (var c = readConnection(path)) {
+      validateDatabase(c);
+      var t = GeoPackageTarget.read(c, layer);
+      if (input != null) t.mapping(input, geometryIndex);
+      var text =
+          new StringBuilder(
+              "Layer: "
+                  + t.layer()
+                  + "\nGeometry: "
+                  + t.geometry()
+                  + " / "
+                  + t.type()
+                  + " / XY\nCRS ID: "
+                  + t.srid()
+                  + "\nSpatial index: "
+                  + GeoPackageIndex.exists(c, t.layer(), t.geometry())
+                  + "\nFields:\n");
+      for (var f : t.columns())
+        text.append(f.name())
+            .append(" : ")
+            .append(f.type())
+            .append(
+                f.primary()
+                    ? " (generated primary key)"
+                    : f.required() ? " (required)" : " (nullable)")
+            .append(f.defaultValue() == null ? "" : " default=" + f.defaultValue())
+            .append('\n');
+      return text.toString();
     }
-    return new Sink(r, crs, assignUnknownCrs);
+  }
+
+  private static void validateDatabase(Connection c) throws Exception {
+    try (var s = c.createStatement();
+        var r = s.executeQuery("PRAGMA application_id")) {
+      if (!r.next() || r.getInt(1) != 1196444487)
+        throw new IllegalArgumentException("Not a GeoPackage database");
+    }
+    for (String table : List.of("gpkg_contents", "gpkg_spatial_ref_sys", "gpkg_geometry_columns"))
+      if (!GeoPackageIndex.hasTable(c, table))
+        throw new IllegalArgumentException("Missing GeoPackage metadata: " + table);
   }
 
   private static final class Sink implements VectorSink {
@@ -294,102 +313,171 @@ public final class GeoPackageProvider implements VectorProvider {
     final WriteRequest r;
     final Path output;
     Path temp;
+    Connection connection;
     GeoPackageFeatureWriter writer;
-    boolean closed, failed;
-    final boolean assignUnknownCrs;
+    GeoPackageTarget target;
+    boolean closed, failed, changed;
+    long rowNumber;
 
-    Sink(WriteRequest r, CrsDefinitionResolver crs, boolean assignUnknownCrs) throws Exception {
-      this.assignUnknownCrs = assignUnknownCrs;
+    Sink(WriteRequest r, CrsDefinitionResolver crs) throws Exception {
       this.r = r;
+      var options = r.options() instanceof GeoPackageOptions o ? o : GeoPackageOptions.defaults();
       Path absolute = r.file().toAbsolutePath().normalize();
-      Files.createDirectories(absolute.getParent());
-      output = absolute.getParent().toRealPath().resolve(absolute.getFileName());
+      boolean create = options.writeMode() == GeoPackageOptions.WriteMode.CREATE_FILE;
+      if (create) Files.createDirectories(absolute.getParent());
+      output =
+          Files.exists(absolute)
+              ? absolute.toRealPath()
+              : absolute.getParent().toRealPath().resolve(absolute.getFileName());
       if (!ACTIVE.add(output))
-        throw new IllegalArgumentException("Another GeoPackage writer owns the output path");
+        throw new IllegalArgumentException("Another GeoPackage writer owns output " + output);
       try {
-        if (Files.exists(output))
+        r.checkCancelled();
+        if (create && Files.exists(output))
           throw new IllegalArgumentException("Output already exists: " + output);
-        if (r.geometry().z() != Ordinate.ABSENT || r.geometry().m() != Ordinate.ABSENT)
-          throw new IllegalArgumentException("GeoPackage supports XY only");
-        if (r.sample() == null)
-          throw new IllegalArgumentException("GeoPackage requires a geometry sample");
-        GeoPackageBinary.encode(r.sample());
-        temp = Files.createTempFile(output.getParent(), ".hop-geopackage-", ".gpkg");
-        createSchema(temp, r, crs);
-        writer =
-            GeoPackageFeatureWriter.open(
-                temp,
-                r.layer(),
-                r.rowMeta().getValueMeta(r.geometryIndex()).getName(),
-                r.rowMeta(),
-                r.geometryIndex(),
-                r.sample());
+        if (!create && !Files.isRegularFile(output))
+          throw new IllegalArgumentException("GeoPackage does not exist: " + output);
+        ensureSqliteDriver();
+        var config = new org.sqlite.SQLiteConfig();
+        config.setBusyTimeout(5000);
+        config.enforceForeignKeys(true);
+        config.setTransactionMode(org.sqlite.SQLiteConfig.TransactionMode.IMMEDIATE);
+        Path file = output;
+        if (create) {
+          temp = Files.createTempFile(output.getParent(), ".hop-geopackage-", ".gpkg");
+          file = temp;
+        }
+        connection = DriverManager.getConnection("jdbc:sqlite:" + file, config.toProperties());
+        GeoPackageIndex.register(connection);
+        connection.setAutoCommit(false);
+        if (create) createSystemTables(connection);
+        else validateDatabase(connection);
+        if (options.writeMode() != GeoPackageOptions.WriteMode.APPEND_FEATURES) {
+          if (r.geometry() == null || r.sample() == null)
+            throw new IllegalArgumentException(
+                "Explicit geometry schema or a geometry sample required");
+          if (r.geometry().z() != Ordinate.ABSENT || r.geometry().m() != Ordinate.ABSENT)
+            throw new IllegalArgumentException("GeoPackage supports XY only");
+          if (!r.geometry().type().equalsIgnoreCase(r.sample().getGeometryType())
+              && !r.geometry().type().equalsIgnoreCase(GeoPackageBinary.geometryType(r.sample())))
+            throw new IllegalArgumentException("Geometry type differs from output schema");
+          if (r.sample().getSRID() != 0 && r.sample().getSRID() != r.geometry().srid())
+            throw new IllegalArgumentException("Geometry SRID differs from output schema");
+          GeoPackageBinary.encode(r.sample());
+          createLayer(connection, r, crs);
+          changed = true;
+        }
+        target = GeoPackageTarget.read(connection, r.layer());
+        writer = GeoPackageFeatureWriter.open(connection, target, r.rowMeta(), r.geometryIndex());
+        if (!changed) writer.includeExistingBounds(r);
+        boolean indexed = GeoPackageIndex.exists(connection, target.layer(), target.geometry());
+        if (!indexed && options.createSpatialIndex()) {
+          GeoPackageIndex.create(connection, target.layer(), target.geometry(), target.fid(), r);
+          changed = true;
+        }
       } catch (Exception e) {
-        close();
+        failed = true;
+        cleanup(e);
         throw e;
       }
     }
 
     public boolean write(Object[] row) throws Exception {
       try {
-        return writeRow(row);
+        r.checkCancelled();
+        rowNumber++;
+        Geometry geometry = (Geometry) row[r.geometryIndex()];
+        target.validateGeometry(geometry);
+        var options = r.options() instanceof GeoPackageOptions o ? o : GeoPackageOptions.defaults();
+        if (geometry != null
+            && geometry.getSRID() == 0
+            && target.srid() != 0
+            && options.writeMode() != GeoPackageOptions.WriteMode.APPEND_FEATURES
+            && r.sample().getSRID() != 0)
+          throw new IllegalArgumentException("Geometry SRID differs from output layer");
+        if (geometry != null && geometry.getSRID() == 0 && target.srid() != 0) {
+          geometry = com.atolcd.hop.gis.geometry.curve.CurveGeometrySupport.copy(geometry);
+          geometry.setSRID(target.srid());
+        }
+        writer.write(row, geometry);
+        return true;
       } catch (Exception e) {
         failed = true;
-        throw e;
+        throw new IllegalArgumentException(
+            "GeoPackage "
+                + output
+                + ", layer "
+                + target.layer()
+                + ", row "
+                + rowNumber
+                + ": "
+                + e.getMessage(),
+            e);
       }
-    }
-
-    private boolean writeRow(Object[] row) throws Exception {
-      Geometry g = (Geometry) row[r.geometryIndex()];
-      if (g != null) {
-        if (g.getSRID() != r.sample().getSRID() && !(assignUnknownCrs && g.getSRID() == 0))
-          throw new IllegalArgumentException("Geometry SRID differs from output layer");
-        if (!GeoPackageBinary.geometryType(g).equals(GeoPackageBinary.geometryType(r.sample())))
-          throw new IllegalArgumentException("Geometry type differs from output layer");
-      }
-      if (g != null && g.getSRID() != r.sample().getSRID()) {
-        g = com.atolcd.hop.gis.geometry.curve.CurveGeometrySupport.copy(g);
-        g.setSRID(r.sample().getSRID());
-      }
-      writer.write(row, g);
-      return true;
     }
 
     public void finish() throws Exception {
-      if (failed) {
-        close();
-        throw new IllegalStateException("Cannot publish failed GeoPackage export");
-      }
-      writer.commit();
-      writer.close();
-      writer = null;
+      if (closed || failed)
+        throw new IllegalStateException("Cannot commit a closed or failed GeoPackage writer");
       try {
-        Files.move(temp, output);
-        temp = null;
-      } finally {
+        r.checkCancelled();
+        writer.updateContents(changed);
+        writer.close();
+        writer = null;
+        r.checkCancelled();
+        connection.commit();
+        connection.close();
+        connection = null;
+        if (temp != null) {
+          Files.move(temp, output);
+          temp = null;
+        }
+      } catch (Exception e) {
+        failed = true;
+        cleanup(e);
+        throw e;
+      }
+      close();
+    }
+
+    private void cleanup(Exception original) {
+      try {
         close();
+      } catch (Exception e) {
+        original.addSuppressed(e);
       }
     }
 
     public void close() throws Exception {
       if (closed) return;
       closed = true;
+      Exception error = null;
       try {
-        if (writer != null) {
+        if (writer != null)
           try {
-            writer.rollback();
-          } finally {
             writer.close();
-            writer = null;
+          } catch (Exception e) {
+            error = e;
+          }
+        if (connection != null) {
+          try {
+            connection.rollback();
+          } catch (Exception e) {
+            if (error == null) error = e;
+            else error.addSuppressed(e);
+          }
+          try {
+            connection.close();
+          } catch (Exception e) {
+            if (error == null) error = e;
+            else error.addSuppressed(e);
           }
         }
+        if (temp != null) Files.deleteIfExists(temp);
       } finally {
-        try {
-          if (temp != null) Files.deleteIfExists(temp);
-        } finally {
-          ACTIVE.remove(output);
-        }
+        ACTIVE.remove(output);
       }
+      if (error != null) throw error;
     }
   }
 
@@ -403,111 +491,113 @@ public final class GeoPackageProvider implements VectorProvider {
     }
   }
 
-  private static void createSchema(Path file, WriteRequest r, CrsDefinitionResolver crs)
+  private static void createSystemTables(Connection c) throws Exception {
+    try (Statement s = c.createStatement()) {
+      s.execute("PRAGMA application_id=1196444487");
+      s.execute("PRAGMA user_version=10400");
+      s.execute(
+          "CREATE TABLE gpkg_spatial_ref_sys (srs_name TEXT NOT NULL,srs_id INTEGER NOT NULL"
+              + " PRIMARY KEY,organization TEXT NOT NULL,organization_coordsys_id INTEGER NOT"
+              + " NULL,definition TEXT NOT NULL,description TEXT)");
+      s.execute(
+          "CREATE TABLE gpkg_contents (table_name TEXT NOT NULL PRIMARY KEY,data_type TEXT NOT"
+              + " NULL,identifier TEXT UNIQUE,description TEXT DEFAULT '',last_change DATETIME"
+              + " NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),min_x DOUBLE,min_y"
+              + " DOUBLE,max_x DOUBLE,max_y DOUBLE,srs_id INTEGER,FOREIGN KEY(srs_id) REFERENCES"
+              + " gpkg_spatial_ref_sys(srs_id))");
+      s.execute(
+          "CREATE TABLE gpkg_geometry_columns (table_name TEXT NOT NULL,column_name TEXT NOT"
+              + " NULL,geometry_type_name TEXT NOT NULL,srs_id INTEGER NOT NULL,z TINYINT NOT"
+              + " NULL,m TINYINT NOT NULL,PRIMARY"
+              + " KEY(table_name,column_name),UNIQUE(table_name),FOREIGN KEY(table_name)"
+              + " REFERENCES gpkg_contents(table_name),FOREIGN KEY(srs_id) REFERENCES"
+              + " gpkg_spatial_ref_sys(srs_id))");
+      s.execute(
+          "CREATE TABLE gpkg_extensions (table_name TEXT,column_name TEXT,extension_name TEXT NOT"
+              + " NULL,definition TEXT NOT NULL,scope TEXT NOT"
+              + " NULL,UNIQUE(table_name,column_name,extension_name))");
+    }
+  }
+
+  private static void createLayer(Connection c, WriteRequest r, CrsDefinitionResolver crs)
       throws Exception {
-    ensureSqliteDriver();
-    try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file.toAbsolutePath())) {
-      try (Statement s = c.createStatement()) {
-        s.execute("PRAGMA application_id=1196444487");
-        s.execute("PRAGMA user_version=10400");
-        s.execute("PRAGMA foreign_keys=ON");
-        c.setAutoCommit(false);
-        s.execute(
-            "CREATE TABLE gpkg_spatial_ref_sys (srs_name TEXT NOT NULL,srs_id INTEGER NOT NULL"
-                + " PRIMARY KEY,organization TEXT NOT NULL,organization_coordsys_id INTEGER NOT"
-                + " NULL,definition TEXT NOT NULL,description TEXT)");
-        s.execute(
-            "CREATE TABLE gpkg_contents (table_name TEXT NOT NULL PRIMARY KEY,data_type TEXT NOT"
-                + " NULL,identifier TEXT UNIQUE,description TEXT DEFAULT '',last_change DATETIME"
-                + " NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),min_x DOUBLE,min_y"
-                + " DOUBLE,max_x DOUBLE,max_y DOUBLE,srs_id INTEGER,FOREIGN KEY(srs_id) REFERENCES"
-                + " gpkg_spatial_ref_sys(srs_id))");
-        s.execute(
-            "CREATE TABLE gpkg_geometry_columns (table_name TEXT NOT NULL,column_name TEXT NOT"
-                + " NULL,geometry_type_name TEXT NOT NULL,srs_id INTEGER NOT NULL,z TINYINT NOT"
-                + " NULL,m TINYINT NOT NULL,PRIMARY"
-                + " KEY(table_name,column_name),UNIQUE(table_name),FOREIGN KEY(table_name)"
-                + " REFERENCES gpkg_contents(table_name),FOREIGN KEY(srs_id) REFERENCES"
-                + " gpkg_spatial_ref_sys(srs_id))");
-        s.execute(
-            "CREATE TABLE gpkg_extensions (table_name TEXT,column_name TEXT,extension_name TEXT NOT"
-                + " NULL,definition TEXT NOT NULL,scope TEXT NOT"
-                + " NULL,UNIQUE(table_name,column_name,extension_name))");
-      }
-      for (int srid : new TreeSet<>(List.of(-1, 0, 4326, r.sample().getSRID()))) {
-        var d =
-            srid == r.geometry().srid()
-                    && r.geometry().crs() != null
-                    && !r.geometry().crs().wkt().isBlank()
-                ? r.geometry().crs()
-                : crs.resolve(srid);
-        try (PreparedStatement p =
-            c.prepareStatement("INSERT INTO gpkg_spatial_ref_sys VALUES(?,?,?,?,?,NULL)")) {
-          p.setString(1, d.name());
-          p.setInt(2, d.srid());
-          p.setString(3, d.organization());
-          p.setInt(4, d.organizationId());
-          p.setString(5, d.wkt());
-          p.executeUpdate();
+    for (int srid : new TreeSet<>(List.of(-1, 0, 4326, r.geometry().srid()))) {
+      var d =
+          srid == r.geometry().srid()
+                  && r.geometry().crs() != null
+                  && !r.geometry().crs().wkt().isBlank()
+              ? r.geometry().crs()
+              : crs.resolve(srid);
+      try (var existing =
+          c.prepareStatement(
+              "SELECT organization,organization_coordsys_id,definition FROM gpkg_spatial_ref_sys"
+                  + " WHERE srs_id=?")) {
+        existing.setInt(1, d.srid());
+        try (var row = existing.executeQuery()) {
+          if (row.next()) {
+            boolean sameAuthority =
+                "EPSG".equalsIgnoreCase(d.organization())
+                    && "EPSG".equalsIgnoreCase(row.getString(1))
+                    && row.getInt(2) == d.organizationId();
+            if (!sameAuthority && !java.util.Objects.equals(row.getString(3), d.wkt()))
+              throw new IllegalArgumentException(
+                  "Conflicting CRS definition for GeoPackage SRS ID " + d.srid());
+          }
         }
-      }
-      String geom = r.rowMeta().getValueMeta(r.geometryIndex()).getName();
-      Set<String> names = new HashSet<>();
-      for (var f : r.rowMeta().getValueMetaList())
-        if (!names.add(f.getName().toLowerCase(Locale.ROOT)))
-          throw new IllegalArgumentException("Duplicate field name: " + f.getName());
-      if (r.layer().toLowerCase(Locale.ROOT).startsWith("gpkg_")
-          || r.layer().toLowerCase(Locale.ROOT).startsWith("sqlite_"))
-        throw new IllegalArgumentException("Reserved layer name");
-      String fid = "fid";
-      while (names.contains(fid.toLowerCase(Locale.ROOT))) fid = "_" + fid;
-      List<String> columns = new ArrayList<>();
-      columns.add(quote(fid) + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL");
-      for (int i = 0; i < r.rowMeta().size(); i++) {
-        var f = r.rowMeta().getValueMeta(i);
-        columns.add(
-            quote(f.getName())
-                + " "
-                + (i == r.geometryIndex()
-                    ? GeoPackageBinary.geometryType(r.sample())
-                    : sqlType(f.getType())));
-      }
-      try (Statement s = c.createStatement()) {
-        s.execute("CREATE TABLE " + quote(r.layer()) + " (" + String.join(",", columns) + ")");
       }
       try (PreparedStatement p =
           c.prepareStatement(
-              "INSERT INTO gpkg_contents(table_name,data_type,identifier,srs_id)"
-                  + " VALUES(?,'features',?,?)")) {
-        p.setString(1, r.layer());
-        p.setString(2, r.layer());
-        p.setInt(3, r.sample().getSRID());
+              "INSERT OR IGNORE INTO gpkg_spatial_ref_sys"
+                  + " (srs_name,srs_id,organization,organization_coordsys_id,definition,description)"
+                  + " VALUES(?,?,?,?,?,NULL)")) {
+        p.setString(1, d.name());
+        p.setInt(2, d.srid());
+        p.setString(3, d.organization());
+        p.setInt(4, d.organizationId());
+        p.setString(5, d.wkt());
         p.executeUpdate();
       }
-      try (PreparedStatement p =
-          c.prepareStatement("INSERT INTO gpkg_geometry_columns VALUES(?,?,?,?,0,0)")) {
-        p.setString(1, r.layer());
-        p.setString(2, geom);
-        p.setString(3, GeoPackageBinary.geometryType(r.sample()));
-        p.setInt(4, r.sample().getSRID());
-        p.executeUpdate();
-      }
-      // Register every nested non-linear type, not just the top-level geometry.
-      byte[] binary = GeoPackageBinary.encode(r.sample());
-      Set<Integer> types =
-          GeoPackageBinary.validateWkb(Arrays.copyOfRange(binary, 8, binary.length));
-      for (int type : types)
-        if (type >= 8)
-          try (PreparedStatement p =
-              c.prepareStatement(
-                  "INSERT INTO gpkg_extensions"
-                      + " VALUES(?,?,?,'http://www.geopackage.org/spec/#extension_geometry_types','read-write')")) {
-            p.setString(1, r.layer());
-            p.setString(2, geom);
-            p.setString(3, "gpkg_geom_" + GeoPackageBinary.typeName(type));
-            p.executeUpdate();
-          }
-      c.commit();
+    }
+    String geom = r.rowMeta().getValueMeta(r.geometryIndex()).getName();
+    Set<String> names = new HashSet<>();
+    for (var f : r.rowMeta().getValueMetaList())
+      if (!names.add(f.getName().toLowerCase(Locale.ROOT)))
+        throw new IllegalArgumentException("Duplicate field name: " + f.getName());
+    if (r.layer().toLowerCase(Locale.ROOT).startsWith("gpkg_")
+        || r.layer().toLowerCase(Locale.ROOT).startsWith("sqlite_"))
+      throw new IllegalArgumentException("Reserved layer name");
+    String fid = "fid";
+    while (names.contains(fid.toLowerCase(Locale.ROOT))) fid = "_" + fid;
+    List<String> columns = new ArrayList<>();
+    columns.add(quote(fid) + " INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL");
+    for (int i = 0; i < r.rowMeta().size(); i++) {
+      var f = r.rowMeta().getValueMeta(i);
+      columns.add(
+          quote(f.getName())
+              + " "
+              + (i == r.geometryIndex()
+                  ? GeoPackageBinary.geometryType(r.sample())
+                  : sqlType(f.getType())));
+    }
+    try (Statement s = c.createStatement()) {
+      s.execute("CREATE TABLE " + quote(r.layer()) + " (" + String.join(",", columns) + ")");
+    }
+    try (PreparedStatement p =
+        c.prepareStatement(
+            "INSERT INTO gpkg_contents(table_name,data_type,identifier,srs_id)"
+                + " VALUES(?,'features',?,?)")) {
+      p.setString(1, r.layer());
+      p.setString(2, r.layer());
+      p.setInt(3, r.geometry().srid());
+      p.executeUpdate();
+    }
+    try (PreparedStatement p =
+        c.prepareStatement("INSERT INTO gpkg_geometry_columns VALUES(?,?,?,?,0,0)")) {
+      p.setString(1, r.layer());
+      p.setString(2, geom);
+      p.setString(3, GeoPackageBinary.geometryType(r.sample()));
+      p.setInt(4, r.geometry().srid());
+      p.executeUpdate();
     }
   }
 
@@ -519,10 +609,10 @@ public final class GeoPackageProvider implements VectorProvider {
       case IValueMeta.TYPE_DATE, IValueMeta.TYPE_TIMESTAMP -> "DATETIME";
       case IValueMeta.TYPE_BINARY -> "BLOB";
       case IValueMeta.TYPE_STRING -> "TEXT";
-      // A row may contain additional geometry attributes besides the selected
-      // feature geometry. They are ordinary attributes in this layer and are
-      // represented as their textual WKT/debug value rather than as a second
-      // GeoPackage geometry column.
+        // A row may contain additional geometry attributes besides the selected
+        // feature geometry. They are ordinary attributes in this layer and are
+        // represented as their textual WKT/debug value rather than as a second
+        // GeoPackage geometry column.
       case ValueMetaGeometry.TYPE_GEOMETRY -> "TEXT";
       default -> throw new IllegalArgumentException("Unsupported Hop attribute type: " + type);
     };

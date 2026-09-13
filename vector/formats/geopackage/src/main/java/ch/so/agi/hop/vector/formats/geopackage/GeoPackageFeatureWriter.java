@@ -1,16 +1,11 @@
 package ch.so.agi.hop.vector.formats.geopackage;
 
 import java.math.BigDecimal;
-import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Types;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.row.IValueMeta;
 import org.locationtech.jts.geom.Geometry;
@@ -25,7 +20,6 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
   private final PreparedStatement insertStatement;
   private final IRowMeta rowMeta;
   private final int geometryFieldIndex;
-  private final CurveType curveType;
   private String layerName;
   private String geometryColumn;
   private final org.locationtech.jts.geom.Envelope bounds =
@@ -36,64 +30,101 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
       Connection connection,
       PreparedStatement insertStatement,
       IRowMeta rowMeta,
-      int geometryFieldIndex,
-      CurveType curveType) {
+      int geometryFieldIndex) {
     this.connection = connection;
     this.insertStatement = insertStatement;
     this.rowMeta = rowMeta;
     this.geometryFieldIndex = geometryFieldIndex;
-    this.curveType = curveType;
   }
 
-  public static GeoPackageFeatureWriter open(
-      Path file,
-      String layerName,
-      String geometryFieldName,
-      IRowMeta rowMeta,
-      int geometryFieldIndex,
-      Geometry sampleGeometry)
+  private GeoPackageTarget target;
+  private GeoPackageTarget.Column[] mapping;
+  private long rowCount;
+
+  static GeoPackageFeatureWriter open(
+      Connection connection, GeoPackageTarget target, IRowMeta rowMeta, int geometryFieldIndex)
       throws Exception {
-    GeoPackageProvider.ensureSqliteDriver();
-    String database = file.toAbsolutePath().normalize().toString().replace('\\', '/');
-    Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-    try {
-      connection.setAutoCommit(false);
-      CurveType curveType = CurveType.fromGeometry(sampleGeometry);
-      if (curveType != null) {
-        registerCurveType(connection, layerName, geometryFieldName, curveType);
+    var mapping = target.mapping(rowMeta, geometryFieldIndex);
+    String columns =
+        java.util.Arrays.stream(mapping)
+            .map(c -> quoteIdentifier(c.name()))
+            .collect(java.util.stream.Collectors.joining(","));
+    String parameters = String.join(",", java.util.Collections.nCopies(mapping.length, "?"));
+    var insert =
+        connection.prepareStatement(
+            "INSERT INTO "
+                + quoteIdentifier(target.layer())
+                + " ("
+                + columns
+                + ") VALUES ("
+                + parameters
+                + ")");
+    var result = new GeoPackageFeatureWriter(connection, insert, rowMeta, geometryFieldIndex);
+    result.layerName = target.layer();
+    result.geometryColumn = target.geometry();
+    result.target = target;
+    result.mapping = mapping;
+    return result;
+  }
+
+  void includeExistingBounds(ch.so.agi.hop.vector.core.WriteRequest request) throws Exception {
+    try (var p =
+        connection.prepareStatement(
+            "SELECT min_x,max_x,min_y,max_y FROM gpkg_contents WHERE table_name=?")) {
+      p.setString(1, layerName);
+      try (var rs = p.executeQuery()) {
+        if (rs.next()
+            && rs.getObject(1) != null
+            && rs.getObject(2) != null
+            && rs.getObject(3) != null
+            && rs.getObject(4) != null) {
+          bounds.expandToInclude(
+              new org.locationtech.jts.geom.Envelope(
+                  rs.getDouble(1), rs.getDouble(2), rs.getDouble(3), rs.getDouble(4)));
+          return;
+        }
       }
-      PreparedStatement insert = connection.prepareStatement(insertSql(layerName, rowMeta));
-      GeoPackageFeatureWriter result =
-          new GeoPackageFeatureWriter(connection, insert, rowMeta, geometryFieldIndex, curveType);
-      result.layerName = layerName;
-      result.geometryColumn = geometryFieldName;
-      return result;
-    } catch (Exception e) {
-      try {
-        connection.close();
-      } catch (SQLException ignored) {
-        // Preserve the original failure.
+    }
+    try (var s = connection.createStatement();
+        var rows =
+            s.executeQuery(
+                "SELECT "
+                    + quoteIdentifier(geometryColumn)
+                    + " FROM "
+                    + quoteIdentifier(layerName))) {
+      while (rows.next()) {
+        request.checkCancelled();
+        bounds.expandToInclude(
+            GeoPackageIndex.envelope(GeoPackageBinary.decode(rows.getBytes(1), target.srid())));
       }
-      throw e;
     }
   }
 
   void write(Object[] row, Geometry geometry) throws Exception {
-    validateGeometryType(geometry);
+    target.validateGeometry(geometry);
+    rowCount++;
     for (int i = 0; i < rowMeta.size(); i++) {
       int parameter = i + 1;
-      if (i == geometryFieldIndex) {
-        bindGeometry(parameter, geometry);
-      } else {
-        bindAttribute(parameter, rowMeta.getValueMeta(i), row[i]);
+      try {
+        if (i == geometryFieldIndex) {
+          if (geometry == null && mapping[i].required())
+            throw new IllegalArgumentException("NULL geometry");
+          bindGeometry(parameter, geometry);
+        } else {
+          Object value = mapping[i].normalize(rowMeta.getValueMeta(i), row[i]);
+          bindAttribute(parameter, rowMeta.getValueMeta(i), value);
+        }
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Field " + mapping[i].name() + ": " + e.getMessage(), e);
       }
     }
     insertStatement.executeUpdate();
     if (geometry != null && !geometry.isEmpty())
-      bounds.expandToInclude(geometry.getEnvelopeInternal());
+      bounds.expandToInclude(GeoPackageIndex.envelope(geometry));
   }
 
-  void commit() throws SQLException {
+  void updateContents(boolean changed) throws SQLException {
+    if (rowCount == 0 && !changed) return;
     try (PreparedStatement p =
         connection.prepareStatement(
             "UPDATE gpkg_contents SET"
@@ -109,53 +140,11 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
       p.setString(5, layerName);
       p.executeUpdate();
     }
-    connection.commit();
-  }
-
-  void rollback() throws SQLException {
-    connection.rollback();
   }
 
   @Override
   public void close() throws SQLException {
-    SQLException failure = null;
-    try {
-      insertStatement.close();
-    } catch (SQLException e) {
-      failure = e;
-    }
-    try {
-      connection.close();
-    } catch (SQLException e) {
-      if (failure == null) {
-        failure = e;
-      } else {
-        failure.addSuppressed(e);
-      }
-    }
-    if (failure != null) {
-      throw failure;
-    }
-  }
-
-  private void validateGeometryType(Geometry geometry) {
-    if (geometry == null) {
-      return;
-    }
-    CurveType actual = CurveType.fromGeometry(geometry);
-    if (curveType == null && actual != null) {
-      throw new IllegalArgumentException(
-          "GeoPackage geometry type was inferred from a linear geometry, but a later row contains "
-              + actual.geometryTypeName);
-    }
-    if (curveType != null && actual != curveType) {
-      String actualName = actual == null ? geometry.getGeometryType() : actual.geometryTypeName;
-      throw new IllegalArgumentException(
-          "GeoPackage geometry type was inferred as "
-              + curveType.geometryTypeName
-              + " but a later row contains "
-              + actualName);
-    }
+    insertStatement.close();
   }
 
   private void bindGeometry(int parameter, Geometry geometry) throws Exception {
@@ -168,7 +157,8 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
         GeoPackageBinary.validateWkb(java.util.Arrays.copyOfRange(encoded, 8, encoded.length)))
       if (type >= 8) {
         String extension = "gpkg_geom_" + GeoPackageBinary.typeName(type);
-        if (registeredExtensions.add(extension))
+        if (registeredExtensions.add(extension)) {
+          GeoPackageIndex.extensions(connection);
           try (PreparedStatement p =
               connection.prepareStatement(
                   "INSERT OR IGNORE INTO gpkg_extensions VALUES(?,?,?,?,'read-write')")) {
@@ -178,17 +168,25 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
             p.setString(4, CURVE_EXTENSION_DEFINITION);
             p.executeUpdate();
           }
+        }
       }
     insertStatement.setBytes(parameter, encoded);
   }
 
   private void bindAttribute(int parameter, IValueMeta valueMeta, Object value) throws Exception {
-    Object normalized = valueMeta.convertToNormalStorageType(value);
+    Object normalized = value;
     if (normalized == null) {
       insertStatement.setObject(parameter, null);
       return;
     }
-
+    if (normalized instanceof Long l) {
+      insertStatement.setLong(parameter, l);
+      return;
+    }
+    if (normalized instanceof Double d) {
+      insertStatement.setDouble(parameter, d);
+      return;
+    }
     switch (valueMeta.getType()) {
       case IValueMeta.TYPE_BOOLEAN -> insertStatement.setBoolean(parameter, (Boolean) normalized);
       case IValueMeta.TYPE_INTEGER ->
@@ -204,6 +202,15 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
       }
       case IValueMeta.TYPE_DATE, IValueMeta.TYPE_TIMESTAMP -> {
         if (normalized instanceof java.util.Date date) {
+          if (mapping[parameter - 1].baseType().equals("DATE")) {
+            insertStatement.setString(
+                parameter,
+                Instant.ofEpochMilli(date.getTime())
+                    .atOffset(java.time.ZoneOffset.UTC)
+                    .toLocalDate()
+                    .toString());
+            break;
+          }
           insertStatement.setString(
               parameter,
               new java.time.format.DateTimeFormatterBuilder()
@@ -217,68 +224,6 @@ public final class GeoPackageFeatureWriter implements AutoCloseable {
       case IValueMeta.TYPE_BINARY -> insertStatement.setBytes(parameter, (byte[]) normalized);
       default -> insertStatement.setString(parameter, normalized.toString());
     }
-  }
-
-  private static void registerCurveType(
-      Connection connection, String layerName, String geometryFieldName, CurveType curveType)
-      throws SQLException {
-    try (Statement statement = connection.createStatement()) {
-      statement.execute(
-          """
-          CREATE TABLE IF NOT EXISTS gpkg_extensions (
-            table_name TEXT,
-            column_name TEXT,
-            extension_name TEXT NOT NULL,
-            definition TEXT NOT NULL,
-            scope TEXT NOT NULL,
-            CONSTRAINT ge_tce UNIQUE (table_name, column_name, extension_name),
-            CONSTRAINT ge_rte FOREIGN KEY (table_name) REFERENCES gpkg_contents(table_name)
-          )
-          """);
-    }
-
-    try (PreparedStatement update =
-        connection.prepareStatement(
-            "UPDATE gpkg_geometry_columns SET geometry_type_name = ? WHERE table_name = ? AND"
-                + " column_name = ?")) {
-      update.setString(1, curveType.geometryTypeName);
-      update.setString(2, layerName);
-      update.setString(3, geometryFieldName);
-      if (update.executeUpdate() != 1) {
-        throw new SQLException(
-            "Could not update gpkg_geometry_columns for " + layerName + "." + geometryFieldName);
-      }
-    }
-
-    try (PreparedStatement insert =
-        connection.prepareStatement(
-            """
-            INSERT OR REPLACE INTO gpkg_extensions
-              (table_name, column_name, extension_name, definition, scope)
-            VALUES (?, ?, ?, ?, 'read-write')
-            """)) {
-      insert.setString(1, layerName);
-      insert.setString(2, geometryFieldName);
-      insert.setString(3, "gpkg_geom_" + curveType.geometryTypeName);
-      insert.setString(4, CURVE_EXTENSION_DEFINITION);
-      insert.executeUpdate();
-    }
-  }
-
-  private static String insertSql(String layerName, IRowMeta rowMeta) {
-    List<String> columns = new ArrayList<>();
-    List<String> placeholders = new ArrayList<>();
-    for (int i = 0; i < rowMeta.size(); i++) {
-      columns.add(quoteIdentifier(rowMeta.getValueMeta(i).getName()));
-      placeholders.add("?");
-    }
-    return "INSERT INTO "
-        + quoteIdentifier(layerName)
-        + " ("
-        + String.join(", ", columns)
-        + ") VALUES ("
-        + String.join(", ", placeholders)
-        + ")";
   }
 
   private static String quoteIdentifier(String identifier) {

@@ -182,6 +182,27 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   @HopMetadataProperty private int decimals = -1;
   @HopMetadataProperty private boolean comma;
   @HopMetadataProperty private boolean skipEmpty;
+  @HopMetadataProperty private String geoPackageWriteMode = "CREATE_FILE";
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean geoPackageCreateSpatialIndex = true;
+
+  public String getGeoPackageWriteMode() {
+    return geoPackageWriteMode;
+  }
+
+  public void setGeoPackageWriteMode(String mode) {
+    geoPackageWriteMode = mode;
+  }
+
+  public boolean isGeoPackageCreateSpatialIndex() {
+    return geoPackageCreateSpatialIndex;
+  }
+
+  public void setGeoPackageCreateSpatialIndex(boolean value) {
+    geoPackageCreateSpatialIndex = value;
+  }
+
   @HopMetadataProperty private boolean overwrite;
 
   @HopMetadataProperty private String charset = "";
@@ -283,6 +304,8 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     comma = false;
     skipEmpty = false;
     overwrite = false;
+    geoPackageWriteMode = "CREATE_FILE";
+    geoPackageCreateSpatialIndex = true;
   }
 
   @Override
@@ -472,6 +495,9 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   public FormatOptions options(VectorFormat f, IVariables vars) {
     java.util.function.Function<String, String> resolve = v -> vars == null ? v : vars.resolve(v);
+    if (f == VectorFormat.GEOPACKAGE)
+      return new GeoPackageOptions(
+          GeoPackageOptions.WriteMode.valueOf(geoPackageWriteMode), geoPackageCreateSpatialIndex);
     if (f == VectorFormat.FILEGEODATABASE)
       return new FileGeodatabaseOptions(
           fileGdbPrecisionMode,

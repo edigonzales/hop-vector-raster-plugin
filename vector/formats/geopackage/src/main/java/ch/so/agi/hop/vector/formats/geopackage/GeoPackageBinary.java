@@ -148,7 +148,8 @@ public final class GeoPackageBinary {
   }
 
   static String geometryType(Geometry g) {
-    return g.getGeometryType().toUpperCase(Locale.ROOT);
+    var curve = GeoPackageFeatureWriter.CurveType.fromGeometry(g);
+    return curve == null ? g.getGeometryType().toUpperCase(Locale.ROOT) : curve.name();
   }
 
   static String typeName(int id) {

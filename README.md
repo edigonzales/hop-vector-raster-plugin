@@ -126,3 +126,9 @@ FileGDB Catalog Reader exposes domains, field assignments and relationship metad
 FileGDB Writer exports multiple named inputs to one new geodatabase using a versioned
 JSON schema. Vector Reader also reads ordinary FileGDB tables. See the
 [complete example and supported scope](docs/examples/filegdb/README.md).
+
+### GeoPackage append
+
+Vector Writer can create a new GeoPackage, add a layer to an existing file, or append
+features to an existing layer. Spatial indexes and extents are maintained transactionally.
+See the [sequential example pipelines and GUI settings](docs/examples/geopackage-append/README.md).
