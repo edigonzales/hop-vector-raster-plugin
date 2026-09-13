@@ -15,6 +15,29 @@ public class VectorDialogSmoke {
     return f.get(o);
   }
 
+  private static void whenOpen(Display display, Shell parent, Runnable checks) {
+    display.timerExec(
+        100,
+        () -> {
+          // GTK can dispatch timers inside Shell.open(). Closing the dialog there
+          // would dispose it before Hop starts its normal modal event loop.
+          boolean opening =
+              java.util.Arrays.stream(Thread.currentThread().getStackTrace())
+                  .anyMatch(
+                      frame ->
+                          frame.getClassName().equals(Shell.class.getName())
+                              && frame.getMethodName().equals("open"));
+          boolean visible =
+              java.util.Arrays.stream(parent.getShells())
+                  .anyMatch(shell -> !shell.isDisposed() && shell.isVisible());
+          if (opening || !visible) {
+            whenOpen(display, parent, checks);
+          } else {
+            checks.run();
+          }
+        });
+  }
+
   public static void main(String[] args) throws Exception {
     HopEnvironment.init();
     Display display = new Display();
@@ -25,8 +48,9 @@ public class VectorDialogSmoke {
       PipelineMeta pm = new PipelineMeta();
       pm.addTransform(new TransformMeta("Writer", meta));
       VectorWriterDialog dialog = new VectorWriterDialog(parent, new Variables(), meta, pm);
-      display.timerExec(
-          600,
+      whenOpen(
+          display,
+          parent,
           () -> {
             try {
               Composite group = (Composite) field(dialog, "generateOptions");
@@ -141,8 +165,9 @@ public class VectorDialogSmoke {
       PipelineMeta rpm = new PipelineMeta();
       rpm.addTransform(new TransformMeta("Reader", reader));
       VectorReaderDialog rd = new VectorReaderDialog(parent, new Variables(), reader, rpm);
-      display.timerExec(
-          600,
+      whenOpen(
+          display,
+          parent,
           () -> {
             try {
               Combo formats = (Combo) field(rd, "wFormat");
