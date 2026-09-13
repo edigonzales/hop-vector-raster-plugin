@@ -124,8 +124,15 @@ def main() -> int:
         ]
         run_command(java_smoke + ["prepare"], env)
         gdal_python = str(Path(os.environ["GDAL_PREFIX"]) / "bin/python3") if os.environ.get("GDAL_PREFIX") else None
+        gdal_env = env.copy()
         if gdal_python:
-            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "prepare", str(data)], env)
+            # Calling Conda's Python directly does not activate its data paths.
+            # Use its matching PROJ database, independent of runner-wide installs.
+            gdal_prefix = Path(os.environ["GDAL_PREFIX"])
+            gdal_env["PROJ_DATA"] = str(gdal_prefix / "share/proj")
+            gdal_env["PROJ_LIB"] = gdal_env["PROJ_DATA"]
+            gdal_env["GDAL_DATA"] = str(gdal_prefix / "share/gdal")
+            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "prepare", str(data)], gdal_env)
 
         # Probe the real plugin classloader; never put plugin JARs on its initial classpath.
         hop_classpath = os.pathsep.join(str(path) for path in jars(args.hop_home / "lib"))
@@ -198,14 +205,14 @@ def main() -> int:
                         "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
                         "-p", f"OUTPUT_FILE={data / target}",
                     ], env)
-            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "check", str(data)], env)
+            run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "check", str(data)], gdal_env)
         run_command(java_smoke + ["check"], env)
         if os.environ.get("GDAL_PREFIX"):
             run_command([
                 str(Path(os.environ["GDAL_PREFIX"]) / "bin/python3"),
                 str(Path(__file__).with_name("check-filegdb-catalog.py")),
                 str(data / "catalog-output.gdb"),
-            ], env)
+            ], gdal_env)
         with (data / "zonal.csv").open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream, delimiter=";"))
         if len(rows) != 1:
