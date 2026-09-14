@@ -8,8 +8,34 @@ public record FileGeodatabaseOptions(
     Double xOrigin,
     Double yOrigin,
     boolean spatialIndex,
-    Bounds filter)
+    Bounds filter,
+    WriteMode writeMode)
     implements FormatOptions {
+  public enum WriteMode {
+    CREATE_DATABASE,
+    ADD_DATASET,
+    APPEND_ROWS
+  }
+
+  public FileGeodatabaseOptions(
+      String precisionMode,
+      Double xyResolution,
+      Double xyTolerance,
+      Double xOrigin,
+      Double yOrigin,
+      boolean spatialIndex,
+      Bounds filter) {
+    this(
+        precisionMode,
+        xyResolution,
+        xyTolerance,
+        xOrigin,
+        yOrigin,
+        spatialIndex,
+        filter,
+        WriteMode.CREATE_DATABASE);
+  }
+
   public record Bounds(double xMin, double yMin, double xMax, double yMax) {
     public Bounds {
       if (!Double.isFinite(xMin)
@@ -22,6 +48,7 @@ public record FileGeodatabaseOptions(
   }
 
   public FileGeodatabaseOptions {
+    writeMode = writeMode == null ? WriteMode.CREATE_DATABASE : writeMode;
     precisionMode = precisionMode == null ? "LEGACY" : precisionMode;
     if (!precisionMode.equals("LEGACY") && !precisionMode.equals("AUTO"))
       throw new IllegalArgumentException("Unknown precision mode");

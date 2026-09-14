@@ -32,17 +32,23 @@ public class VectorWriter
       if (getTransformMeta().getCopies(this) > 1)
         throw new IllegalArgumentException(
             "Vector Writer requires one transform copy per output file");
+      if (format == VectorFormat.FILEGEODATABASE
+          && meta.getFileGdbWriteMode().equals("APPEND_ROWS")
+          && !meta.getFileGdbSchemaFile().isBlank())
+        throw new IllegalArgumentException(
+            "Append uses the existing target schema; clear the schema file");
       if (format == VectorFormat.FILEGEODATABASE && !meta.getFileGdbSchemaFile().isBlank()) {
         if (data.sink == null) {
           var schema =
               ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSchema.read(
-                  Path.of(resolve(meta.getFileGdbSchemaFile())));
+                  Path.of(resolve(meta.getFileGdbSchemaFile())),
+                  !meta.getFileGdbWriteMode().equals("CREATE_DATABASE"));
           if (schema.datasets().size() != 1 || !schema.relationships().isEmpty())
             throw new IllegalArgumentException(
                 "Use FileGDB Writer for multiple datasets or relationships");
           String dataset = resolve(meta.getLayerName());
           if (dataset.isBlank()) dataset = defaultLayerName(file);
-          schema.dataset(dataset);
+          var geometryDefinition = schema.dataset(dataset).geometry();
           var rm = getInputRowMeta();
           if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());
           var session =
@@ -50,7 +56,22 @@ public class VectorWriter
                   file,
                   schema,
                   java.util.Map.of(dataset, rm),
-                  new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+                  java.util.Map.of(
+                      dataset,
+                      new ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession
+                          .InputOptions(
+                          ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession.Action
+                              .CREATE_DATASET,
+                          geometryDefinition == null ? "" : geometryDefinition.source(),
+                          geometryDefinition != null
+                              && !Boolean.FALSE.equals(geometryDefinition.spatialIndex()))),
+                  !meta.getFileGdbWriteMode().equals("CREATE_DATABASE"),
+                  new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver(),
+                  () -> {
+                    if (isStopped())
+                      throw new java.util.concurrent.CancellationException(
+                          "FileGDB export stopped");
+                  });
           final String selected = dataset;
           data.sink =
               new VectorSink() {
@@ -78,8 +99,10 @@ public class VectorWriter
         incrementLinesOutput();
         return true;
       }
-      if (format == VectorFormat.GEOPACKAGE
-          && meta.getGeoPackageWriteMode().equals("APPEND_FEATURES")) {
+      if ((format == VectorFormat.GEOPACKAGE
+              && meta.getGeoPackageWriteMode().equals("APPEND_FEATURES"))
+          || (format == VectorFormat.FILEGEODATABASE
+              && meta.getFileGdbWriteMode().equals("APPEND_ROWS"))) {
         if (data.sink == null) {
           var rm = getInputRowMeta();
           if (rm == null) rm = getPipelineMeta().getPrevTransformFields(this, getTransformMeta());

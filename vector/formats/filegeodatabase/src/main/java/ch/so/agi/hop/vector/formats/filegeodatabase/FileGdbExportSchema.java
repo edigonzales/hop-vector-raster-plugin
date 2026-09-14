@@ -132,13 +132,17 @@ public record FileGdbExportSchema(
   }
 
   public static FileGdbExportSchema read(Path path) throws Exception {
+    return read(path, false);
+  }
+
+  public static FileGdbExportSchema read(Path path, boolean existing) throws Exception {
     var mapper = new ObjectMapper();
     mapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     mapper.enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
     mapper.disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
     try {
       var schema = mapper.readValue(path.toFile(), FileGdbExportSchema.class);
-      schema.validate();
+      schema.validate(existing, null);
       return schema;
     } catch (Exception e) {
       throw new IllegalArgumentException(
@@ -160,10 +164,20 @@ public record FileGdbExportSchema(
   }
 
   public void validate() {
+    validate(false, null);
+  }
+
+  public void validate(ch.so.agi.filegdb.FileGeodatabase existing) {
+    validate(true, existing);
+  }
+
+  private void validate(boolean external, ch.so.agi.filegdb.FileGeodatabase database) {
     if (schemaVersion != 1) throw new IllegalArgumentException("Expected schemaVersion 1");
-    if (datasets.isEmpty()) throw new IllegalArgumentException("At least one dataset is required");
+    if (!external && datasets.isEmpty())
+      throw new IllegalArgumentException("At least one dataset is required");
     var names = new HashSet<String>();
     var domainMap = new HashMap<String, Domain>();
+    if (database != null) for (var d : database.domains()) domainMap.put(d.name(), d);
     for (var spec : domains) {
       name(spec.name(), names);
       var domain = spec.domain();
@@ -199,6 +213,7 @@ public record FileGdbExportSchema(
         if (f.length() != null && (f.length() < 1 || f.length() > 65535))
           throw new IllegalArgumentException("Invalid field length");
         if (f.domain() != null
+            && !(external && database == null && !domainMap.containsKey(f.domain()))
             && (!domainMap.containsKey(f.domain())
                 || domainMap.get(f.domain()).fieldType() != f.type()))
           throw new IllegalArgumentException(
@@ -210,8 +225,17 @@ public record FileGdbExportSchema(
       if (r.cardinality() != RelationshipCardinality.ONE_TO_ONE
           && r.cardinality() != RelationshipCardinality.ONE_TO_MANY)
         throw new IllegalArgumentException("Only simple 1:1 and 1:n relationships are supported");
-      var a = field(dataset(r.origin()), r.originKey());
-      var b = field(dataset(r.destination()), r.foreignKey());
+      if ("OBJECTID".equalsIgnoreCase(r.originKey()) || "OBJECTID".equalsIgnoreCase(r.foreignKey()))
+        throw new IllegalArgumentException("Relationships require explicit stable keys");
+      if (external
+          && database == null
+          && (datasets.stream().noneMatch(d -> d.name().equals(r.origin()))
+              || datasets.stream().noneMatch(d -> d.name().equals(r.destination())))) {
+        r.definition();
+        continue;
+      }
+      var a = relationshipField(r.origin(), r.originKey(), database);
+      var b = relationshipField(r.destination(), r.foreignKey(), database);
       if (a.type() != b.type()
           || !Set.of(
                   FileGdbFieldType.INT16,
@@ -222,6 +246,28 @@ public record FileGdbExportSchema(
               .contains(a.type()))
         throw new IllegalArgumentException("Incompatible relationship keys: " + r.name());
       r.definition();
+    }
+  }
+
+  private FieldSpec relationshipField(
+      String dataset, String name, ch.so.agi.filegdb.FileGeodatabase database) {
+    var local = datasets.stream().filter(d -> d.name().equalsIgnoreCase(dataset)).findFirst();
+    if (local.isPresent()) return field(local.get(), name);
+    if (database == null) throw new IllegalArgumentException("Unknown dataset: " + dataset);
+    try (var table = database.table(dataset)) {
+      var f =
+          table.fields().stream()
+              .filter(v -> v.name().equalsIgnoreCase(name))
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Unknown relationship key: " + dataset + "." + name));
+      if (f.type() == FileGdbFieldType.OBJECTID)
+        throw new IllegalArgumentException("Relationships require explicit stable keys");
+      return new FieldSpec(f.name(), f.name(), f.type(), f.nullable(), f.maxWidth(), f.domain());
+    } catch (java.io.IOException e) {
+      throw new IllegalArgumentException("Cannot inspect relationship dataset: " + dataset, e);
     }
   }
 

@@ -29,6 +29,16 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     setDefault();
   }
 
+  @HopMetadataProperty private String fileGdbWriteMode = "CREATE_DATABASE";
+
+  public String getFileGdbWriteMode() {
+    return fileGdbWriteMode;
+  }
+
+  public void setFileGdbWriteMode(String mode) {
+    fileGdbWriteMode = mode == null ? "CREATE_DATABASE" : mode;
+  }
+
   @HopMetadataProperty private String fileGdbSchemaFile = "";
 
   public String getFileGdbSchemaFile() {
@@ -277,6 +287,7 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   @Override
   public void setDefault() {
     fileGdbSchemaFile = "";
+    fileGdbWriteMode = "CREATE_DATABASE";
     fileGdbPrecisionMode = "AUTO";
     fileGdbSpatialIndex = true;
     parquetRowGroupSize = 128L * 1024 * 1024;
@@ -498,6 +509,16 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     if (f == VectorFormat.GEOPACKAGE)
       return new GeoPackageOptions(
           GeoPackageOptions.WriteMode.valueOf(geoPackageWriteMode), geoPackageCreateSpatialIndex);
+    if (f == VectorFormat.FILEGEODATABASE && fileGdbWriteMode.equals("APPEND_ROWS"))
+      return new FileGeodatabaseOptions(
+          "LEGACY",
+          null,
+          null,
+          null,
+          null,
+          fileGdbSpatialIndex,
+          null,
+          FileGeodatabaseOptions.WriteMode.APPEND_ROWS);
     if (f == VectorFormat.FILEGEODATABASE)
       return new FileGeodatabaseOptions(
           fileGdbPrecisionMode,
@@ -506,7 +527,8 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
           FileGeodatabaseOptions.optional(resolve.apply(fileGdbXOrigin)),
           FileGeodatabaseOptions.optional(resolve.apply(fileGdbYOrigin)),
           fileGdbSpatialIndex,
-          null);
+          null,
+          FileGeodatabaseOptions.WriteMode.valueOf(fileGdbWriteMode));
     if (f == VectorFormat.FLATGEOBUF)
       return new FlatGeobufOptions(flatGeobufIndex, flatGeobufSkipEmpty, overwrite);
     if (f == VectorFormat.PARQUET)

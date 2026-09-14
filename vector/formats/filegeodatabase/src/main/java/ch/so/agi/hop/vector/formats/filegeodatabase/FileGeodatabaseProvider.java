@@ -7,13 +7,11 @@ import ch.so.agi.filegdb.geometry.FileGdbGeometry;
 import ch.so.agi.filegdb.geometry.GeometryFieldDefinition;
 import ch.so.agi.filegdb.geometry.GeometryKind;
 import ch.so.agi.filegdb.jts.JtsGeometryReader;
-import ch.so.agi.filegdb.jts.JtsGeometryWriter;
 import ch.so.agi.filegdb.table.FileGdbField;
 import ch.so.agi.filegdb.table.FileGdbGeomField;
 import ch.so.agi.filegdb.table.FileGdbRow;
 import ch.so.agi.filegdb.table.FileGdbTable;
 import ch.so.agi.filegdb.write.FeatureClassDefinition;
-import ch.so.agi.filegdb.write.GdbFeatureWriter;
 import ch.so.agi.hop.vector.core.CrsDefinitionResolver;
 import ch.so.agi.hop.vector.core.GeometrySchema;
 import ch.so.agi.hop.vector.core.LayerSchema;
@@ -25,12 +23,8 @@ import ch.so.agi.hop.vector.core.VectorSink;
 import ch.so.agi.hop.vector.core.VectorSource;
 import ch.so.agi.hop.vector.core.WriteRequest;
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import org.apache.hop.core.row.IRowMeta;
@@ -50,7 +44,6 @@ import org.locationtech.jts.geom.Geometry;
 public final class FileGeodatabaseProvider implements VectorProvider {
 
   private final CrsDefinitionResolver crs;
-  private final JtsGeometryWriter jtsWriter = new JtsGeometryWriter();
 
   public FileGeodatabaseProvider(CrsDefinitionResolver crs) {
     this.crs = crs;
@@ -196,113 +189,103 @@ public final class FileGeodatabaseProvider implements VectorProvider {
 
   @Override
   public VectorSink create(WriteRequest request) throws Exception {
-    Path output = request.file().toAbsolutePath().normalize();
-    if (Files.exists(output)) {
-      throw new IllegalArgumentException("Output already exists: " + output);
-    }
-    Path outputParent = output.getParent();
-    if (outputParent == null) {
-      throw new IllegalArgumentException("Output has no parent directory: " + output);
-    }
-    Path stagingParent = Files.createTempDirectory(outputParent, ".hop-filegdb-");
-    Path staging = stagingParent.resolve("output.gdb");
-
-    FileGeodatabase database = null;
-    GdbFeatureWriter writer = null;
-    try {
-      database = FileGeodatabase.create(staging);
+    var options =
+        request.options() instanceof ch.so.agi.hop.vector.core.FileGeodatabaseOptions o
+            ? o
+            : ch.so.agi.hop.vector.core.FileGeodatabaseOptions.defaults();
+    boolean append =
+        options.writeMode()
+            == ch.so.agi.hop.vector.core.FileGeodatabaseOptions.WriteMode.APPEND_ROWS;
+    FileGdbExportSchema schema = null;
+    String geometrySource = request.rowMeta().getValueMeta(request.geometryIndex()).getName();
+    if (!append) {
       FeatureClassDefinition definition = definition(request);
-      writer = database.createFeatureClass(definition);
-
-      FileGeodatabase sinkDatabase = database;
-      GdbFeatureWriter sinkWriter = writer;
-      IRowMeta rowMeta = request.rowMeta();
-      int geometryIndex = request.geometryIndex();
-      List<IValueMeta> attributeMetas = new ArrayList<>();
-      for (int i = 0; i < rowMeta.size(); i++) {
-        if (i != geometryIndex) {
-          attributeMetas.add(rowMeta.getValueMeta(i));
-        }
+      var fields = new ArrayList<FileGdbExportSchema.FieldSpec>();
+      int attribute = 0;
+      for (int i = 0; i < request.rowMeta().size(); i++) {
+        if (i == request.geometryIndex()) continue;
+        var f = definition.fields().get(attribute++);
+        fields.add(
+            new FileGdbExportSchema.FieldSpec(
+                request.rowMeta().getValueMeta(i).getName(),
+                f.name(),
+                f.type(),
+                f.nullable(),
+                f.maxWidth() > 0 ? f.maxWidth() : null,
+                f.domain()));
       }
-      int[] attributePositions =
-          java.util.stream.IntStream.range(0, rowMeta.size())
-              .filter(i -> i != geometryIndex)
-              .toArray();
-      return new VectorSink() {
-        private boolean finished;
-        private boolean failed;
-
-        @Override
-        public boolean write(Object[] row) throws Exception {
-          request.checkCancelled();
-          try {
-            Object[] attributes = new Object[attributeMetas.size()];
-            for (int i = 0; i < attributeMetas.size(); i++) {
-              attributes[i] = convert(attributeMetas.get(i), row[attributePositions[i]]);
-            }
-            Geometry geometry = row[geometryIndex] instanceof Geometry g && !g.isEmpty() ? g : null;
-            FileGdbGeometry value =
-                geometry == null
-                    ? null
-                    : new HopCurveAdapter(geometry == null ? 0 : geometry.getSRID())
-                        .write(geometry);
-            sinkWriter.write(attributes, value);
-            return true;
-          } catch (Exception e) {
-            failed = true;
-            throw e;
-          }
-        }
-
-        @Override
-        public void finish() throws Exception {
-          if (failed) {
-            close();
-            throw new IllegalStateException("Cannot publish failed file geodatabase export");
-          }
-          sinkWriter.close();
-          sinkDatabase.close();
-          Files.move(staging, output, StandardCopyOption.ATOMIC_MOVE);
-          finished = true;
-          deleteRecursively(stagingParent);
-        }
-
-        @Override
-        public void close() throws Exception {
-          if (finished) {
-            return;
-          }
-          try {
-            sinkWriter.close();
-          } catch (Exception ignored) {
-            // already closed or failed
-          }
-          try {
-            sinkDatabase.close();
-          } catch (Exception ignored) {
-            // already closed or failed
-          }
-          deleteRecursively(stagingParent);
-        }
-      };
-    } catch (Exception e) {
-      if (writer != null) {
-        try {
-          writer.close();
-        } catch (Exception ignored) {
-          // original exception wins
-        }
+      var g = definition.geometry();
+      var p = g.precision();
+      String geometryCrs =
+          g.wkt().isBlank() && request.geometry().srid() > 0
+              ? "EPSG:" + request.geometry().srid()
+              : g.wkt();
+      var geometry =
+          new FileGdbExportSchema.GeometrySpec(
+              geometrySource,
+              g.name(),
+              request.geometry().type(),
+              request.geometry().dimension(),
+              geometryCrs,
+              "LEGACY",
+              p.xyResolution(),
+              p.xyTolerance(),
+              p.xOrigin(),
+              p.yOrigin(),
+              options.spatialIndex());
+      schema =
+          new FileGdbExportSchema(
+              1,
+              List.of(),
+              List.of(
+                  new FileGdbExportSchema.DatasetSpec(
+                      request.layer(), "FEATURE_CLASS", fields, geometry)),
+              List.of());
+    } else {
+      try (var db = FileGeodatabase.open(request.file())) {
+        if (!db.dataset(request.layer())
+            .orElseThrow(() -> new IllegalArgumentException("Target dataset missing"))
+            .isFeatureClass())
+          throw new IllegalArgumentException("Use FileGDB Writer for attribute tables");
       }
-      if (database != null) {
-        try {
-          database.close();
-        } catch (Exception ignored) {
-          // original exception wins
-        }
-      }
-      deleteRecursively(stagingParent);
-      throw e;
     }
+    var operation =
+        new FileGdbExportSession.InputOptions(
+            append
+                ? FileGdbExportSession.Action.APPEND_ROWS
+                : FileGdbExportSession.Action.CREATE_DATASET,
+            geometrySource,
+            options.spatialIndex());
+    var session =
+        new FileGdbExportSession(
+            request.file(),
+            schema,
+            java.util.Map.of(request.layer(), request.rowMeta()),
+            java.util.Map.of(request.layer(), operation),
+            options.writeMode()
+                != ch.so.agi.hop.vector.core.FileGeodatabaseOptions.WriteMode.CREATE_DATABASE,
+            crs,
+            () -> {
+              try {
+                request.checkCancelled();
+              } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+              }
+            });
+    return new VectorSink() {
+      public boolean write(Object[] row) throws Exception {
+        session.write(request.layer(), row);
+        return true;
+      }
+
+      public void finish() throws Exception {
+        session.finish();
+      }
+
+      public void close() throws Exception {
+        session.close();
+      }
+    };
   }
 
   private LayerSchema schema(Dataset dataset, FileGdbTable table, ReadRequest request)
@@ -518,28 +501,5 @@ public final class FileGeodatabaseProvider implements VectorProvider {
           throw new IllegalArgumentException(
               "Unsupported Hop attribute type: " + valueMeta.getTypeDesc());
     };
-  }
-
-  private static Object convert(IValueMeta valueMeta, Object value) {
-    if (value == null) {
-      return null;
-    }
-    return switch (valueMeta.getType()) {
-      case IValueMeta.TYPE_BOOLEAN -> Boolean.TRUE.equals(value) ? 1L : 0L;
-      default -> value;
-    };
-  }
-
-  private static void deleteRecursively(Path directory) {
-    if (directory == null || !Files.exists(directory)) {
-      return;
-    }
-    try (var paths = Files.walk(directory)) {
-      for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
-        Files.deleteIfExists(path);
-      }
-    } catch (IOException e) {
-      // best effort cleanup
-    }
   }
 }

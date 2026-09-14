@@ -15,8 +15,7 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/dataset"
-      },
-      "minItems": 1
+      }
     },
     "relationships": {
       "type": "array",

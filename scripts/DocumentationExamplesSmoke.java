@@ -58,30 +58,35 @@ public class DocumentationExamplesSmoke {
     entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("id"));
     entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("building_id"));
     entrances.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("label"));
-    try (var session =
-        new ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession(
-            temp.resolve("catalog-input.gdb"),
-            schema,
-            java.util.Map.of("buildings", buildings, "entrances", entrances),
-            new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver())) {
-      var point =
-          new GeometryFactory(new PrecisionModel(), 2056)
-              .createPoint(new Coordinate(2600000, 1200000));
-      for (long i = 1; i <= 100; i++) {
-        session.write("buildings", new Object[] {i, 2L, 20.0, point});
-        session.write("entrances", new Object[] {i, i, "Entrance " + i});
+    for (int batch = 0; batch < 2; batch++) {
+      try (var session =
+          new ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession(
+              temp.resolve(batch == 0 ? "catalog-input.gdb" : "catalog-additions.gdb"),
+              schema,
+              java.util.Map.of("buildings", buildings, "entrances", entrances),
+              new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver())) {
+        var point =
+            new GeometryFactory(new PrecisionModel(), 2056)
+                .createPoint(new Coordinate(2600000 + batch * 1000, 1200000 + batch * 1000));
+        for (long i = 1 + batch * 100; i <= 100 + batch * 100; i++) {
+          session.write("buildings", new Object[] {i, 2L, 20.0, point});
+          session.write("entrances", new Object[] {i, i, "Entrance " + i});
+        }
+        session.finish();
       }
-      session.finish();
     }
   }
 
   static void checkCatalog(Path temp) throws Exception {
     try (var db = ch.so.agi.filegdb.FileGeodatabase.open(temp.resolve("catalog-output.gdb"))) {
-      if (db.domains().size() != 2 || db.relationships().size() != 1)
+      if (db.domains().size() != 2 || db.relationships().size() != 2)
         throw new AssertionError("Missing domain or relationship");
+      try (var added = db.table("inspections")) {
+        if (added.rowCount() != 100) throw new AssertionError("Missing added inspections");
+      }
       try (var a = db.table("buildings");
           var b = db.table("entrances")) {
-        if (a.rowCount() != 100 || b.rowCount() != 100)
+        if (a.rowCount() != 200 || b.rowCount() != 100)
           throw new AssertionError("Lost catalog export rows");
         if (!"status".equals(a.field("status").orElseThrow().domain()))
           throw new AssertionError("Lost field domain");

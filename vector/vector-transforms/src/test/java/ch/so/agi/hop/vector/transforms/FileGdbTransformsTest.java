@@ -27,9 +27,13 @@ class FileGdbTransformsTest {
     var m = new FileGdbWriterMeta();
     m.setFileName("${OUTPUT}");
     m.setSchemaFile("${SCHEMA}");
+    m.setExistingDatabase(true);
     m.setInputs(
         List.of(
             new FileGdbWriterMeta.Input("a", "Left"), new FileGdbWriterMeta.Input("b", "Right")));
+    m.getInputs().getFirst().setAction("APPEND_ROWS");
+    m.getInputs().getFirst().setGeometryField("${GEOM}");
+    m.getInputs().getFirst().setSpatialIndex(false);
     var copy = new FileGdbWriterMeta();
     copy.loadXml(
         XmlHandler.loadXmlString("<transform>" + m.getXml() + "</transform>").getDocumentElement(),
@@ -50,11 +54,13 @@ class FileGdbTransformsTest {
     assertThat(restored.getXml()).isEqualTo(c.getXml());
     var v = new VectorWriterMeta();
     v.setFileGdbSchemaFile("${SCHEMA}");
+    v.setFileGdbWriteMode("ADD_DATASET");
     var vc = new VectorWriterMeta();
     vc.loadXml(
         XmlHandler.loadXmlString("<transform>" + v.getXml() + "</transform>").getDocumentElement(),
         null);
     assertThat(vc.getFileGdbSchemaFile()).isEqualTo("${SCHEMA}");
+    assertThat(vc.getFileGdbWriteMode()).isEqualTo("ADD_DATASET");
   }
 
   private Path singleSchema() throws Exception {
@@ -221,9 +227,10 @@ class FileGdbTransformsTest {
     return w;
   }
 
-  @Test
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
   @Timeout(20)
-  void drainsBranchedInputsWithSmallQueues() throws Exception {
+  void drainsBranchedInputsWithSmallQueues(boolean existing) throws Exception {
     var fields = new RowMeta();
     fields.addValueMeta(new ValueMetaInteger("id"));
     var schema = temp.resolve("schema.json");
@@ -235,12 +242,28 @@ class FileGdbTransformsTest {
         {"name":"b","kind":"TABLE","fields":[{"name":"id","type":"INT32"}]}],
         "relationships":[{"name":"ab","origin":"a","destination":"b","originKey":"id","foreignKey":"id","cardinality":"ONE_TO_ONE"}]}
       """);
+    if (existing) {
+      try (var db = ch.so.agi.filegdb.FileGeodatabase.create(temp.resolve("result.gdb"));
+          var writer =
+              db.createTable(
+                  ch.so.agi.filegdb.write.TableDefinition.builder("a")
+                      .field(ch.so.agi.filegdb.table.FileGdbField.integer("id"))
+                      .build())) {}
+      Files.writeString(
+          schema,
+          Files.readString(schema)
+              .replace(
+                  "{\"name\":\"a\",\"kind\":\"TABLE\",\"fields\":[{\"name\":\"id\",\"type\":\"INT32\"}]},",
+                  ""));
+    }
     var m = new FileGdbWriterMeta();
+    m.setExistingDatabase(existing);
     m.setFileName(temp.resolve("result.gdb").toString());
     m.setSchemaFile(schema.toString());
     m.setInputs(
         List.of(
             new FileGdbWriterMeta.Input("a", "Left"), new FileGdbWriterMeta.Input("b", "Right")));
+    if (existing) m.getInputs().getFirst().setAction("APPEND_ROWS");
     var pm =
         new PipelineMeta() {
           @Override

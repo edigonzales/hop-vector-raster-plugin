@@ -1,0 +1,114 @@
+<pipeline>
+  <info>
+    <name>FileGDB append buildings and add inspections</name>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+      <parameter>
+        <name>INPUT_FILE</name>
+        <default_value />
+        <description>INPUT_FILE</description>
+      </parameter>
+      <parameter>
+        <name>OUTPUT_FILE</name>
+        <default_value />
+        <description>OUTPUT_FILE</description>
+      </parameter>
+      <parameter>
+        <name>SCHEMA_FILE</name>
+        <default_value />
+        <description>SCHEMA_FILE</description>
+      </parameter>
+    </parameters>
+  </info>
+  <order>
+    <hop>
+      <from>Read buildings</from>
+      <to>Select building fields</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Read entrances</from>
+      <to>Write database</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select building fields</from>
+      <to>Write database</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>Read buildings</name>
+    <type>SOGIS_VECTOR_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${INPUT_FILE}</fileName>
+    <format>FILEGEODATABASE</format>
+    <layerName>buildings</layerName>
+    <geometryFieldName>geometry</geometryFieldName>
+    <timezone>UTC</timezone>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>100</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Read entrances</name>
+    <type>SOGIS_VECTOR_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${INPUT_FILE}</fileName>
+    <format>FILEGEODATABASE</format>
+    <layerName>entrances</layerName>
+    <geometryFieldName>geometry</geometryFieldName>
+    <timezone>UTC</timezone>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>260</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Write database</name>
+    <type>SOGIS_FILEGDB_WRITER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fileName>${OUTPUT_FILE}</fileName>
+    <schemaFile>${SCHEMA_FILE}</schemaFile>
+    <inputs>
+      <input>
+        <dataset>buildings</dataset>
+        <transform>Select building fields</transform>
+        <action>APPEND_ROWS</action>
+        <geometryField>geometry</geometryField>
+        <spatialIndex>Y</spatialIndex>
+        <indexConfigured>Y</indexConfigured>
+      </input>
+      <input>
+        <dataset>inspections</dataset>
+        <transform>Read entrances</transform>
+        <action>CREATE_DATASET</action>
+      </input>
+    </inputs>
+    <GUI>
+      <xloc>440</xloc>
+      <yloc>180</yloc>
+    </GUI>
+    <existingDatabase>Y</existingDatabase>
+  </transform>
+  <transform>
+    <name>Select building fields</name>
+    <type>SelectValues</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <fields>
+      <select_unspecified>Y</select_unspecified>
+      <remove>
+        <name>OBJECTID</name>
+      </remove>
+    </fields>
+    <GUI>
+      <xloc>280</xloc>
+      <yloc>100</yloc>
+    </GUI>
+  </transform>
+</pipeline>

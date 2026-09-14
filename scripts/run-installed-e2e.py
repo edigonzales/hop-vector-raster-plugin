@@ -133,6 +133,7 @@ def main() -> int:
             gdal_env["PROJ_LIB"] = gdal_env["PROJ_DATA"]
             gdal_env["GDAL_DATA"] = str(gdal_prefix / "share/gdal")
             run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "prepare", str(data)], gdal_env)
+            run_command([gdal_python, str(Path(__file__).with_name("check-filegdb-catalog.py")), "prepare", str(data)], gdal_env)
 
         # Probe the real plugin classloader; never put plugin JARs on its initial classpath.
         hop_classpath = os.pathsep.join(str(path) for path in jars(args.hop_home / "lib"))
@@ -189,6 +190,23 @@ def main() -> int:
             str(Path(__file__).parents[1] / "docs/examples/filegdb/catalog.hpl"),
             "-p", f"INPUT_FILE={data / 'catalog-output.gdb'}",
         ], env)
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "docs/examples/filegdb/extend.hpl"),
+            "-p", f"INPUT_FILE={data / 'catalog-additions.gdb'}",
+            "-p", f"OUTPUT_FILE={data / 'catalog-output.gdb'}",
+            "-p", f"SCHEMA_FILE={Path(__file__).parents[1] / 'docs/examples/filegdb/extend.json'}",
+        ], env)
+        if gdal_python:
+            run_command([
+                hop_run, "-r", "local", "-f",
+                str(Path(__file__).parents[1] / "docs/examples/filegdb/extend.hpl"),
+                "-p", f"INPUT_FILE={data / 'catalog-additions.gdb'}",
+                "-p", f"OUTPUT_FILE={data / 'gdal-catalog.gdb'}",
+                "-p", f"SCHEMA_FILE={Path(__file__).parents[1] / 'docs/examples/filegdb/extend.json'}",
+            ], env)
+            run_command([gdal_python, str(Path(__file__).with_name("check-filegdb-catalog.py")),
+                         str(data / "gdal-catalog.gdb")], gdal_env)
         for filename in ("01-create_file.hpl", "02-add_layer.hpl", "03-append_features.hpl"):
             run_command([
                 hop_run, "-r", "local", "-f",

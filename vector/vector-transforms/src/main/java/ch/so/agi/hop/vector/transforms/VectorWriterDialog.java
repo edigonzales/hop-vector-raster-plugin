@@ -46,7 +46,10 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private Composite flatGeobufOptions, parquetOptions, fileGdbOptions;
   private Combo wFileGdbMode;
   private TextVar wFileGdbResolution, wFileGdbTolerance, wFileGdbXOrigin, wFileGdbYOrigin;
-  private Button wFileGdbIndex;
+  private Button wFileGdbIndex, wFileGdbLoad, wFileGdbCheck;
+  private Combo wFileGdbWriteMode;
+  private Text wFileGdbPreview;
+  private static final String[] FILEGDB_MODES = {"CREATE_DATABASE", "ADD_DATASET", "APPEND_ROWS"};
   private Button wFlatGeobufIndex, wFlatGeobufSkipEmpty;
   private Combo wParquetType, wParquetAlgorithm, wParquetCompression;
   private TextVar wParquetRowGroup;
@@ -87,7 +90,13 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wFormat = new Combo(body, SWT.READ_ONLY);
     wFormat.setItems(
         new String[] {
-          "AUTO", "SHAPEFILE", "GEOPACKAGE", "ARCINFO_GENERATE", "FLATGEOBUF", "PARQUET"
+          "AUTO",
+          "SHAPEFILE",
+          "GEOPACKAGE",
+          "FILEGEODATABASE",
+          "ARCINFO_GENERATE",
+          "FLATGEOBUF",
+          "PARQUET"
         });
     wFormat.setText(input.getFormat());
     new Label(body, SWT.NONE).setText("Layer (optional)");
@@ -298,6 +307,13 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wLayer.addListener(SWT.Selection, e -> previewGeoPackage(false));
     wGeoPackageMode.addListener(SWT.Selection, e -> updateFormat());
     fileGdbOptions = optionGroup();
+    new Label(fileGdbOptions, SWT.NONE).setText("Schreibmodus");
+    wFileGdbWriteMode = new Combo(fileGdbOptions, SWT.READ_ONLY);
+    wFileGdbWriteMode.setItems(
+        new String[] {"Neue GDB erstellen", "Dataset hinzufügen", "Datensätze hinzufügen"});
+    wFileGdbWriteMode.select(
+        Math.max(0, java.util.Arrays.asList(FILEGDB_MODES).indexOf(input.getFileGdbWriteMode())));
+    wFileGdbWriteMode.addListener(SWT.Selection, e -> updateFormat());
     wFileGdbSchema =
         optionText(
             fileGdbOptions,
@@ -324,6 +340,20 @@ public class VectorWriterDialog extends BaseTransformDialog {
     new Label(fileGdbOptions, SWT.NONE).setText("Create native spatial index");
     wFileGdbIndex = new Button(fileGdbOptions, SWT.CHECK);
     wFileGdbIndex.setSelection(input.isFileGdbSpatialIndex());
+    wFileGdbIndex.setToolTipText(
+        "Fehlenden Index anlegen; vorhandene Indizes werden immer nachgeführt.");
+    wFileGdbLoad = new Button(fileGdbOptions, SWT.PUSH);
+    wFileGdbLoad.setText("Datasets laden");
+    wFileGdbCheck = new Button(fileGdbOptions, SWT.PUSH);
+    wFileGdbCheck.setText("Eingangsschema prüfen");
+    wFileGdbPreview =
+        new Text(fileGdbOptions, SWT.BORDER | SWT.MULTI | SWT.READ_ONLY | SWT.V_SCROLL | SWT.WRAP);
+    GridData fileGdbPreviewData = new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1);
+    fileGdbPreviewData.heightHint = 120;
+    wFileGdbPreview.setLayoutData(fileGdbPreviewData);
+    wFileGdbLoad.addListener(SWT.Selection, e -> loadFileGdbDatasets());
+    wFileGdbCheck.addListener(SWT.Selection, e -> previewFileGdb(true));
+    wLayer.addListener(SWT.Selection, e -> previewFileGdb(false));
     flatGeobufOptions = optionGroup();
     new Label(flatGeobufOptions, SWT.NONE).setText("Spatial index (reorders features)");
     wFlatGeobufIndex = new Button(flatGeobufOptions, SWT.CHECK);
@@ -362,13 +392,17 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wFileName.addModifyListener(
         e -> {
           updateFormat();
+          wFileGdbPreview.setText("Datasets laden, um die Vorschau zu aktualisieren.");
           wGeoPackagePreview.setText(
               "Layer laden, um die Vorschau für diese Datei zu aktualisieren.");
         });
     wLayer.addModifyListener(
-        e ->
-            wGeoPackagePreview.setText(
-                "Layer laden oder Eingangsschema prüfen, um die Vorschau zu aktualisieren."));
+        e -> {
+          wGeoPackagePreview.setText(
+              "Layer laden oder Eingangsschema prüfen, um die Vorschau zu aktualisieren.");
+          wFileGdbPreview.setText(
+              "Datasets laden oder Eingangsschema prüfen, um die Vorschau zu aktualisieren.");
+        });
     updateFormat();
     Composite buttons = new Composite(shell, SWT.NONE);
     org.eclipse.swt.layout.FormData buttonData = new org.eclipse.swt.layout.FormData();
@@ -418,16 +452,28 @@ public class VectorWriterDialog extends BaseTransformDialog {
     boolean gpkg = format == ch.so.agi.hop.vector.core.VectorFormat.GEOPACKAGE;
     geoPackageOptions.setVisible(gpkg);
     ((GridData) geoPackageOptions.getLayoutData()).exclude = !gpkg;
-    boolean append = gpkg && wGeoPackageMode.getSelectionIndex() == 2;
+    boolean fileGdbAppend = filegdb && wFileGdbWriteMode.getSelectionIndex() == 2;
+    boolean append = (gpkg && wGeoPackageMode.getSelectionIndex() == 2) || fileGdbAppend;
+    wFileGdbLoad.setEnabled(wFileGdbWriteMode.getSelectionIndex() != 0);
+    wFileGdbCheck.setEnabled(fileGdbAppend);
+    for (Control c :
+        new Control[] {
+          wFileGdbMode,
+          wFileGdbResolution,
+          wFileGdbTolerance,
+          wFileGdbXOrigin,
+          wFileGdbYOrigin,
+          wFileGdbSchema
+        }) c.setEnabled(!fileGdbAppend);
     wLayerType.setEnabled(!append);
     wLayerDimension.setEnabled(!append);
     wCrs.setEnabled(!append);
     wGeoPackageLoad.setEnabled(wGeoPackageMode.getSelectionIndex() != 0);
     wGeoPackageCheck.setEnabled(append);
-    wOverwrite.setVisible(!gpkg);
-    ((GridData) wOverwrite.getLayoutData()).exclude = gpkg;
-    wOverwriteLabel.setVisible(!gpkg);
-    ((GridData) wOverwriteLabel.getLayoutData()).exclude = gpkg;
+    wOverwrite.setVisible(!gpkg && !filegdb);
+    ((GridData) wOverwrite.getLayoutData()).exclude = gpkg || filegdb;
+    wOverwriteLabel.setVisible(!gpkg && !filegdb);
+    ((GridData) wOverwriteLabel.getLayoutData()).exclude = gpkg || filegdb;
     body.layout(true, true);
     scroll.setMinSize(body.computeSize(760, SWT.DEFAULT));
   }
@@ -443,6 +489,46 @@ public class VectorWriterDialog extends BaseTransformDialog {
       throw new IllegalArgumentException(
           "Vorschau nicht verfügbar: Dateipfad enthält ungelöste Variablen.");
     return java.nio.file.Path.of(path);
+  }
+
+  private void loadFileGdbDatasets() {
+    try (var db = ch.so.agi.filegdb.FileGeodatabase.open(geoPackagePath())) {
+      String current = wLayer.getText();
+      wLayer.setItems(
+          db.featureClasses().stream()
+              .map(ch.so.agi.filegdb.catalog.Dataset::name)
+              .toArray(String[]::new));
+      if (current.isBlank()
+          && wFileGdbWriteMode.getSelectionIndex() == 2
+          && !db.featureClasses().isEmpty()) current = db.featureClasses().getFirst().name();
+      wLayer.setText(current);
+      if (wFileGdbWriteMode.getSelectionIndex() == 2) previewFileGdb(false);
+      else
+        wFileGdbPreview.setText(
+            "Vorhandene Datasets: "
+                + String.join(
+                    ", ",
+                    db.datasets().stream().map(ch.so.agi.filegdb.catalog.Dataset::name).toList()));
+    } catch (Exception e) {
+      wFileGdbPreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
+    }
+  }
+
+  private void previewFileGdb(boolean check) {
+    if (wFileGdbWriteMode.getSelectionIndex() != 2) return;
+    try {
+      String dataset = variables.resolve(wLayer.getText());
+      if (dataset.contains("${"))
+        throw new IllegalArgumentException("Vorschau nicht verfügbar: ungelöste Dataset-Variable.");
+      var fields = check ? pipelineMeta.getPrevTransformFields(variables, transformName) : null;
+      if (check && fields == null)
+        throw new IllegalArgumentException("Eingangsschema nicht verfügbar.");
+      wFileGdbPreview.setText(
+          ch.so.agi.hop.vector.formats.filegeodatabase.FileGdbExportSession.preview(
+              geoPackagePath(), dataset, fields, variables.resolve(wGeometryField.getText())));
+    } catch (Exception e) {
+      wFileGdbPreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
+    }
   }
 
   private void loadGeoPackageLayers() {
@@ -561,7 +647,9 @@ public class VectorWriterDialog extends BaseTransformDialog {
   }
 
   private void readAdditional(VectorWriterMeta meta) {
-    meta.setFileGdbSchemaFile(wFileGdbSchema.getText());
+    meta.setFileGdbWriteMode(FILEGDB_MODES[wFileGdbWriteMode.getSelectionIndex()]);
+    meta.setFileGdbSchemaFile(
+        wFileGdbWriteMode.getSelectionIndex() == 2 ? "" : wFileGdbSchema.getText());
     meta.setFileGdbPrecisionMode(wFileGdbMode.getText());
     meta.setFileGdbXyResolution(wFileGdbResolution.getText());
     meta.setGeoPackageWriteMode(GPKG_MODES[wGeoPackageMode.getSelectionIndex()]);
@@ -611,6 +699,16 @@ public class VectorWriterDialog extends BaseTransformDialog {
     browse.addListener(
         SWT.Selection,
         e -> {
+          if (fileGdbOptions != null
+              && fileGdbOptions.getVisible()
+              && wFileGdbWriteMode.getSelectionIndex() > 0) {
+            DirectoryDialog chooser = new DirectoryDialog(shell);
+            chooser.setText("Bestehende FileGeodatabase auswählen");
+            chooser.setFilterPath(variables.resolve(text.getText()));
+            String selected = chooser.open();
+            if (selected != null) text.setText(selected);
+            return;
+          }
           boolean existingGeoPackage =
               geoPackageOptions != null
                   && geoPackageOptions.getVisible()

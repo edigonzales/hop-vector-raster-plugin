@@ -123,8 +123,11 @@ interpolated values and should be considered when passing measured curves throug
 ### FileGDB catalog and schema export
 
 FileGDB Catalog Reader exposes domains, field assignments and relationship metadata.
-FileGDB Writer exports multiple named inputs to one new geodatabase using a versioned
-JSON schema. Vector Reader also reads ordinary FileGDB tables. See the
+FileGDB Writer creates or extends a geodatabase with multiple named inputs, each
+creating a dataset or appending rows. A versioned JSON schema defines new datasets,
+domains and relationships; append-only runs use the existing schema without JSON.
+Vector Writer also supports creating a GDB, adding a feature class and appending
+features. Existing indexes and extents are maintained in a recoverable working copy. Vector Reader also reads ordinary FileGDB tables. See the
 [complete example and supported scope](docs/examples/filegdb/README.md).
 
 ### GeoPackage append

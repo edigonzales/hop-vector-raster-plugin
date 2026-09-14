@@ -30,13 +30,19 @@ public class FileGdbWriter extends BaseTransform<FileGdbWriterMeta, FileGdbWrite
       if (data.session == null) {
         if (getTransformMeta().getCopies(this) != 1)
           throw new IllegalArgumentException("FileGDB Writer requires one copy");
-        var schema = FileGdbExportSchema.read(Path.of(resolve(meta.getSchemaFile())));
+        var schema =
+            meta.getSchemaFile().isBlank()
+                ? null
+                : FileGdbExportSchema.read(
+                    Path.of(resolve(meta.getSchemaFile())), meta.isExistingDatabase());
+        var operations = new LinkedHashMap<String, FileGdbExportSession.InputOptions>();
         data.streams = new ArrayList<>();
         data.datasets = new ArrayList<>();
         var rows = new LinkedHashMap<String, org.apache.hop.core.row.IRowMeta>();
         var used = new HashSet<String>();
         for (var input : meta.getInputs()) {
-          if (!used.add(input.getTransform()) || rows.containsKey(input.getDataset()))
+          String dataset = resolve(input.getDataset());
+          if (!used.add(input.getTransform()) || rows.containsKey(dataset))
             throw new IllegalArgumentException("Duplicate input mapping");
           var matches =
               getInputRowSets().stream()
@@ -46,9 +52,21 @@ public class FileGdbWriter extends BaseTransform<FileGdbWriterMeta, FileGdbWrite
             throw new IllegalArgumentException(
                 "Expected one input stream from " + input.getTransform());
           data.streams.add(matches.getFirst());
-          data.datasets.add(input.getDataset());
-          rows.put(
-              input.getDataset(), getPipelineMeta().getTransformFields(this, input.getTransform()));
+          data.datasets.add(dataset);
+          boolean index = input.isSpatialIndex();
+          if (!input.isIndexConfigured()
+              && input.getAction().equals("CREATE_DATASET")
+              && schema != null) {
+            var geometry = schema.dataset(dataset).geometry();
+            index = geometry != null && !Boolean.FALSE.equals(geometry.spatialIndex());
+          }
+          operations.put(
+              dataset,
+              new FileGdbExportSession.InputOptions(
+                  FileGdbExportSession.Action.valueOf(input.getAction()),
+                  resolve(input.getGeometryField()),
+                  index));
+          rows.put(dataset, getPipelineMeta().getTransformFields(this, input.getTransform()));
         }
         if (data.streams.size() != getInputRowSets().size())
           throw new IllegalArgumentException("Unmapped input stream");
@@ -57,7 +75,13 @@ public class FileGdbWriter extends BaseTransform<FileGdbWriterMeta, FileGdbWrite
                 Path.of(resolve(meta.getFileName())),
                 schema,
                 rows,
-                new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+                operations,
+                meta.isExistingDatabase(),
+                new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver(),
+                () -> {
+                  if (isStopped())
+                    throw new java.util.concurrent.CancellationException("FileGDB export stopped");
+                });
       }
       // One bounded wait per turn, round-robin. Never drain a branch before reading another.
       int n = data.streams.size();

@@ -137,6 +137,57 @@ public class VectorDialogSmoke {
               if (!((Combo) field(dialog, "wLayerType")).getEnabled())
                 throw new AssertionError("New layer schema must be editable");
               java.nio.file.Files.delete(gpkg);
+              java.nio.file.Path fgdb =
+                  java.nio.file.Files.createTempDirectory("hop-dialog-").resolve("test.gdb");
+              var fgdbProvider =
+                  new ch.so.agi.hop.vector.formats.filegeodatabase.FileGeodatabaseProvider(
+                      new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+              try (var sink =
+                  fgdbProvider.create(
+                      new ch.so.agi.hop.vector.core.WriteRequest(
+                          fgdb, "places", rows, 1, point, null, null, null))) {
+                sink.finish();
+              }
+              format.setText("FILEGEODATABASE");
+              ((org.apache.hop.ui.core.widget.TextVar) field(dialog, "wFileName"))
+                  .setText(fgdb.toString());
+              format.notifyListeners(SWT.Selection, new Event());
+              Combo fgdbMode = (Combo) field(dialog, "wFileGdbWriteMode");
+              fgdbMode.select(2);
+              fgdbMode.notifyListeners(SWT.Selection, new Event());
+              if (((Button) field(dialog, "wOverwrite")).getVisible()
+                  || ((Combo) field(dialog, "wLayerType")).getEnabled()
+                  || ((org.apache.hop.ui.core.widget.TextVar) field(dialog, "wFileGdbResolution"))
+                      .getTextWidget()
+                      .getEnabled())
+                throw new AssertionError(
+                    "FileGDB append controls: format="
+                        + format.getText()
+                        + ", overwrite="
+                        + ((Button) field(dialog, "wOverwrite")).getVisible()
+                        + ", type="
+                        + ((Combo) field(dialog, "wLayerType")).getEnabled()
+                        + ", resolution="
+                        + ((org.apache.hop.ui.core.widget.TextVar)
+                                field(dialog, "wFileGdbResolution"))
+                            .getTextWidget()
+                            .getEnabled());
+              ((Button) field(dialog, "wFileGdbLoad")).notifyListeners(SWT.Selection, new Event());
+              if (!((Text) field(dialog, "wFileGdbPreview"))
+                  .getText()
+                  .contains("Spatial index: true"))
+                throw new AssertionError(
+                    "FileGDB target preview missing: "
+                        + ((Text) field(dialog, "wFileGdbPreview")).getText());
+              fgdbMode.select(1);
+              fgdbMode.notifyListeners(SWT.Selection, new Event());
+              if (!((Combo) field(dialog, "wLayerType")).getEnabled())
+                throw new AssertionError("FileGDB add schema must be editable");
+              try (var paths = java.nio.file.Files.walk(fgdb.getParent())) {
+                for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList())
+                  java.nio.file.Files.delete(path);
+              }
+
               format.setText("PARQUET");
               format.notifyListeners(SWT.Selection, new Event());
               ((Combo) field(dialog, "wParquetType")).setText("GEOGRAPHY");
@@ -161,6 +212,65 @@ public class VectorDialogSmoke {
             }
           });
       dialog.open();
+      FileGdbWriterMeta multi = new FileGdbWriterMeta();
+      multi.setExistingDatabase(true);
+      multi.setFileName("${UNRESOLVED}/target.gdb");
+      var mapping = new FileGdbWriterMeta.Input("buildings", "Source");
+      mapping.setAction("APPEND_ROWS");
+      mapping.setGeometryField("shape");
+      mapping.setSpatialIndex(false);
+      multi.setInputs(new java.util.ArrayList<>(java.util.List.of(mapping)));
+      PipelineMeta mpm = new PipelineMeta();
+      var source = new TransformMeta("Source", new VectorReaderMeta());
+      var target = new TransformMeta("Multi", multi);
+      mpm.addTransform(source);
+      mpm.addTransform(target);
+      mpm.addPipelineHop(new org.apache.hop.pipeline.PipelineHopMeta(source, target));
+      var md = new FileGdbWriterDialog(parent, new Variables(), multi, mpm);
+      whenOpen(
+          display,
+          parent,
+          () -> {
+            try {
+              Combo modes = (Combo) field(md, "wMode");
+              Composite mappings = (Composite) field(md, "mappings");
+              Combo action =
+                  java.util.Arrays.stream(mappings.getChildren())
+                      .filter(c -> c instanceof Combo)
+                      .map(c -> (Combo) c)
+                      .findFirst()
+                      .orElseThrow();
+              if (modes.getSelectionIndex() != 1
+                  || action.getSelectionIndex() != 1
+                  || !action.getEnabled())
+                throw new AssertionError("Existing mapping was not loaded");
+              modes.select(0);
+              modes.notifyListeners(SWT.Selection, new Event());
+              if (action.getEnabled() || action.getSelectionIndex() != 0)
+                throw new AssertionError("New GDB cannot append");
+              modes.select(1);
+              modes.notifyListeners(SWT.Selection, new Event());
+              action.select(1);
+              action.notifyListeners(SWT.Selection, new Event());
+              if (!((Text) field(md, "preview")).getText().contains("Variable"))
+                throw new AssertionError("Unresolved variable preview");
+              for (Control control : mappings.getShell().getChildren())
+                if (control instanceof Button button && button.getText().equals("OK")) {
+                  button.notifyListeners(SWT.Selection, new Event());
+                  break;
+                }
+              if (!multi.isExistingDatabase()
+                  || !multi.getInputs().getFirst().getAction().equals("APPEND_ROWS")
+                  || !multi.getInputs().getFirst().getGeometryField().equals("shape")
+                  || multi.getInputs().getFirst().isSpatialIndex())
+                throw new AssertionError("FileGDB mapping save failed");
+              System.out.println("FileGDB Writer dialog modes, mapping, variables and save OK");
+            } catch (Throwable e) {
+              e.printStackTrace();
+              System.exit(1);
+            }
+          });
+      md.open();
       VectorReaderMeta reader = new VectorReaderMeta();
       PipelineMeta rpm = new PipelineMeta();
       rpm.addTransform(new TransformMeta("Reader", reader));

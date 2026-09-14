@@ -14,6 +14,16 @@ import org.apache.hop.pipeline.transform.stream.*;
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry")
 public class FileGdbWriterMeta extends BaseTransformMeta<FileGdbWriter, FileGdbWriterData> {
+  @HopMetadataProperty private boolean existingDatabase;
+
+  public boolean isExistingDatabase() {
+    return existingDatabase;
+  }
+
+  public void setExistingDatabase(boolean existing) {
+    existingDatabase = existing;
+  }
+
   @HopMetadataProperty private String fileName = "";
   @HopMetadataProperty private String schemaFile = "";
 
@@ -21,6 +31,56 @@ public class FileGdbWriterMeta extends BaseTransformMeta<FileGdbWriter, FileGdbW
   private List<Input> inputs = new ArrayList<>();
 
   public static class Input {
+    @HopMetadataProperty private String action = "CREATE_DATASET";
+    @HopMetadataProperty private String geometryField = "geometry";
+
+    @HopMetadataProperty(defaultBoolean = true)
+    private boolean spatialIndex = true;
+
+    @HopMetadataProperty private boolean indexConfigured;
+
+    public boolean isIndexConfigured() {
+      return indexConfigured;
+    }
+
+    public void setIndexConfigured(boolean value) {
+      indexConfigured = value;
+    }
+
+    public String getAction() {
+      return action;
+    }
+
+    public void setAction(String value) {
+      action = value;
+    }
+
+    public String getGeometryField() {
+      return geometryField;
+    }
+
+    public void setGeometryField(String value) {
+      geometryField = value;
+    }
+
+    public boolean isSpatialIndex() {
+      return spatialIndex;
+    }
+
+    public void setSpatialIndex(boolean value) {
+      spatialIndex = value;
+      indexConfigured = true;
+    }
+
+    public Input copy() {
+      Input copy = new Input(dataset, transform);
+      copy.action = action;
+      copy.geometryField = geometryField;
+      copy.spatialIndex = spatialIndex;
+      copy.indexConfigured = indexConfigured;
+      return copy;
+    }
+
     @HopMetadataProperty private String dataset = "";
     @HopMetadataProperty private String transform = "";
 
@@ -108,8 +168,7 @@ public class FileGdbWriterMeta extends BaseTransformMeta<FileGdbWriter, FileGdbW
   @Override
   public Object clone() {
     var copy = (FileGdbWriterMeta) super.clone();
-    copy.inputs =
-        new ArrayList<>(inputs.stream().map(i -> new Input(i.dataset, i.transform)).toList());
+    copy.inputs = new ArrayList<>(inputs.stream().map(Input::copy).toList());
     copy.resetTransformIoMeta();
     return copy;
   }

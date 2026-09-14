@@ -68,5 +68,48 @@ metadata. Vector Reader emits stored codes unchanged. Its schema preview shows
 catalog definitions; the Catalog Reader provides explicit metadata rows for lookups.
 Normal FileGDB tables can be selected in Vector Reader without a geometry column.
 
-No append/update of an existing GDB is supported. Cross-reader verification uses
-GDAL/OpenFileGDB; this is not an assertion of having tested ArcGIS.
+## Extend an existing geodatabase
+
+Run `extend.hpl` after `export.hpl`. Set `OUTPUT_FILE` to the existing result,
+`INPUT_FILE` to a GDB containing additional `buildings` and `entrances`, and
+`SCHEMA_FILE` to `extend.json`. The example appends buildings, creates an
+`inspections` table from the second input, and adds `building_inspections`.
+Existing entrances and relationships remain unchanged. Choose distinct business
+keys in the additional input. The Select Values transform removes the reader's
+system OBJECTID before append; map it to an ordinary target field when needed.
+
+The FileGDB Writer selects **Bestehende GDB ergänzen** and assigns `APPEND_ROWS`
+or `CREATE_DATASET` to each input. JSON defines only new datasets, desired domains
+and relationships; relationships may reference existing datasets. Identical
+existing domains/relationships are reused; conflicting definitions fail. An
+append-only run needs no JSON file. Source geometry and index creation are
+configured per input. Attribute tables need no geometry field.
+
+The Vector Writer offers `CREATE_DATABASE`, `ADD_DATASET` and `APPEND_ROWS`.
+Append uses the existing target schema, including geometry, precision, defaults
+and domains. Attribute names match without regard to case. Unknown fields and
+system OBJECTID inputs fail; missing fields require a default or nullable target.
+Explicit NULL does not invoke a default. Known conflicting CRS and incompatible
+geometry dimensions fail. No reprojection or implicit curve linearization occurs.
+Both dialogs load targets and show schema checks and reasons editing is unsupported.
+Unresolved design-time variables prevent preview only.
+
+Each run edits a full neighbouring working copy, requiring additional disk space.
+Only a successful finish replaces the original through a recoverable backup and
+journal. Failure or cancellation discards the changes. The next edit recovers an
+interrupted replacement. This is not an uninterrupted directory exchange for other
+readers: close ArcGIS, GDAL and other users of the GDB before writing. Writers use
+an exclusive canonical-path file lock with a five-second timeout and detect
+external changes before replacement.
+
+Existing spatial indexes are rebuilt from old and new features, even when index
+creation is disabled. Missing indexes are created when enabled (the default).
+OBJECTIDs of existing rows, domains and relationship identities remain unchanged.
+A no-op append without metadata/index creation leaves the original untouched.
+
+Updates, upserts, schema changes and replacement of datasets are unsupported.
+Editing datasets with attribute indexes, GlobalID automation, managed area/length
+fields, subtypes, attribute rules, attachments, complex relationships or topology/
+network participation is rejected; untouched datasets are retained. Table format
+version 3 is required. Business-key integrity remains a pipeline responsibility.
+Cross-reader verification uses GDAL/OpenFileGDB; ArcGIS has not been tested.

@@ -6,7 +6,7 @@
 |Format |Lesen |Schreiben |Dimensionen |Besonderheiten
 |Shapefile |Ja |Ja |XY, XYZ, XYM, XYZM |Mehrere Dateien; DBF-Grenzen; Kurven werden linearisiert.
 |GeoPackage (Vektor) |Ja |Ja |XY |Ein Layer pro Reader/Writer; unterstützt ausgewählte Kurventypen.
-|File Geodatabase (`.gdb`) |Ja |Ja |XY, XYZ, XYM, XYZM |Reines Java über `filegdb4j`; Writer erzeugt eine neue Geodatabase mit einem Layer.
+|File Geodatabase (`.gdb`) |Ja |Ja |XY, XYZ, XYM, XYZM |Reines Java über `filegdb4j`; Neue GDB, zusätzliche Datasets und Append; Domains und Beziehungen.
 |FlatGeobuf |Nein |Ja |XY, XYZ, XYM, XYZM |Optionaler räumlicher Index; sortiert Features um.
 |Native spatial Parquet |Nein |Ja |XY, XYZ, XYM, XYZM |GEOMETRY/GEOGRAPHY; kein GeoParquet-`geo`-Metadatendokument.
 |ArcInfo GENERATE |Nein |Ja |XY, XYZ |Homogene einfache Geometrien, keine beliebigen Attribute.
@@ -27,16 +27,31 @@ Der Schema-Dialog zeigt Domains, Feldzuordnungen und Relationship Classes. Diese
 Definitionen werden nicht automatisch in die Hop-Feldmetadaten übernommen.
 Der separate FileGDB Catalog Reader gibt sie als normale Metadatenzeilen aus.
 
-Der bisherige Vector Writer erzeugt eine neue Geodatabase mit einer Feature Class;
-mit optionaler JSON-Schemadatei unterstützt er auch eine einzelne Attributtabelle und Domains.
-Der neue FileGDB Writer schreibt mehrere benannte Eingangsströme gemeinsam und erzeugt
-einfache 1:1-/1:n-Beziehungen anhand einer JSON-Schemadatei. Beispiele und das Schema
-stehen unter `docs/examples/filegdb`. Domainwerte werden geprüft; Eindeutigkeit und
-referenzielle Integrität müssen bei Bedarf in der Pipeline geprüft werden. Das Ziel darf
-nicht existieren. Die Ausgabe wird in einem temporären Verzeichnis neben dem Ziel
-aufgebaut und erst nach erfolgreichem Abschluss veröffentlicht. Append, Update und
-Löschen sind nicht Teil dieses Umfangs. Kreisbögen werden in XY, XYZ, XYM und XYZM nativ
-geschrieben; Bézier- und Ellipsensegmente können nicht geschrieben werden.
+Der Vector Writer erstellt eine neue GDB, ergänzt eine Feature Class oder hängt
+Features an. Der FileGDB Writer kombiniert mehrere benannte Eingänge mit den Aktionen
+`CREATE_DATASET` und `APPEND_ROWS`. JSON definiert neue Datasets, Domains und einfache
+1:1-/1:n-Beziehungen, auch zu vorhandenen Datasets. Reine Appends benötigen kein JSON.
+Beispiele stehen unter `docs/examples/filegdb`, insbesondere `extend.hpl` und `extend.json`.
+
+Beim Append bestimmt das Ziel Feldtypen, Defaults, Domains, Geometrie, CRS und Präzision.
+Felder werden unabhängig von Gross-/Kleinschreibung nach Namen zugeordnet. Unbekannte
+Felder und eingehende systemverwaltete OBJECTIDs werden abgelehnt; Quell-IDs vorher
+umbenennen oder entfernen. Fehlende Felder benötigen einen Default oder Nullable.
+Domainwerte werden geprüft; fachliche Eindeutigkeit und referenzielle Integrität
+bleiben Aufgabe der Pipeline. Die Dialoge laden Datasets und prüfen Eingangsschemata.
+
+Alle Änderungen entstehen in einer vollständigen benachbarten Arbeitskopie. Erst nach
+Erfolg wird diese mittels Sicherungsverzeichnis und dauerhaftem Übernahmeprotokoll
+übernommen; unterbrochene Übernahmen werden vor der nächsten Bearbeitung wiederhergestellt.
+Andere Programme müssen die GDB schliessen. Eine Dateisperre wartet maximal fünf Sekunden;
+Änderungen am Original werden vor der Übernahme erkannt. Vorhandene räumliche Indizes
+werden immer nachgeführt, fehlende bei aktivierter Indexoption angelegt.
+
+Updates, Upserts, Schemaänderungen und Dataset-Ersetzung sind ausgeschlossen. Bearbeitung
+von Datasets mit Attributindizes, GlobalID-Automatik, verwalteten Flächen-/Längenfeldern,
+Subtypes, Regeln, Attachments oder komplexen Beziehungen/Topologien wird abgelehnt.
+Nicht betroffene Datasets bleiben erhalten. Kreisbögen werden in XY, XYZ, XYM und XYZM
+nativ geschrieben; Bézier- und Ellipsensegmente können nicht geschrieben werden.
 
 Die Writer-Optionen enthalten XY-Auflösung, XY-Toleranz, beide Ursprünge und das Erstellen
 eines räumlichen Indexes. Neue Transforms verwenden CRS-abhängige Vorgaben (`AUTO`), alte
@@ -46,7 +61,7 @@ die Toleranz ist Metadateninformation und keine Linearisierungsgenauigkeit.
 Vier optionale Reader-Grenzen filtern inklusiv nach der Geometrie-Boundingbox im Quell-CRS.
 Neue FileGDB-Indizes und fremde Punktindizes werden verwendet; fremde Linien-/Polygonindizes
 führen für diese Abfragesemantik zu einem Scan. Der Schema-Dialog zeigt die gespeicherten
-XY-Einstellungen. Eine eingehende `OBJECTID` wird als `SOURCE_OBJECTID` exportiert; eine
+XY-Einstellungen. Beim Erstellen wird eine eingehende `OBJECTID` als `SOURCE_OBJECTID` exportiert; eine
 Namenskollision wird abgelehnt.
 
 Für explizite Linearisierung dienen `linearize_curves` beziehungsweise `coverage_linearize`
