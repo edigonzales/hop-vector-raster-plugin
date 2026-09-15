@@ -138,13 +138,13 @@ final class VectorReaderDialogComposite extends Composite {
     FormData fdControl = new FormData();
     fdControl.left = new FormAttachment(middlePct, 0);
     fdControl.right = new FormAttachment(actionButton, -margin);
-    fdControl.top = new FormAttachment(0, margin);
+    fdControl.top = new FormAttachment(actionButton, 0, SWT.CENTER);
     control.setLayoutData(fdControl);
 
     FormData fdLabel = new FormData();
     fdLabel.left = new FormAttachment(0, 0);
     fdLabel.right = new FormAttachment(middlePct, -margin);
-    fdLabel.top = new FormAttachment(control, 0, SWT.TOP);
+    fdLabel.top = new FormAttachment(actionButton, 0, SWT.CENTER);
     label.setLayoutData(fdLabel);
   }
 
