@@ -16,9 +16,7 @@
       <unpack>false</unpack>
       <includes>
         <include>ch.so.agi:hop-vector-transforms</include>
-        <include>ch.so.agi:hop-raster-clip</include>
-        <include>ch.so.agi:hop-raster-reproject</include>
-        <include>ch.so.agi:hop-raster-zonal-stats</include>
+        <include>ch.so.agi:hop-raster-values</include>
       </includes>
     </dependencySet>
 
@@ -30,9 +28,9 @@
       <unpack>false</unpack>
       <excludes>
         <exclude>ch.so.agi:hop-vector-transforms</exclude>
-        <exclude>ch.so.agi:hop-raster-clip</exclude>
-        <exclude>ch.so.agi:hop-raster-reproject</exclude>
-        <exclude>ch.so.agi:hop-raster-zonal-stats</exclude>
+        <exclude>ch.so.agi:hop-raster-values</exclude>
+        <exclude>ch.so.agi:hop-raster-core</exclude>
+        <exclude>ch.so.agi:hop-raster-type</exclude>
         <exclude>ch.so.agi:hop-geometry-type</exclude>
         <exclude>org.locationtech.jts:jts-core</exclude>
         <exclude>org.apache.hop:*</exclude>

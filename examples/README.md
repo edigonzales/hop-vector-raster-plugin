@@ -20,3 +20,5 @@ parameter examples are in the [handbook](https://edigonzales.github.io/hop-vecto
 
 After `mvn clean verify`, run `python3 scripts/check-doc-examples.py` with Java 21
 to execute the clip and statistics pipelines using small local fixtures.
+
+[Raster value chain](raster-values/README.md): Reader → Clip → Reproject → Writer without intermediate TIFFs.

@@ -121,6 +121,27 @@ public class DocumentationExamplesSmoke {
       coverage.dispose(true);
     }
 
+    try (var raw = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+        new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
+      var scaled = new ch.so.agi.hop.raster.geotools.RasterSource() {
+        public java.awt.Rectangle bounds() { return raw.bounds(); }
+        public org.geotools.api.referencing.crs.CoordinateReferenceSystem crs() { return raw.crs(); }
+        public org.geotools.api.referencing.operation.MathTransform gridToWorld() { return raw.gridToWorld(); }
+        public int bands() { return 1; }
+        public int dataType() { return raw.dataType(); }
+        public Double noData(int band) { return 255d; }
+        public double scale(int band) { return .5; }
+        public double offset(int band) { return 100; }
+        public boolean valid(double v, int band) { return v != 255 && Double.isFinite(v); }
+        public double physical(double v, int band) { return v * .5 + 100; }
+        public java.awt.image.Raster read(ch.so.agi.hop.raster.geotools.RasterReadRequest r) throws Exception { return raw.read(r); }
+        public void close() {}
+      };
+      var full = new GeometryFactory().toGeometry(new Envelope(2600000,2600004,1200000,1200003));
+      ch.so.agi.hop.raster.geotools.RasterClip.write(scaled, full, false, 0, 255d,
+          temp.resolve("input-scaled.tif"), false, () -> false);
+    }
+
     var geometry =
         new GeometryFactory(new PrecisionModel(), 2056)
             .toGeometry(new Envelope(2600000, 2600004, 1200000, 1200003));
@@ -219,6 +240,11 @@ public class DocumentationExamplesSmoke {
     } finally {
       result.dispose(true);
       reader.dispose();
+    }
+    try (var scaled = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+        new ch.so.agi.hop.raster.geotools.RasterDatasetRef(temp.resolve("branch-a.tif").toString()))) {
+      if (scaled.scale(0) != .5 || scaled.offset(0) != 100)
+        throw new AssertionError("Installed Raster value chain lost scale/offset");
     }
     System.out.println("Installed Hop clip HPL: 2x2 source-grid pixels and georeferencing OK");
   }

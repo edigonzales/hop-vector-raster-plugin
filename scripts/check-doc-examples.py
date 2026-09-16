@@ -53,6 +53,7 @@ def main() -> int:
         default=None,
         help="Geometry runtime ZIP; defaults to GEOMETRY_ZIP or local CI/development locations",
     )
+    parser.add_argument("--raster-type-zip", type=Path, required=True)
     args = parser.parse_args()
 
     hop_home = args.hop_home
@@ -80,6 +81,7 @@ def main() -> int:
             str(plugin_zip),
             "--geometry-zip",
             str(geometry_zip),
+            "--raster-type-zip", str(args.raster_type_zip),
         ],
         check=True,
     )

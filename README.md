@@ -16,8 +16,11 @@ All transforms appear in the **Geospatial** category.
 |---|---|
 | Vector Reader | Read Shapefile, GeoPackage or File Geodatabase layers into typed Hop rows. |
 | Vector Writer | Write Shapefile, GeoPackage, File Geodatabase, FlatGeobuf, native spatial Parquet or ArcInfo GENERATE. |
-| Raster Clip (GeoTools) | Clip one band from a local GeoTIFF or public COG using a box or polygon. |
+| Raster Reader (GeoTools) | Create a Raster value from a local GeoTIFF or public HTTP/HTTPS COG. |
+| Raster Info (GeoTools) | Add selected raster metadata without calculating pixels. |
+| Raster Clip (GeoTools) | Plan a box/polygon clip of all bands or an explicit selection. |
 | Raster Reproject / Resample (GeoTools) | Reproject and resample all bands, including color, palette and alpha rasters. |
+| Raster Writer (GeoTools) | Materialize a Raster value as a local GeoTIFF/BigTIFF. |
 | Raster Zonal Statistics (GeoTools) | Add polygon statistics such as mean, min, max and valid pixel count to rows. |
 
 FlatGeobuf, Parquet and GENERATE are output-only. Parquet uses native
@@ -29,6 +32,8 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
 - The separately installed
   [Geometry Type plugin](https://github.com/edigonzales/hop-geometry-type-plugin),
   **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.
+- The matching [Raster Type plugin](https://github.com/edigonzales/hop-raster-type-plugin),
+  which supplies the shared Raster model and Hop value type.
 - A writable local directory for output files.
 
 The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster uses
@@ -36,28 +41,34 @@ The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster us
 both `../../misc/hop-geometry-type` and `../../misc/hop-geometry-type/lib`.
 Hop does not recursively include `lib` when resolving dependency folders.
 The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
-Install the separate Geometry Type ZIP before running Vector/Raster. On upgrade,
+Install both separate Geometry Type and Raster Type ZIPs before running Vector/Raster.
+Raster Type root and `lib` folders are also referenced by `dependencies.xml`; its shared classes
+are excluded from the Vector/Raster ZIP. On upgrade,
 replace the complete `plugins/transforms/vector-raster` folder to remove stale JARs.
 
 ## Installation
 
 1. Stop Apache Hop.
-2. Install the Geometry Type plugin according to its installation instructions.
+2. Install the Geometry Type plugin and the matching Raster Type ZIP.
 3. Download the versioned `hop-vector-raster-plugin-<version>.zip` from the
    [Maven repository](https://jars.interlis.guru/releases/ch/so/agi/hop-vector-raster-plugin/).
 4. Keep exactly one Vector Raster installation. When changing versions,
    replace the complete `plugins/transforms/vector-raster` directory.
 5. Extract the ZIP into Hop home. It creates `plugins/transforms/vector-raster/`.
-6. Restart Hop and check that the five transforms appear under **Geospatial**.
+6. Restart Hop and check that the vector and raster transforms appear under **Geospatial**.
 
 Check the installed transforms and their plugin IDs in the
 [installation chapter](https://edigonzales.github.io/hop-vector-raster-plugin/benutzerhandbuch/main/index.html#installation).
 
 ## First steps
 
-Use **Vector Reader → Vector Writer** for vector conversion. For one raster
-operation, use **Generate Rows (one row) → Raster Clip (GeoTools)** or
-**Raster Reproject / Resample (GeoTools)**.
+Use **Vector Reader → Vector Writer** for vector conversion. For raster processing, use
+**Raster Reader → Raster Clip → Raster Reproject → Raster Writer**. Reader can run without
+upstream rows; downstream operations carry a typed Raster field and do not write intermediate TIFFs.
+See the [complete value-chain example](examples/raster-values/README.md).
+
+File-based raster pipelines require migration with `scripts/migrate-raster-values.py old.hpl new.hpl`.
+The old transform IDs report a migration error instead of running a parallel legacy implementation.
 
 The [manual sources](docs/biblios/user/master.adoc) are also available directly
 in this repository. The manual explains every dialog, defaults, output fields,

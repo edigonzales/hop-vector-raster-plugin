@@ -43,7 +43,7 @@ using the shared Maven downloader. The test requires Java, `javac` and Python. I
 across Linux, macOS and Windows using the same canonical ZIP and Geometry snapshot.
 
 ```bash
-python3 scripts/run-installed-e2e.py --hop-home "$HOP_HOME" --plugin-zip "$PLUGIN_ZIP" --geometry-zip "$GEOMETRY_ZIP"
+python3 scripts/run-installed-e2e.py --hop-home "$HOP_HOME" --plugin-zip "$PLUGIN_ZIP" --geometry-zip "$GEOMETRY_ZIP" --raster-type-zip "$RASTER_TYPE_ZIP"
 ```
 
 For local tests, the plugin ZIP comes from
@@ -51,3 +51,7 @@ For local tests, the plugin ZIP comes from
 canonical artifact, downloaded into `.ci/verified`. The script installs both
 ZIPs and executes raster/vector smoke tests in Hop. Snapshot and release jobs
 depend on the verify workflow including this installed E2E job.
+
+Raster V1 additionally requires the matching Raster Type ZIP and Maven artifacts from
+`hop-raster-type-plugin`. Build/install that repository first during coordinated local development.
+The native raster model is supplied only by its separate type ZIP.

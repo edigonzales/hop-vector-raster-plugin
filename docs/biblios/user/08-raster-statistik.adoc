@@ -1,54 +1,13 @@
 [[raster-statistik]]
 == Raster Zonal Statistics (GeoTools)
 
-Dieser Transform ergänzt pro eingehender Polygonzeile Rasterstatistiken.
-Typische Pipeline: *Vector Reader → Raster Zonal Statistics (GeoTools) → Vector Writer*.
-Er schreibt selbst keine Rasterdatei. Plugin-ID: `SOGIS_RASTER_ZONAL_STATS`.
+`SOGIS_RASTER_VALUE_ZONAL_STATS` liest ein Rasterfeld und ein Polygonfeld und ergänzt Kennzahlen.
+Typische Pipeline: Vector Reader → Raster Reader → Zonal Statistics → Select Values → Vector Writer.
+Select Values entfernt das Rasterfeld vor dem Vector Writer. Der Reader kann dieselbe Quelle über alle Zeilen verwenden.
 
-=== Dialogansicht
-
-Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
-`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
-`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
-
-[source,text,role="gui-dialog"]
-----
-+==============================================================================+
-| Raster Zonal Statistics (GeoTools)                                           |
-| ============================================================================ |
-| Transform name                         [ Gebäudehöhen berechnen ]            |
-| Input raster                           [ ${INPUT_RASTER} ] [ Browse... ]     |
-| Raster address from input field        [ ]                                   |
-| Geometry field                         [ geometry v]                         |
-| Explicit geometry CRS (empty: geometry SRID) [ EPSG:2056 ]                   |
-| Band (1 based)                         [ 1 ]                                 |
-| NoData override (empty: raster metadata) [ ]                                 |
-| Output field prefix                    [ height_ ]                           |
-| Statistics (mean min max sum stddev; count always included)                  |
-|   [ mean min max stddev ]                                                    |
-|                                                                              |
-|                                                          [ OK ] [ Cancel ]   |
-+==============================================================================+
-----
-
-Setzen Sie `INPUT_RASTER` auf das Gebäude-nDSM aus dem Beispiel.
-Die Eingabezeilen liefern die Polygonspalte `geometry`; Ergebnisfelder erhalten das Präfix `height_`.
-
-=== Einstellungen
-
-[cols="2,1,4",options="header"]
-|===
-|Einstellung |Standard |Bedeutung
-|Transform name |Von Hop vergeben |Name des Schritts.
-|Input raster |Leer |Lokale GeoTIFF-Datei oder öffentliche COG-URL.
-|Raster address from input field |Aus |Die Rasteradresse stammt aus dem benannten Feld.
-|Geometry field |`geometry` |Hop-Geometry-Spalte mit Polygon/MultiPolygon.
-|Explicit geometry CRS (empty: geometry SRID) |Leer |CRS der Polygone; sonst SRID ungleich null erforderlich.
-|Band (1 based) |`1` |Zu analysierendes Band.
-|NoData override (empty: raster metadata) |Leer |Ersetzt den deklarierten Sentinel.
-|Output field prefix |`raster_` |Präfix aller angehängten Kennzahlen und des Status.
-|Statistics (mean min max sum stddev; count always included) |`mean min max` |Feste Auswahl (keine Variablen) mit Leerzeichen, Komma oder Semikolon; `count` wird immer ergänzt.
-|===
+Einstellungen: Rasterfeld (`raster`), Geometriefeld (`geometry`), explizites Geometrie-CRS oder SRID,
+Bandnummer ab 1, optionales NoData-Override, Ausgabepräfix (`raster_`) und Statistikliste (`mean min max`).
+Alle Eingabeattribute bleiben erhalten. Unterstützte Kennzahlen: mean, min, max, sum, stddev und count.
 
 === Auswahl der Pixel und Kennzahlen
 
@@ -86,17 +45,3 @@ Technische Fehler werden über einen Error Hop behandelt oder stoppen den Transf
 sie werden niemals als erfolgreiche count-0-Zeile kaschiert.
 Für HTTP-COGs gelten die Range-/Authentifizierungsgrenzen aus <<raster-clip,Raster Clip>>.
 Leser schliessen bei Quellenwechsel, EOF, Fehler und Disposal.
-
-=== Beispiel: Gebäudehöhen
-
-Lesen Sie Gebäudegrundrisse aus einem GeoPackage mit `Geometry output field = geometry`.
-Wählen Sie folgendes Raster und konfigurieren Sie Band 1, Präfix `height_`, Statistiken `mean min max stddev`:
-
-[source,text]
-----
-https://files.geo.so.ch/ch.swisstopo.lidar_2023.ndsm_buildings/aktuell/ch.swisstopo.lidar_2023.ndsm_buildings.tif
-----
-
-Das Raster enthält Gebäudehöhen über Terrain. Verwenden Sie diese Werte direkt für die Statistik.
-`height_mean` ist die mittlere gültige Rasterhöhe innerhalb des Polygons, keine automatisch ermittelte First-, Trauf- oder baurechtliche Höhe.
-Die Beispieldaten wurden mit 0.25 m, EPSG:2056, Float32 und NoData -9999 beschrieben; eine `aktuell`-URL kann sich ändern.

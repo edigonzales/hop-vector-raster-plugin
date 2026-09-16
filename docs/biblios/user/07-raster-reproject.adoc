@@ -1,84 +1,19 @@
 [[raster-reproject]]
 == Raster Reproject / Resample (GeoTools)
 
-Dieser Transform ändert CRS und/oder Pixelgrösse eines Rasters und verarbeitet *alle Bänder*.
-Eine Eingabezeile erzeugt eine GeoTIFF-Datei. Quelle ist eine lokale GeoTIFF-Datei oder ein öffentliches HTTP/HTTPS-COG.
-Plugin-ID: `SOGIS_RASTER_REPROJECT`.
-
-=== Dialogansicht
-
-Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
-`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
-`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
-
-[source,text,role="gui-dialog"]
-----
-+==============================================================================+
-| Raster Reproject / Resample (GeoTools)                                       |
-| ============================================================================ |
-| Transform name                         [ Gelände auf 1 m resamplen ]         |
-|                                                                              |
-| Input                                                                        |
-| Raster (local GeoTIFF or public COG URL) [ ${INPUT_RASTER} ] [ Browse... ]   |
-| Raster value is an input field         [ ]                                   |
-| Source NoData override (empty: metadata) [ ]                                 |
-|                                                                              |
-| Target grid                                                                  |
-| Target CRS (empty: source CRS)         [ EPSG:2056 ]                         |
-| Target CRS is an input field           [ ]                                   |
-| Pixel size X (target CRS units)        [ 1 ]                                 |
-| Pixel size Y (target CRS units)        [ 1 ]                                 |
-| Pixel sizes are input fields           [ ]                                   |
-| Extent                                 [ BOUNDING_BOX v]                     |
-| Minimum X                              [ 2607400 ]                           |
-| Minimum Y                              [ 1228400 ]                           |
-| Maximum X                              [ 2607500 ]                           |
-| Maximum Y                              [ 1228500 ]                           |
-| Bounding box values are input fields   [ ]                                   |
-|                                                                              |
-| Resampling                                                                   |
-| Interpolation                          [ BILINEAR v]                         |
-| Numeric output type                    [ AUTO v]                             |
-|                                                                              |
-| Output                                                                       |
-| Output GeoTIFF                                                               |
-|   [ ${OUTPUT_DIR}/terrain-1m.tif ] [ Browse... ]                             |
-| Output path is an input field          [ ]                                   |
-| Output NoData (numeric / palette only) [ ]                                   |
-| Overwrite existing file                [ ]                                   |
-| Output field prefix                    [ raster_ ]                           |
-|                                                                              |
-|                                                          [ OK ] [ Cancel ]   |
-+==============================================================================+
-----
-
-Die Gruppen *Input*, *Target grid*, *Resampling* und *Output* enthalten den Auftrag für ein 1-m-Zielraster.
-`INPUT_RASTER` bezeichnet die Quelle; `OUTPUT_DIR` ist ein vorhandener lokaler Ausgabeordner.
+`SOGIS_RASTER_VALUE_REPROJECT` liest ein Rasterfeld und liefert einen abgeleiteten Rasterwert.
+Ein leeres Ausgabefeld ersetzt das Eingabefeld, ein anderer Name ergänzt eine Spalte. Es wird keine Datei geschrieben.
+Verbinden Sie anschliessend Raster Writer oder Zonal Statistics.
 
 === Einstellungen
 
-[cols="2,1,4",options="header"]
-|===
-|Einstellung |Standard |Bedeutung
-|Transform name |Von Hop vergeben |Name des Schritts.
-|Raster (local GeoTIFF or public COG URL) |Leer |Quelle; `Raster value is an input field` bezieht sie aus einer Spalte.
-|Raster value is an input field |Aus |Rasteradresse aus der benannten Spalte.
-|Source NoData override (empty: metadata) |Leer |Ersetzt den deklarierten Quell-Sentinel.
-|Target CRS (empty: source CRS) |Leer |EPSG-Code oder Quell-CRS beibehalten.
-|Target CRS is an input field |Aus |Ziel-CRS aus der benannten Spalte.
-|Pixel size X / Y (target CRS units) |Leer |Beide erforderlich, endlich und positiv; über `Pixel sizes are input fields` feldgebunden möglich.
-|Pixel sizes are input fields |Aus |Beide Pixelgrössen aus Eingabespalten.
-|Extent |`AUTO` |Automatische Ausdehnung oder `BOUNDING_BOX` im Ziel-CRS.
-|Minimum X / Y, Maximum X / Y |Leer |Zielbox; gemeinsames Kästchen für Werte aus Eingabefeldern.
-|Bounding box values are input fields |Aus |Vier Boxwerte aus Eingabespalten.
-|Interpolation |`NEAREST` |Alternativ `BILINEAR`.
-|Numeric output type |`AUTO` |Auch `SOURCE`, `FLOAT32`, `FLOAT64`; gilt nur für numerische Raster.
-|Output GeoTIFF |Leer |Zieldatei; `Output path is an input field` bezieht den Pfad aus einer Spalte.
-|Output path is an input field |Aus |Ausgabepfad aus der benannten Spalte.
-|Output NoData (numeric / palette only) |Leer |Ausgabe-Sentinel; sonst Quell-Override, Quellmetadaten, bei Float schliesslich NaN.
-|Overwrite existing file |Aus |Bestehende Datei ausdrücklich ersetzen.
-|Output field prefix |`raster_` |Präfix für Dateipfad und Status.
-|===
+* Rasterfeld: `raster` als Standard.
+* Ziel-CRS: leer übernimmt das Quell-CRS; optional aus einem Eingabefeld.
+* Pixelgrösse X/Y: positive endliche Werte im Ziel-CRS, optional aus Eingabefeldern.
+* Ausdehnung: `AUTO` oder `BOUNDING_BOX` mit minX/minY/maxX/maxY, optional feldgebunden.
+* Interpolation: `NEAREST` (Standard) oder `BILINEAR`.
+* Numerischer Ausgabetyp: `AUTO`, `SOURCE`, `FLOAT32`, `FLOAT64`.
+* Quell-/Ausgabe-NoData: optionale Overrides.
 
 === Zielraster und Ausschnitt
 
@@ -140,20 +75,6 @@ Quellcache: höchstens 64 MiB pro Kopie; zusätzliche Ausgabe-/Operationscaches:
 Quellblöcke werden auf höchstens 262144 Pixel begrenzt und bei starker Vergröberung weiter unterteilt.
 Diese Cache-Limits sind keine Gesamtgrenze für den JVM-Heap. Gelesen wird in Originalauflösung ohne Overviews.
 
-[source,text]
-----
-Generate Rows (Limit = 1) -> Raster Reproject / Resample (GeoTools)
-Raster: ${INPUT_RASTER}
-Target CRS: EPSG:2056
-Pixel size X / Y: 1 / 1
-Extent: BOUNDING_BOX
-Minimum X / Y: 2607400 / 1228400
-Maximum X / Y: 2607500 / 1228500
-Interpolation: BILINEAR
-Numeric output type: AUTO
-Output GeoTIFF: ${OUTPUT_DIR}/terrain-1m.tif
-----
 
-Bei passender Quelle entsteht ein 100 × 100 Pixel grosses Float64-Raster.
-Für eine reine Auflösungsänderung lassen Sie das Ziel-CRS leer.
-Bicubic, Average und Polygonmasken gehören nicht zu diesem Transform.
+Die Auswertung erfolgt erst beim Verbraucher. Quellen werden dort über aufeinanderfolgende Zeilen wiederverwendet.
+Operationsketten teilen begrenzte Caches; vollständige Raster werden nicht im Heap aufgebaut.

@@ -33,7 +33,17 @@
   <order>
     <hop>
       <from>Read vector</from>
+      <to>Zonal statistics source</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Zonal statistics source</from>
       <to>Zonal statistics</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Zonal statistics</from>
+      <to>Zonal statistics remove raster value</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -57,17 +67,16 @@
     <timezone>UTC</timezone>
     <attributes />
     <GUI>
-      <xloc>150</xloc>
-      <yloc>150</yloc>
+      <xloc>120</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
     </GUI>
   </transform>
   <transform>
     <name>Zonal statistics</name>
-    <type>SOGIS_RASTER_ZONAL_STATS</type>
+    <type>SOGIS_RASTER_VALUE_ZONAL_STATS</type>
     <copies>1</copies>
     <distribute>Y</distribute>
-    <source>${INPUT_RASTER}</source>
-    <sourceField>N</sourceField>
     <geometryField>geometry</geometryField>
     <explicitCrs>${GEOMETRY_CRS}</explicitCrs>
     <band>1</band>
@@ -75,10 +84,47 @@
     <statistics>mean min max</statistics>
     <prefix>raster_</prefix>
     <GUI>
-      <xloc>450</xloc>
-      <yloc>150</yloc>
+      <xloc>560</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
     </GUI>
+    <version>1</version>
+    <rasterField>__raster_value_2</rasterField>
   </transform>
   <transform_error_handling />
   <attributes />
+  <transform>
+    <name>Zonal statistics source</name>
+    <type>SOGIS_RASTER_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <version>1</version>
+    <rasterField>__raster_value_2</rasterField>
+    <GUI>
+      <xloc>340</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+    <source>${INPUT_RASTER}</source>
+    <sourceField>N</sourceField>
+  </transform>
+  <transform>
+    <name>Zonal statistics remove raster value</name>
+    <type>SelectValues</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <version>1</version>
+    <rasterField>__raster_value_2</rasterField>
+    <GUI>
+      <xloc>780</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+    <fields>
+      <select_unspecified>Y</select_unspecified>
+      <remove>
+        <name>__raster_value_2</name>
+      </remove>
+    </fields>
+  </transform>
 </pipeline>

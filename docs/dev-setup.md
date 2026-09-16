@@ -15,7 +15,8 @@ The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster us
 both `../../misc/hop-geometry-type` and `../../misc/hop-geometry-type/lib`.
 Hop does not recursively include `lib` when resolving dependency folders.
 The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
-Install the separate Geometry Type ZIP before running Vector/Raster. On upgrade,
+Build/install the matching `hop-raster-type-plugin` repository first. Install both the separate
+Geometry Type and Raster Type ZIPs before running Vector/Raster. On upgrade,
 replace the complete `plugins/transforms/vector-raster` folder to remove stale JARs.
 
 ## Java and Maven
@@ -137,7 +138,7 @@ The automated tests cover exact file roundtrips for `CIRCULARSTRING`, `COMPOUNDC
 - Curves are XY only; Shapefile/FlatGeobuf/Parquet linearize them, GENERATE rejects them.
 - Reader/Writer assign CRS but do not reproject or clip. Dedicated Raster Clip and Raster Reproject / Resample transforms handle raster processing.
 
-The [German handbook](https://edigonzales.github.io/hop-vector-raster-plugin/) is the central user documentation for all five transforms and format rules.
+The [German handbook](https://edigonzales.github.io/hop-vector-raster-plugin/) is the central user documentation for the vector and raster transforms and format rules.
 Documentation builds use Java 21 independently of Maven; see [Biblios build and preview](biblios/README.md).
 After building the ZIP, run the documentation smoke against a clean Hop installation and the matching Geometry runtime ZIP:
 

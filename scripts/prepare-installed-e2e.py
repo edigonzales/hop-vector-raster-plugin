@@ -24,5 +24,6 @@ subprocess.run([
     "--hop-home", str(hop_root / "hop"),
     "--plugin-zip", str(one(root / ".ci/verified", "hop-vector-raster-plugin-*.zip")),
     "--geometry-zip", str(one(inputs, "hop-geometry-type-plugin.zip")),
+    "--raster-type-zip", str(one(inputs, "hop-raster-type-plugin.zip")),
     "--work-dir", str(root / ".ci/e2e-results"),
 ], check=True)

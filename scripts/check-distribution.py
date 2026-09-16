@@ -30,10 +30,8 @@ with zipfile.ZipFile(zip_path) as archive:
         "filegdb4j-geometry-",
         "filegdb4j-jts-",
         "hop-geotools-support-",
-        "hop-raster-core-",
-        "hop-raster-clip-",
-        "hop-raster-reproject-",
-        "hop-raster-zonal-stats-",
+        "hop-raster-values-",
+        "hop-raster-geotools-",
         "hop-vector-format-generate-",
         "gt-geotiff-",
         "gt-coverage-",
@@ -54,11 +52,11 @@ with zipfile.ZipFile(zip_path) as archive:
 
     dependencies = ET.fromstring(archive.read("plugins/transforms/vector-raster/dependencies.xml"))
     folders = {node.text for node in dependencies.findall("folder")}
-    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-geometry-type/lib"}:
+    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-geometry-type/lib", "../../misc/hop-raster-type", "../../misc/hop-raster-type/lib"}:
         raise SystemExit("Geometry and its lib folder must both be explicit dependencies")
 
     forbidden = [
-        "hop-geometry-type-", "jts-core-",
+        "hop-geometry-type-", "hop-raster-type-", "hop-raster-core-", "jts-core-",
         "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
         "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",

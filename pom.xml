@@ -8,6 +8,7 @@
   <description>Vector formats and raster processing for Apache Hop.</description>
   <modules>
     <module>vector/vector-core</module>
+    <module>raster/raster-values</module>
     <module>vector/formats/shapefile</module>
     <module>vector/formats/flatgeobuf</module>
     <module>vector/formats/parquet</module>
@@ -15,10 +16,6 @@
     <module>vector/formats/filegeodatabase</module>
     <module>support/geotools-support</module>
     <module>vector/vector-transforms</module>
-    <module>raster/raster-core</module>
-    <module>raster/raster-clip</module>
-    <module>raster/raster-reproject</module>
-    <module>raster/raster-zonal-stats</module>
     <module>vector/formats/arcinfo-generate</module>
     <module>assemblies/assemblies-hop-vector-raster</module>
   </modules>

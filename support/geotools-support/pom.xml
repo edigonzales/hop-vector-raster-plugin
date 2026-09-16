@@ -7,7 +7,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>hop-geotools-support</artifactId>
-  <dependencies>
+  <dependencies><dependency><groupId>ch.so.agi</groupId><artifactId>hop-raster-geotools</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>ch.so.agi</groupId>
       <artifactId>hop-vector-core</artifactId>

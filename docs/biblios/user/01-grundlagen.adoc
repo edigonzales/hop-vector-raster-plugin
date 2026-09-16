@@ -2,7 +2,7 @@
 == Einführung und Grundlagen
 
 Das Plugin verbindet Vektordateien und Rasterdaten mit Apache-Hop-Pipelines.
-Sie finden seine fünf Transforms in der Kategorie *Geospatial*.
+Sie finden seine Transforms in der Kategorie *Geospatial*.
 Eine GDAL-/OGR-Installation ist nicht erforderlich. GeoTools 35.1 übernimmt Rasterverarbeitung und CRS-Dienste;
 Vektorformate verwenden eigene Java-Adapter, GeoPackage zusätzlich SQLite JDBC.
 
@@ -70,3 +70,7 @@ Ein NoData-Override ersetzt den deklarierten Sentinel. Details zu Interpolation 
 
 Rohwerte können eine bandweise Skalierung besitzen: `physikalischer Wert = Rohwert × scale + offset`.
 Statistiken verwenden physikalische Werte. Clip und Reproject schreiben Rohwerte und erhalten Scale/Offset.
+
+Raster werden als typisierte Werte weitergegeben: *Raster Reader → Raster Clip → Raster Reproject → Raster Writer*.
+Installieren Sie zusätzlich das passende Raster-Type-ZIP. Clip und Reproject erzeugen keine Zwischendateien;
+bestehende dateibasierte Raster-Pipelines müssen migriert werden.

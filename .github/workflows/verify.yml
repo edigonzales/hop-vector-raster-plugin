@@ -22,7 +22,7 @@ jobs:
       maven-goals: clean verify
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
       zip-glob: assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip
-      validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py", "xvfb-run -a python scripts/check-vector-dialogs.py"]'
+      validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py", "python scripts/test-raster-migration.py", "xvfb-run -a python scripts/check-vector-dialogs.py"]'
       additional-verified-files: '["pom.xml"]'
       artifact-name-prefix: hop-vector-raster-plugin
       group-id: ch.so.agi
@@ -63,6 +63,13 @@ jobs:
             --extension zip \
             --maven-settings "$RUNNER_TEMP/maven-settings.xml" \
             --output .ci/geometry-dist/hop-geometry-type-plugin.zip
+      - name: Download matching Raster Type snapshot
+        run: |
+          mkdir -p .ci/raster-dist
+          python3 .ci/hop-plugin-ci/scripts/download_maven_artifact.py \
+            --group ch.so.agi --artifact hop-raster-type-plugin --version 0.1.0-SNAPSHOT \
+            --extension zip --maven-settings "$RUNNER_TEMP/maven-settings.xml" \
+            --output .ci/raster-dist/hop-raster-type-plugin.zip
       - name: Download isolated Hop 2.19.0
         run: |
           if ! curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
@@ -79,6 +86,7 @@ jobs:
           path: |
             ${{ runner.temp }}/hop.zip
             .ci/geometry-dist/hop-geometry-type-plugin.zip
+            .ci/raster-dist/hop-raster-type-plugin.zip
 
   installed-e2e:
     needs: [build, e2e-inputs]

@@ -38,7 +38,7 @@ class GeoToolsRuntimeSupportTest {
 
     try (ServiceHidingClassLoader loader =
         new ServiceHidingClassLoader(
-            new URL[] {pluginClasses, indriyaJar}, ClassLoader.getPlatformClassLoader())) {
+            new URL[] {pluginClasses, indriyaJar, ch.so.agi.hop.raster.geotools.GeoToolsRuntimeSupport.class.getProtectionDomain().getCodeSource().getLocation()}, ClassLoader.getPlatformClassLoader())) {
       Class<?> runtimeSupport =
           loader.loadClass("ch.so.agi.hop.support.geotools.GeoToolsRuntimeSupport");
       Method initialize = runtimeSupport.getDeclaredMethod("initialize");

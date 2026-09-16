@@ -16,13 +16,14 @@ Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 
 . Beenden Sie Hop vollständig.
 . Installieren beziehungsweise aktualisieren Sie das Geometry-Type-Plugin gemäss dessen Anleitung.
+. Installieren Sie zusätzlich das passende https://github.com/edigonzales/hop-raster-type-plugin[Raster-Type-Plugin] (`plugins/misc/hop-raster-type`).
 . Laden Sie die Datei `hop-vector-raster-plugin-<version>.zip` aus dem
   https://jars.interlis.guru/releases/ch/so/agi/hop-vector-raster-plugin/[Maven-Repository]
   herunter.
 . Stellen Sie sicher, dass genau eine Installation des Vector-Raster-Plugins vorhanden ist.
   Verwenden Sie für einen Versionswechsel ein vollständig ersetztes Verzeichnis `plugins/transforms/vector-raster`.
 . Entpacken Sie das ZIP direkt im Hop-Hauptverzeichnis. Danach muss `plugins/transforms/vector-raster/` vorhanden sein.
-. Starten Sie Hop neu und suchen Sie unter *Geospatial* nach allen fünf Transforms.
+. Starten Sie Hop neu und suchen Sie unter *Geospatial* nach den Vector- und Raster-Transforms.
 
 [source,text]
 ----
@@ -59,3 +60,7 @@ Bei einem unbekannten Transform prüfen Sie diese ID und die Installation.
 Build und lokale Installation sind in der {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung] beschrieben.
 Das Skript `scripts/dev-sync-hop-plugin.sh` baut und installiert beide Plugins und startet Hop GUI neu.
 Für die normale Benutzung genügt die Installation der Release-ZIPs.
+
+Raster Type stellt den gemeinsamen Raster-Datentyp bereit. Seine Klassen werden nur einmal installiert;
+Vector/Raster bringt den GeoTools-Adapter und die Raster-Transforms mit. Für bisherige Dateikonfigurationen
+ist die Migration auf Reader → Operation → Writer erforderlich.
