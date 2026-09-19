@@ -61,6 +61,30 @@ class VectorIoContractTest {
   }
 
   @Test
+  void legacyFileGdbBoundsRemainSerializedAndActiveAtRuntime() throws Exception {
+    VectorReaderMeta reader = new VectorReaderMeta();
+    reader.setFormat("FILEGEODATABASE");
+    reader.setFileName("/tmp/source.gdb");
+    reader.setFileGdbXMin("10");
+    reader.setFileGdbYMin("20");
+    reader.setFileGdbXMax("30");
+    reader.setFileGdbYMax("40");
+
+    var restored = new VectorReaderMeta();
+    restored.loadXml(
+        XmlHandler.loadXmlString("<transform>" + reader.getXml() + "</transform>")
+            .getDocumentElement(),
+        null);
+
+    assertThat(restored.getFileGdbXMin()).isEqualTo("10");
+    assertThat(restored.getFileGdbYMin()).isEqualTo("20");
+    assertThat(restored.getFileGdbXMax()).isEqualTo("30");
+    assertThat(restored.getFileGdbYMax()).isEqualTo("40");
+    var options = (FileGeodatabaseOptions) restored.request(new Variables(), Diagnostics.NONE).options();
+    assertThat(options.filter()).isEqualTo(new FileGeodatabaseOptions.Bounds(10, 20, 30, 40));
+  }
+
+  @Test
   void sharedWriterAndReaderWorkForShapefileAndGeoPackage() throws Exception {
     for (String extension : List.of("shp", "gpkg")) {
       Path file = dir.resolve("places." + extension);

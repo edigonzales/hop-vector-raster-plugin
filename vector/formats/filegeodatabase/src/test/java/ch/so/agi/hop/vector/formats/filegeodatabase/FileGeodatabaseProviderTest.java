@@ -1,6 +1,7 @@
 package ch.so.agi.hop.vector.formats.filegeodatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ch.so.agi.filegdb.FileGeodatabase;
 import ch.so.agi.filegdb.catalog.CrsDefinition;
@@ -126,6 +127,17 @@ class FileGeodatabaseProviderTest {
     assertThat(layer.rowMeta().getValueMetaList())
         .extracting(org.apache.hop.core.row.IValueMeta::getName)
         .containsExactly("OBJECTID", "name", "lanes", "shape");
+    assertThat(layer.rowMeta().getValueMeta(layer.rowMeta().indexOfValue("name")).getLength())
+        .isEqualTo(255);
+    assertThatThrownBy(
+            () ->
+                provider.open(
+                    new ReadRequest(
+                        gdb, "roads", "name", "", new FormatOptions.None(), Diagnostics.NONE)))
+        .hasMessageContaining("collides with an attribute");
+    try (VectorSource source = provider.open(gdb, "roads", "")) {
+      assertThat(source.schema().geometryColumn()).isEqualTo("shape");
+    }
 
     try (VectorSource source =
         provider.open(

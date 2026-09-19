@@ -190,6 +190,23 @@ class ShapefileAdapterTest {
   }
 
   @Test
+  void blankGeometryNameUsesTheGeom() throws Exception {
+    Path file = dir.resolve("default-geometry-name.shp");
+    Point point = (Point) point("XY");
+    try (var sink =
+        provider.create(request(file, meta(), point, ShapefileOptions.defaults(), Diagnostics.NONE))) {
+      sink.write(new Object[] {"default", point});
+      sink.finish();
+    }
+
+    try (var source = provider.open(file, "", "")) {
+      assertThat(source.schema().geometryColumn()).isEqualTo("the_geom");
+      assertThat(source.schema().rowMeta().getValueMeta(source.schema().rowMeta().size() - 1))
+          .isInstanceOf(ValueMetaGeometry.class);
+    }
+  }
+
+  @Test
   void holesDisjointAndNestedRings() throws Exception {
     Geometry g =
         new org.locationtech.jts.io.WKTReader()

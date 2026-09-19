@@ -380,7 +380,8 @@ public final class FileGeodatabaseProvider implements VectorProvider {
   }
 
   private static IValueMeta valueMeta(FileGdbField field) {
-    return switch (field.type()) {
+    IValueMeta valueMeta =
+        switch (field.type()) {
       case INT16, INT32, INT64, OBJECTID -> new ValueMetaInteger(field.name());
       case FLOAT32, FLOAT64 -> new ValueMetaNumber(field.name());
       case STRING, XML, GUID, GLOBALID -> new ValueMetaString(field.name());
@@ -395,6 +396,10 @@ public final class FileGeodatabaseProvider implements VectorProvider {
                   + field.name()
                   + ")");
     };
+    if (field.type() == ch.so.agi.filegdb.table.FileGdbFieldType.STRING && field.maxWidth() > 0) {
+      valueMeta.setLength(field.maxWidth());
+    }
+    return valueMeta;
   }
 
   private FeatureClassDefinition definition(WriteRequest request) throws Exception {

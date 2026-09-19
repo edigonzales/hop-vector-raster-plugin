@@ -6,12 +6,19 @@ import java.nio.file.*;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.hop.core.row.*;
 import org.apache.hop.core.row.value.*;
 import org.locationtech.jts.geom.Geometry;
 
 /** SQLite/JDBC vector adapter. No GeoTools types or dependencies. */
 public final class GeoPackageProvider implements VectorProvider {
+  private static final Pattern DECLARED_TYPE =
+      Pattern.compile(
+          "^\\s*[^ (]+\\s*\\(\\s*(\\d+)\\s*(?:,\\s*(\\d+)\\s*)?\\)\\s*$",
+          Pattern.CASE_INSENSITIVE);
+
   private final CrsDefinitionResolver crs;
 
   public GeoPackageProvider(CrsDefinitionResolver crs) {
@@ -148,17 +155,33 @@ public final class GeoPackageProvider implements VectorProvider {
   }
 
   private static IValueMeta field(String name, String declaration) {
-    String t = declaration.toUpperCase(Locale.ROOT);
-    if (t.contains("BOOL")) return new ValueMetaBoolean(name);
-    if (t.contains("INT")) return new ValueMetaInteger(name);
-    if (t.contains("REAL")
+    String t = declaration == null ? "" : declaration.toUpperCase(Locale.ROOT);
+    IValueMeta valueMeta;
+    if (t.contains("BOOL")) valueMeta = new ValueMetaBoolean(name);
+    else if (t.contains("INT")) valueMeta = new ValueMetaInteger(name);
+    else if (t.contains("REAL")
         || t.contains("FLOA")
         || t.contains("DOUB")
         || t.contains("NUMERIC")
-        || t.contains("DECIMAL")) return new ValueMetaNumber(name);
-    if (t.contains("DATE") || t.contains("TIME")) return new ValueMetaDate(name);
-    if (t.contains("BLOB")) return new ValueMetaBinary(name);
-    return new ValueMetaString(name);
+        || t.contains("DECIMAL")) valueMeta = new ValueMetaNumber(name);
+    else if (t.contains("DATE") || t.contains("TIME")) valueMeta = new ValueMetaDate(name);
+    else if (t.contains("BLOB")) valueMeta = new ValueMetaBinary(name);
+    else valueMeta = new ValueMetaString(name);
+
+    applyDeclaredTypeMetadata(valueMeta, declaration);
+    return valueMeta;
+  }
+
+  private static void applyDeclaredTypeMetadata(IValueMeta valueMeta, String declaration) {
+    if (declaration == null) return;
+    Matcher matcher = DECLARED_TYPE.matcher(declaration);
+    if (!matcher.matches()) return;
+    try {
+      valueMeta.setLength(Integer.parseInt(matcher.group(1)));
+      if (matcher.group(2) != null) valueMeta.setPrecision(Integer.parseInt(matcher.group(2)));
+    } catch (NumberFormatException ignored) {
+      // SQLite type declarations are advisory. An invalid size must not prevent schema reading.
+    }
   }
 
   public VectorSource open(ReadRequest request) throws Exception {

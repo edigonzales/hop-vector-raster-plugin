@@ -22,15 +22,16 @@ import org.eclipse.swt.widgets.Text;
 public class VectorReaderDialog extends BaseTransformDialog {
 
   private final VectorReaderMeta input;
-  private TextVar[] wBounds;
   private TextVar wFileName, wCharset, wTimezone, wCrs;
   private org.eclipse.swt.widgets.Combo wFormat;
   private Button wbFile;
   private ComboVar wLayerName;
   private Text wAvailableFieldsPreview;
   private TextVar wGeometryFieldName;
+  private VectorReaderDialogComposite content;
   private List<VectorSchemaProbe.LayerDefinition> layerDefinitions = List.of();
   private boolean suppressSchemaRefresh;
+  private boolean geometryFieldAutoPopulated;
 
   public VectorReaderDialog(
       Shell parent,
@@ -101,11 +102,9 @@ public class VectorReaderDialog extends BaseTransformDialog {
     fdMain.right = new FormAttachment(100, 0);
     fdMain.bottom = new FormAttachment(wOk, -margin * 2);
 
-    VectorReaderDialogComposite content =
-        new VectorReaderDialogComposite(shell, SWT.NONE, variables, props.getMiddlePct());
+    content = new VectorReaderDialogComposite(shell, SWT.NONE, variables, props.getMiddlePct());
     content.setLayoutData(fdMain);
 
-    wBounds = content.getFileGdbBounds();
     wCharset = content.getCharset();
     wTimezone = content.getTimezone();
     wCrs = content.getCrs();
@@ -130,7 +129,11 @@ public class VectorReaderDialog extends BaseTransformDialog {
             refreshFieldsPreview();
           }
         });
-    wGeometryFieldName.addModifyListener(e -> input.setChanged());
+    wGeometryFieldName.addModifyListener(
+        e -> {
+          input.setChanged();
+          if (!suppressSchemaRefresh) geometryFieldAutoPopulated = false;
+        });
     wbFile.addListener(SWT.Selection, e -> browse());
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
@@ -170,10 +173,6 @@ public class VectorReaderDialog extends BaseTransformDialog {
   private void getData() {
     suppressSchemaRefresh = true;
     try {
-      wBounds[0].setText(input.getFileGdbXMin());
-      wBounds[1].setText(input.getFileGdbYMin());
-      wBounds[2].setText(input.getFileGdbXMax());
-      wBounds[3].setText(input.getFileGdbYMax());
       wCharset.setText(input.getCharset());
       wTimezone.setText(input.getTimezone());
       wCrs.setText(input.getCrsOverride());
@@ -181,6 +180,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
       wLayerName.setText(Utils.isEmpty(input.getLayerName()) ? "" : input.getLayerName());
       wGeometryFieldName.setText(
           Utils.isEmpty(input.getGeometryFieldName()) ? "" : input.getGeometryFieldName());
+      geometryFieldAutoPopulated = Utils.isEmpty(input.getGeometryFieldName());
       resetAvailableFieldsPreview("Select a vector file to inspect its schema.");
     } finally {
       suppressSchemaRefresh = false;
@@ -200,12 +200,14 @@ public class VectorReaderDialog extends BaseTransformDialog {
     if (resolvedFileName.isBlank()) {
       layerDefinitions = List.of();
       clearLayerCombo();
+      clearAutoPopulatedGeometryField();
       resetAvailableFieldsPreview("Select a vector file to inspect its schema.");
       return;
     }
     if (resolvedFileName.contains("${")) {
       layerDefinitions = List.of();
       clearLayerCombo();
+      clearAutoPopulatedGeometryField();
       resetAvailableFieldsPreview(
           "Schema preview unavailable because the file name contains unresolved variables.");
       return;
@@ -223,6 +225,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
       // service must never make the whole transform dialog impossible to open.
       layerDefinitions = List.of();
       clearLayerCombo();
+      clearAutoPopulatedGeometryField();
       resetAvailableFieldsPreview("No schema information available.\n" + rootCauseMessage(e));
     }
   }
@@ -278,6 +281,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
           suppressSchemaRefresh = false;
         }
       }
+      updateGeometryFieldDefault(layer.geometryFieldName());
       String preview = VectorSchemaProbe.formatFieldPreview(layer);
       var path = java.nio.file.Path.of(variables.resolve(wFileName.getText()));
       if (ch.so.agi.hop.vector.core.VectorFormat.resolve(wFormat.getText(), path)
@@ -292,6 +296,27 @@ public class VectorReaderDialog extends BaseTransformDialog {
   private void resetAvailableFieldsPreview(String message) {
     if (wAvailableFieldsPreview != null && !wAvailableFieldsPreview.isDisposed()) {
       wAvailableFieldsPreview.setText(message == null ? "" : message);
+    }
+  }
+
+  private void updateGeometryFieldDefault(String sourceGeometryField) {
+    if (!geometryFieldAutoPopulated) return;
+    suppressSchemaRefresh = true;
+    try {
+      wGeometryFieldName.setText(sourceGeometryField == null ? "" : sourceGeometryField);
+      geometryFieldAutoPopulated = true;
+    } finally {
+      suppressSchemaRefresh = false;
+    }
+  }
+
+  private void clearAutoPopulatedGeometryField() {
+    if (!geometryFieldAutoPopulated) return;
+    suppressSchemaRefresh = true;
+    try {
+      wGeometryFieldName.setText("");
+    } finally {
+      suppressSchemaRefresh = false;
     }
   }
 
@@ -319,10 +344,6 @@ public class VectorReaderDialog extends BaseTransformDialog {
       return;
     }
     transformName = wTransformName.getText();
-    input.setFileGdbXMin(wBounds[0].getText());
-    input.setFileGdbYMin(wBounds[1].getText());
-    input.setFileGdbXMax(wBounds[2].getText());
-    input.setFileGdbYMax(wBounds[3].getText());
     input.setCharset(wCharset.getText());
     input.setTimezone(wTimezone.getText());
     input.setCrsOverride(wCrs.getText());
@@ -338,7 +359,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
     m.setFileName(wFileName.getText());
     m.setFormat(wFormat.getText());
     m.setLayerName("");
-    m.setGeometryFieldName(wGeometryFieldName.getText());
+    m.setGeometryFieldName("");
     m.setCharset(wCharset.getText());
     m.setTimezone(wTimezone.getText());
     m.setCrsOverride(wCrs.getText());

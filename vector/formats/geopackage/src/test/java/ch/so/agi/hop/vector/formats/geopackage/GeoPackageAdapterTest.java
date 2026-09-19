@@ -59,6 +59,11 @@ class GeoPackageAdapterTest {
       sink.write(new Object[] {"empty", gf.createPoint(), 101L, false, 0.0, date, new byte[0]});
       sink.finish();
     }
+    assertThatThrownBy(() -> provider.open(file, "a layer", "name"))
+        .hasMessageContaining("collides with an attribute");
+    try (VectorSource source = provider.open(file, "a layer", "")) {
+      assertThat(source.schema().geometryColumn()).isEqualTo("shape");
+    }
     try (VectorSource source = provider.open(file, "", "geometry")) {
       assertThat(source.schema().rowMeta().getFieldNames())
           .containsExactly("name", "fid", "flag", "height", "date", "blob", "geometry");
@@ -265,5 +270,42 @@ class GeoPackageAdapterTest {
     try (var source = provider.open(file, "other", "")) {
       assertThat(source.read()[1]).isInstanceOf(Point.class);
     }
+  }
+
+  @Test
+  void readsDeclaredSqlLengthsAndDecimalPrecision() throws Exception {
+    Path file = dir.resolve("declared-types.gpkg");
+    try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file);
+        Statement s = c.createStatement()) {
+      s.execute(
+          "CREATE TABLE gpkg_spatial_ref_sys(srs_name TEXT,srs_id INTEGER PRIMARY KEY,"
+              + "organization TEXT,organization_coordsys_id INTEGER,definition TEXT)");
+      s.execute(
+          "INSERT INTO gpkg_spatial_ref_sys VALUES('CH1903+ / LV95',2056,'EPSG',2056,'undefined')");
+      s.execute(
+          "CREATE TABLE gpkg_contents(table_name TEXT PRIMARY KEY,data_type TEXT,srs_id INTEGER)");
+      s.execute("CREATE TABLE gpkg_geometry_columns(table_name TEXT,column_name TEXT,"
+          + "geometry_type_name TEXT,srs_id INTEGER,z INTEGER,m INTEGER)");
+      s.execute("CREATE TABLE places(fid INTEGER PRIMARY KEY, short_text TEXT(36), "
+          + "long_text VARCHAR(256), amount DECIMAL(10,2), shape POINT)");
+      s.execute("INSERT INTO gpkg_contents VALUES('places','features',2056)");
+      s.execute(
+          "INSERT INTO gpkg_geometry_columns VALUES('places','shape','POINT',2056,0,0)");
+    }
+
+    LayerSchema layer =
+        provider
+            .layers(new ReadRequest(file, "", "", "", new FormatOptions.None(), Diagnostics.NONE))
+            .getFirst();
+
+    assertThat(layer.rowMeta().getValueMeta(layer.rowMeta().indexOfValue("short_text")).getLength())
+        .isEqualTo(36);
+    assertThat(layer.rowMeta().getValueMeta(layer.rowMeta().indexOfValue("long_text")).getLength())
+        .isEqualTo(256);
+    assertThat(layer.rowMeta().getValueMeta(layer.rowMeta().indexOfValue("amount")).getLength())
+        .isEqualTo(10);
+    assertThat(
+            layer.rowMeta().getValueMeta(layer.rowMeta().indexOfValue("amount")).getPrecision())
+        .isEqualTo(2);
   }
 }

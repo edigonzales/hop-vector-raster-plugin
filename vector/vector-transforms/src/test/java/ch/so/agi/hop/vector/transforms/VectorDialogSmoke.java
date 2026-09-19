@@ -15,6 +15,23 @@ public class VectorDialogSmoke {
     return f.get(o);
   }
 
+  private static boolean containsLabel(Control control, String expected) {
+    if (control instanceof Label label && expected.equals(label.getText())) return true;
+    if (control instanceof Composite composite)
+      for (Control child : composite.getChildren()) if (containsLabel(child, expected)) return true;
+    return false;
+  }
+
+  private static String childSizes(Composite composite) {
+    StringBuilder result = new StringBuilder();
+    for (Control child : composite.getChildren()) {
+      result.append(child.getClass().getSimpleName()).append('=').append(child.getBounds());
+      if (child instanceof Composite nested) result.append('[').append(childSizes(nested)).append(']');
+      result.append(' ');
+    }
+    return result.toString();
+  }
+
   private static void whenOpen(Display display, Shell parent, Runnable checks) {
     display.timerExec(
         100,
@@ -285,6 +302,30 @@ public class VectorDialogSmoke {
                   formats.getItems(),
                   new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE"}))
                 throw new AssertionError("Wrong reader formats");
+              VectorReaderDialogComposite content =
+                  (VectorReaderDialogComposite) field(rd, "content");
+              Text preview = content.getAvailableFieldsPreview();
+              int initialHeight = preview.getSize().y;
+              if (containsLabel(content, "FileGDB X min (source CRS)"))
+                throw new AssertionError("Legacy FileGDB bounds must not be visible");
+              var readerShell = content.getShell();
+              var readerSize = readerShell.getSize();
+              readerShell.setSize(readerSize.x, readerSize.y + 180);
+              readerShell.layout(true, true);
+              if (preview.getSize().y <= initialHeight)
+                throw new AssertionError(
+                    "Available fields preview did not grow with the dialog: initial="
+                        + initialHeight
+                        + ", current="
+                        + preview.getSize().y
+                        + ", shell="
+                        + readerSize.y
+                        + " -> "
+                        + readerShell.getSize().y
+                        + ", content="
+                        + content.getSize().y
+                        + ", children="
+                        + childSizes(content));
               System.out.println("Reader dialog format selection OK");
               rd.dispose();
             } catch (Throwable e) {

@@ -57,14 +57,16 @@ class VectorSchemaProbeTest {
             "Point",
             List.of(
                 new VectorSchemaProbe.FieldDefinition("name", "STRING"),
-                new VectorSchemaProbe.FieldDefinition("rank", "INTEGER", -1, 0)));
+                new VectorSchemaProbe.FieldDefinition("rank", "INTEGER", -1, 0),
+                new VectorSchemaProbe.FieldDefinition("precise", "BIGNUMBER", 12, 4)));
 
     assertThat(VectorSchemaProbe.formatFieldPreview(layer))
         .contains("Layer: places")
         .contains("Geometry type: Point")
         .contains("Geometry field: shape")
         .contains("- name (STRING)")
-        .contains("- rank (INTEGER)");
+        .contains("- rank (INTEGER)")
+        .contains("- precise (BIGNUMBER) length=12 precision=4");
   }
 
   private static SimpleFeatureType featureType(

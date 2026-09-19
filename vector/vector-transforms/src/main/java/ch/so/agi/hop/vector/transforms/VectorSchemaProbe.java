@@ -157,6 +157,7 @@ final class VectorSchemaProbe {
     return switch (type) {
       case org.apache.hop.core.row.IValueMeta.TYPE_INTEGER -> "INTEGER";
       case org.apache.hop.core.row.IValueMeta.TYPE_NUMBER -> "NUMBER";
+      case org.apache.hop.core.row.IValueMeta.TYPE_BIGNUMBER -> "BIGNUMBER";
       case org.apache.hop.core.row.IValueMeta.TYPE_BOOLEAN -> "BOOLEAN";
       case org.apache.hop.core.row.IValueMeta.TYPE_DATE -> "DATE";
       case org.apache.hop.core.row.IValueMeta.TYPE_BINARY -> "BINARY";
