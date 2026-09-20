@@ -40,6 +40,7 @@
         <exclude>org.eclipse.imagen:*</exclude>
         <exclude>it.geosolutions.imageio-ext:*</exclude>
         <exclude>tech.units:*</exclude>
+        <exclude>tech.uom.lib:*</exclude>
         <exclude>javax.measure:*</exclude>
         <exclude>systems.uom:*</exclude>
         <exclude>si.uom:*</exclude>
