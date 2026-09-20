@@ -32,13 +32,16 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
   which supplies the shared Raster model and Hop value type.
 - A writable local directory for output files.
 
-The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster uses
+The Geometry Type plugin supplies the Geometry runtime, JTS and the shared GeoTools/Imagen,
+ImageIO-Ext and UOM runtime. Vector/Raster uses
 `classLoaderGroup=sogeo-geometry` and an explicit `dependencies.xml` referencing
-both `../../misc/hop-geometry-type` and `../../misc/hop-geometry-type/lib`.
-Hop does not recursively include `lib` when resolving dependency folders.
+`../../misc/hop-geometry-type`. The Geometry Type plugin adds its own `lib/`
+directory to that shared classloader; repeating the `lib/` folder here would
+make Hop scan every Imagen registry twice because dependency URLs are not
+canonicalized.
 The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
 Install both separate Geometry Type and Raster Type ZIPs before running Vector/Raster.
-Raster Type root and `lib` folders are also referenced by `dependencies.xml`; its shared classes
+The Raster Type root and `lib/` folder are also referenced by `dependencies.xml`; its shared classes
 are excluded from the Vector/Raster ZIP. On upgrade,
 replace the complete `plugins/transforms/vector-raster` folder to remove stale JARs.
 

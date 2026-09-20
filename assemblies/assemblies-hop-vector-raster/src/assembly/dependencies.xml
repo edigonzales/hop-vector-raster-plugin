@@ -1,6 +1,5 @@
 <dependencies>
   <folder>../../misc/hop-geometry-type</folder>
-  <folder>../../misc/hop-geometry-type/lib</folder>
   <folder>../../misc/hop-raster-type</folder>
   <folder>../../misc/hop-raster-type/lib</folder>
 </dependencies>

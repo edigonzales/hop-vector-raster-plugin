@@ -33,18 +33,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-raster-values-",
         "hop-raster-geotools-",
         "hop-vector-format-generate-",
-        "gt-geotiff-",
-        "gt-coverage-",
-        "imageio-ext-cog-reader-",
-        "imageio-ext-cog-streams-",
-        "gt-main-",
-
-        "gt-epsg-hsql-",
         "sqlite-jdbc-",
-        "imagen-core-",
-        "indriya-",
-        "systems-common-",
-        "unit-api-",
     ]
     for fragment in required:
         if not any(fragment in name for name in names):
@@ -52,11 +41,12 @@ with zipfile.ZipFile(zip_path) as archive:
 
     dependencies = ET.fromstring(archive.read("plugins/transforms/vector-raster/dependencies.xml"))
     folders = {node.text for node in dependencies.findall("folder")}
-    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-geometry-type/lib", "../../misc/hop-raster-type", "../../misc/hop-raster-type/lib"}:
-        raise SystemExit("Geometry and its lib folder must both be explicit dependencies")
+    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-raster-type", "../../misc/hop-raster-type/lib"}:
+        raise SystemExit("Geometry Type and Raster Type dependencies must be explicit")
 
     forbidden = [
         "hop-geometry-type-", "hop-raster-type-", "hop-raster-core-", "jts-core-",
+        "gt-", "imageio-ext-", "indriya-", "unit-api-", "systems-common-", "uom-", "si-",
         "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
         "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
         "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
@@ -68,23 +58,15 @@ with zipfile.ZipFile(zip_path) as archive:
                 f"{zip_path.name}: dependency {fragment!r} must not be bundled: {matches}"
             )
 
-    # Explicitly reviewed GeoTools modules; none originate in modules/unsupported.
-    # Additions require reviewing their source module and runtime requirements.
-    allowed_geotools = {
-        "gt-api", "gt-main", "gt-metadata", "gt-referencing", "gt-http",
-        "gt-epsg-hsql", "gt-coverage",
-        "gt-geotiff", "gt-xml", "gt-xsd-core", "gt-xsd-ows", "gt-xsd-gml2",
-        "gt-xsd-gml3", "gt-xsd-filter", "gt-xsd-fes",
-    }
-    for name in names:
-        if name.startswith("gt-") and name.endswith(".jar"):
-            if name.removesuffix("-35.1.jar") not in allowed_geotools:
-                raise SystemExit(f"Unreviewed GeoTools module or version (expected 35.1): {name}")
-    # SQLite JDBC's bundled natives are intentional; no raster native runtime is allowed.
+    # SQLite JDBC's bundled natives are intentional; no shared raster/vector runtime is allowed.
     for entry in entries:
         if not entry.endswith(".jar"):
             continue
         with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
+            if "META-INF/registryFile.imagen" in nested.namelist():
+                raise SystemExit(
+                    f"Imagen registry metadata must come from Geometry Type, not {entry}"
+                )
             if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-filegeodatabase-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-transforms-")):
                 for name in nested.namelist():
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
@@ -110,31 +92,9 @@ with zipfile.ZipFile(zip_path) as archive:
             if natives and not Path(entry).name.startswith("sqlite-jdbc-"):
                 raise SystemExit(f"Unexpected native library in {entry}: {natives}")
 
-    indriya_entries = [
-        entry for entry in entries if Path(entry).name.lower().startswith("indriya-") and entry.endswith(".jar")
-    ]
-    if len(indriya_entries) != 1:
-        raise SystemExit(
-            f"{zip_path.name}: expected exactly one Indriya runtime JAR, found {indriya_entries}"
-        )
-
-    service_path = "META-INF/services/tech.units.indriya.spi.NumberSystem"
-    with archive.open(indriya_entries[0]) as nested_file:
-        with zipfile.ZipFile(BytesIO(nested_file.read())) as nested:
-            if service_path not in nested.namelist():
-                raise SystemExit(
-                    f"{zip_path.name}: {indriya_entries[0]} is missing {service_path}"
-                )
-            provider = nested.read(service_path).decode("utf-8").strip()
-            if "tech.units.indriya.function.DefaultNumberSystem" not in provider.splitlines():
-                raise SystemExit(
-                    f"{zip_path.name}: Indriya NumberSystem service does not declare DefaultNumberSystem"
-                )
-
 size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
-print("  Native Java Shapefile + GeoTools 35.1 raster + EPSG runtime; GeoPackage uses SQLite JDBC")
+print("  Native Java Shapefile + Geometry Type supplied GeoTools/Imagen runtime; GeoPackage uses SQLite JDBC")
 print("  File geodatabase support is pure Java via filegdb4j, no GDAL bindings")
-print("  Indriya NumberSystem service metadata is present")
-print("  Geometry and JTS are supplied only by the separate Geometry Type plugin")
-print("  No unsupported GeoTools modules or GDAL bindings; SQLite JDBC natives are allowed")
+print("  Geometry, JTS, GeoTools, Imagen, ImageIO-Ext and UOM are supplied only by Geometry Type")
+print("  No GeoTools/Imagen registry metadata or GDAL bindings; SQLite JDBC natives are allowed")

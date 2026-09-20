@@ -50,6 +50,13 @@
       <artifactId>hop-raster-geotools</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- The transform exposes GeoTools API types in its implementation boundary, but the
+         shared GeoTools runtime is supplied by the Geometry Type plugin at installation time. -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-main</artifactId>
+      <scope>provided</scope>
+    </dependency>
   <dependency><groupId>ch.so.agi</groupId><artifactId>hop-raster-type</artifactId><version>${project.version}</version><scope>provided</scope></dependency><dependency><groupId>ch.so.agi</groupId><artifactId>hop-raster-core</artifactId><version>${project.version}</version><scope>provided</scope></dependency></dependencies>
   <build>
     <plugins>

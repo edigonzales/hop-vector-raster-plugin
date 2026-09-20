@@ -16,6 +16,7 @@
     <dependency>
       <groupId>org.geotools</groupId>
       <artifactId>gt-main</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hop</groupId>
@@ -57,14 +58,17 @@
     <dependency>
       <groupId>org.geotools</groupId>
       <artifactId>gt-referencing</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.geotools</groupId>
       <artifactId>gt-epsg-hsql</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>tech.units</groupId>
       <artifactId>indriya</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
   <build>

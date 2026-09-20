@@ -19,6 +19,18 @@
       <artifactId>gt-geopkg</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Tests use the shared CRS/UOM runtime directly; the installable plugin receives it from
+         Geometry Type rather than from Vector/Raster. -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-epsg-hsql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>tech.units</groupId>
+      <artifactId>indriya</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-core</artifactId>

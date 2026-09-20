@@ -8,8 +8,8 @@
   mindestens `0.2.0-SNAPSHOT` mit Z/M-Serialisierungsupdate oder ein kompatibler neuerer Build.
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
 
-Das Plugin-ZIP enthält seine GeoTools- und Rasterbibliotheken sowie SQLite JDBC.
-Das Geometry-Type-Plugin stellt den Geometry-Datentyp und JTS bereit. Vector/Raster verweist in `dependencies.xml` explizit auf dessen Hauptordner und `lib`-Unterordner; beide Plugins verwenden `sogeo-geometry`. Das Vector/Raster-ZIP enthält keine eigenen Geometry-/JTS-Kopien. Bei Updates den gesamten Vector/Raster-Ordner ersetzen.
+Das Plugin-ZIP enthält seine Rasterbibliotheken sowie SQLite JDBC.
+Das Geometry-Type-Plugin stellt den Geometry-Datentyp und die gemeinsame GeoTools-/Imagen-Runtime bereit. Vector/Raster verweist in `dependencies.xml` auf dessen Hauptordner sowie auf die Raster-Type-Ordner; dessen eigener `lib`-Ordner wird bereits durch den Geometry-Type-Classloader eingebunden und darf nicht ein zweites Mal referenziert werden. Beide Plugins verwenden `sogeo-geometry`. Das Vector/Raster-ZIP enthält keine eigenen Geometry-/JTS-Kopien. Bei Updates den gesamten Vector/Raster-Ordner ersetzen.
 Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 
 === Release installieren

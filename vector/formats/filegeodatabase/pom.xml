@@ -46,6 +46,18 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- GeoTools/UOM are shared runtime dependencies. These test-only declarations keep the
+         module tests self-contained without making either library part of the assembly. -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-epsg-hsql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>tech.units</groupId>
+      <artifactId>indriya</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

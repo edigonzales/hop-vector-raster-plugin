@@ -20,6 +20,13 @@
       <artifactId>gt-geopkg</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- The package tests exercise EPSG decoding locally; production/runtime GeoTools comes
+         from the shared Geometry Type plugin and is not packaged here. -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-epsg-hsql</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-core</artifactId>
