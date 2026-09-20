@@ -17,6 +17,7 @@
       <includes>
         <include>ch.so.agi:hop-vector-transforms</include>
         <include>ch.so.agi:hop-raster-values</include>
+        <include>ch.so.agi:hop-raster-geotools</include>
       </includes>
     </dependencySet>
 
@@ -30,9 +31,18 @@
         <exclude>ch.so.agi:hop-vector-transforms</exclude>
         <exclude>ch.so.agi:hop-raster-values</exclude>
         <exclude>ch.so.agi:hop-raster-core</exclude>
+        <exclude>ch.so.agi:hop-raster-geotools</exclude>
         <exclude>ch.so.agi:hop-raster-type</exclude>
         <exclude>ch.so.agi:hop-geometry-type</exclude>
         <exclude>org.locationtech.jts:jts-core</exclude>
+        <exclude>org.geotools:*</exclude>
+        <exclude>org.geotools.ogc:*</exclude>
+        <exclude>org.eclipse.imagen:*</exclude>
+        <exclude>it.geosolutions.imageio-ext:*</exclude>
+        <exclude>tech.units:*</exclude>
+        <exclude>javax.measure:*</exclude>
+        <exclude>systems.uom:*</exclude>
+        <exclude>si.uom:*</exclude>
         <exclude>org.apache.hop:*</exclude>
         <exclude>org.slf4j:*</exclude>
       </excludes>
