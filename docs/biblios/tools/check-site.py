@@ -56,7 +56,7 @@ def check(root):
     for anchor in expected:
         assert anchor in pages[manual].ids, 'Missing section: ' + anchor
     downloads = list(root.rglob('*.hpl'))
-    assert len(downloads) == 7, f'Expected seven pipeline downloads, got {len(downloads)}'
+    assert len(downloads) == 8, f'Expected eight pipeline downloads, got {len(downloads)}'
     search = list(root.rglob('*search*.json'))
     assert search, 'Missing search JSON'
     combined = '\n'.join(p.read_text() for p in search)
