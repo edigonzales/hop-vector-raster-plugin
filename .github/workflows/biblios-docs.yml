@@ -5,9 +5,13 @@ on:
     branches: [main]
     paths:
       - 'docs/biblios/**'
+      - 'examples/**'
+      - '.github/workflows/biblios-docs.yml'
   pull_request:
     paths:
       - 'docs/biblios/**'
+      - 'examples/**'
+      - '.github/workflows/biblios-docs.yml'
   workflow_dispatch:
 
 permissions:

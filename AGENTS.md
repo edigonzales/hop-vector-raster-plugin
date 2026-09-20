@@ -4,8 +4,13 @@
 
 Before changing pipelines or test setup, read the
 [shared CI contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md).
+Also read the
+[plugin repository contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/plugin-repository-contract.md).
 The documentation follows `main`; use the interfaces at this repo's actual
 workflow/helper revisions and preserve existing pins and `ci-ref` values.
+The `multi-module-suite` repository contract check runs as a dedicated job in
+`verify.yml` against the central checker, because the build workflow remains on
+its existing pinned helper revision.
 
 Run the commands below from this repository root in Bash, using Python 3, Maven
 and JDK 21 (`JAVA_HOME` and `PATH` pointing to that JDK). Compatibility jobs also

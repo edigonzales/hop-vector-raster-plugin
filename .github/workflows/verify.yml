@@ -7,6 +7,20 @@ permissions:
   contents: read
 
 jobs:
+  contract:
+    name: Check plugin repository contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: edigonzales/hop-plugin-ci
+          ref: main
+          path: .ci/hop-plugin-ci
+          persist-credentials: false
+      - name: Validate repository structure and documentation links
+        run: python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile multi-module-suite
+
   build:
     uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@990af4813013fa8d21f6447e7545ed5499f2f202
     with:

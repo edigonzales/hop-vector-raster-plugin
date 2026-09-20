@@ -6,6 +6,13 @@
   <packaging>pom</packaging>
   <name>Apache Hop Vector Raster Plugin</name>
   <description>Vector formats and raster processing for Apache Hop.</description>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <modules>
     <module>vector/vector-core</module>
     <module>raster/raster-values</module>
