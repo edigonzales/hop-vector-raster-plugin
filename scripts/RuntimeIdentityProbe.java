@@ -43,6 +43,10 @@ public class RuntimeIdentityProbe {
    var origin=java.nio.file.Path.of(ca.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath();
    if(!origin.startsWith(java.nio.file.Path.of("plugins/misc/hop-raster-type").toRealPath()))throw new AssertionError("Raster class outside central type plugin: "+origin);
   }
+  Class<?> backend=a.loadClass("ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend");
+  if(backend!=b.loadClass(backend.getName())) throw new AssertionError("Different raster backend class identity");
+  var backendOrigin=java.nio.file.Path.of(backend.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath();
+  if(!backendOrigin.startsWith(java.nio.file.Path.of("plugins/transforms/vector-raster/lib").toRealPath()))throw new AssertionError("Raster backend outside Vector/Raster lib: "+backendOrigin);
 
  }
 }

@@ -39,10 +39,17 @@ with zipfile.ZipFile(zip_path) as archive:
         if not any(fragment in name for name in names):
             raise SystemExit(f"{zip_path.name}: required dependency matching {fragment!r} is missing")
 
+    raster_backend = [
+        entry for entry in entries
+        if Path(entry).name.lower().startswith("hop-raster-geotools-")
+    ]
+    if len(raster_backend) != 1 or "/lib/" not in raster_backend[0]:
+        raise SystemExit("hop-raster-geotools must be packaged once in the plugin lib directory")
+
     dependencies = ET.fromstring(archive.read("plugins/transforms/vector-raster/dependencies.xml"))
     folders = {node.text for node in dependencies.findall("folder")}
-    if folders != {"../../misc/hop-geometry-type", "../../misc/hop-raster-type", "../../misc/hop-raster-type/lib"}:
-        raise SystemExit("Geometry Type and Raster Type dependencies must be explicit")
+    if folders != {"../../misc/hop-raster-type", "../../misc/hop-raster-type/lib"}:
+        raise SystemExit("Raster Type dependencies must be explicit")
 
     forbidden = [
         "hop-geometry-type-", "hop-raster-type-", "hop-raster-core-", "jts-core-",

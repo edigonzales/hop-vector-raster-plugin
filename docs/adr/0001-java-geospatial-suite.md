@@ -22,7 +22,7 @@ The modules are:
 - `hop-raster-zonal-stats`: one input polygon row receives statistics, valid count and status.
 - `hop-vector-format-generate`: independent Java/JTS encoder and file sink, without any GeoTools dependency.
 
-Use the new installation directory `plugins/transforms/vector-raster` and remove the former `geotools-vector` directory on upgrade. Transform IDs intentionally change without aliases; see [migration](../migration.md). All transforms share `classLoaderGroup=sogeo-geometry`. The Geometry Type plugin supplies the Hop Geometry type and its shared runtime; the Vector/Raster ZIP declares the Geometry plugin folder and Raster Type folders in `dependencies.xml`. Its Geometry Type `lib` folder is intentionally not repeated there, because the Geometry Type classloader already contributes it and Hop does not canonicalize dependency URLs. Different raster plugin IDs and explicit `(GeoTools)` display names permit installation alongside GDAL transforms.
+Use the new installation directory `plugins/transforms/vector-raster` and remove the former `geotools-vector` directory on upgrade. Transform IDs intentionally change without aliases; see [migration](../migration.md). All transforms share `classLoaderGroup=sogeo-geometry`. The Geometry Type plugin supplies the Hop Geometry type and its shared runtime directly to that grouped classloader; Vector/Raster does not repeat its folders in `dependencies.xml`, avoiding duplicate non-canonical URLs and Imagen registrations. The declaration contains only the Raster Type folders. Different raster plugin IDs and explicit `(GeoTools)` display names permit installation alongside GDAL transforms.
 
 ## Raster semantics
 
