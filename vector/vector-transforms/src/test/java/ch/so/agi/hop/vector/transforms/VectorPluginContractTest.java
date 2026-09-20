@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import org.apache.hop.core.annotations.Transform;
+import org.apache.hop.core.extension.ExtensionPoint;
 import org.junit.jupiter.api.Test;
 
 class VectorPluginContractTest {
@@ -17,6 +18,16 @@ class VectorPluginContractTest {
     assertThat(writer).isNotNull();
     assertThat(reader.classLoaderGroup()).isEqualTo("sogeo-geometry");
     assertThat(writer.classLoaderGroup()).isEqualTo("sogeo-geometry");
+  }
+
+  @Test
+  void geometryRuntimeBootstrapRunsAfterHopEnvironmentInitialization() {
+    ExtensionPoint bootstrap =
+        GeometryRuntimeClassLoaderBootstrap.class.getAnnotation(ExtensionPoint.class);
+
+    assertThat(bootstrap).isNotNull();
+    assertThat(bootstrap.extensionPointId()).isEqualTo("HopEnvironmentAfterInit");
+    assertThat(bootstrap.classLoaderGroup()).isEqualTo("sogeo-geometry");
   }
 
   @Test

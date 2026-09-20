@@ -55,6 +55,23 @@ def extract_plugin(zip_path: Path, hop_home: Path, plugin_root: str) -> None:
         archive.extractall(hop_home)
 
 
+def reject_preinstalled_geospatial_runtime(hop_home: Path) -> None:
+    markers = {
+        "org/eclipse/imagen/PlanarImage.class",
+        "org/locationtech/jts/geom/Geometry.class",
+    }
+    for jar in jars(hop_home / "plugins"):
+        try:
+            with zipfile.ZipFile(jar) as archive:
+                found = markers.intersection(archive.namelist())
+        except zipfile.BadZipFile as exc:
+            raise SystemExit(f"Invalid plugin JAR in Hop home: {jar}") from exc
+        if found:
+            raise SystemExit(
+                f"Hop home is not clean; preinstalled geospatial runtime {sorted(found)} in {jar}"
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hop-home", required=True, type=Path)
@@ -77,6 +94,7 @@ def main() -> int:
     ):
         if plugin_root.exists():
             raise SystemExit(f"Hop home is not clean; plugin directory already exists: {plugin_root}")
+    reject_preinstalled_geospatial_runtime(args.hop_home)
 
     if args.work_dir:
         args.work_dir = args.work_dir.resolve()

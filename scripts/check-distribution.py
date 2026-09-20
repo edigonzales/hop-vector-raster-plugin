@@ -81,6 +81,7 @@ with zipfile.ZipFile(zip_path) as archive:
             required_content = []
             if Path(entry).name.startswith("hop-vector-transforms-"):
                 required_content = [
+                    "ch/so/agi/hop/vector/transforms/GeometryRuntimeClassLoaderBootstrap.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbWriter.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbWriterDialog.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbCatalogReader.class",

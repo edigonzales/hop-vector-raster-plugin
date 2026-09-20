@@ -12,9 +12,11 @@ sources/
 
 The Geometry Type plugin supplies the Geometry runtime and JTS. Vector/Raster uses
 `classLoaderGroup=sogeo-geometry`, which lets Hop add the complete Geometry plugin
-to the shared classloader once. Do not reference the Geometry Type folders in
-Vector/Raster's `dependencies.xml`: the relative aliases would load the same
-Imagen registry resources twice. Only the Raster Type folders are explicit there.
+to the shared classloader once. A `HopEnvironmentAfterInit` extension initializes
+that canonical Geometry loader before any pipeline constructs raster data. Do not
+reference the Geometry Type folders in Vector/Raster's `dependencies.xml`: the
+relative aliases would load the same Imagen registry resources twice. Only the
+Raster Type folders are explicit there.
 The Vector/Raster ZIP contains neither Geometry Type nor JTS runtime copies.
 Build/install the matching `hop-raster-type-plugin` repository first. Install both the separate
 Geometry Type and Raster Type ZIPs before running Vector/Raster. On upgrade,

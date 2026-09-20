@@ -17,7 +17,7 @@ public class RuntimeIdentityProbe {
   ClassLoader first=r.getClassLoader(args[0].equals("raster-first")?raster:geometry);
   ClassLoader a=r.getClassLoader(raster), b=r.getClassLoader(geometry);
   if(a!=b) throw new AssertionError("Different classloaders");
-  for(String n:new String[]{"org.locationtech.jts.geom.GeometryFactory","com.atolcd.hop.core.row.value.ValueMetaGeometry","org.geotools.ows.wmts.WebMapTileServer","org.eclipse.imagen.OperationRegistry"}) {
+  for(String n:new String[]{"org.locationtech.jts.geom.GeometryFactory","com.atolcd.hop.core.row.value.ValueMetaGeometry","org.geotools.ows.wmts.WebMapTileServer","org.eclipse.imagen.OperationRegistry","org.eclipse.imagen.PlanarImage"}) {
    Class<?> ca=a.loadClass(n),cb=b.loadClass(n);
    if(ca!=cb) throw new AssertionError("Different classes "+n);
    java.nio.file.Path origin=java.nio.file.Path.of(ca.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath();
