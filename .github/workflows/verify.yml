@@ -36,7 +36,7 @@ jobs:
       maven-goals: clean verify
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
       zip-glob: assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip
-      validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py", "python scripts/test-raster-migration.py", "xvfb-run -a python scripts/check-vector-dialogs.py"]'
+      validation-commands: '["python scripts/check-distribution.py", "python scripts/check-cloud-output.py", "python scripts/test-raster-migration.py", "sh scripts/run-headless-vector-dialogs.sh"]'
       additional-verified-files: '["pom.xml"]'
       artifact-name-prefix: hop-vector-raster-plugin
       group-id: ch.so.agi

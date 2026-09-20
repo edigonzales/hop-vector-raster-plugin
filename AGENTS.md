@@ -14,7 +14,9 @@ its existing pinned helper revision.
 
 Run the commands below from this repository root in Bash, using Python 3, Maven
 and JDK 21 (`JAVA_HOME` and `PATH` pointing to that JDK). Compatibility jobs also
-use JDK 25. For headless Linux SWT tests, run Maven under `xvfb-run -a`.
+use JDK 25. For headless Linux SWT tests, run Maven normally and execute the
+native dialog smoke check with `sh scripts/run-headless-vector-dialogs.sh`. The
+wrapper starts Xvfb directly and does not require `xauth`.
 Set `HOP_CI_DIR` to an absolute checkout of `hop-plugin-ci` at the helper revision
 used by this repo's workflow, then prepare the same Maven repositories as CI:
 
