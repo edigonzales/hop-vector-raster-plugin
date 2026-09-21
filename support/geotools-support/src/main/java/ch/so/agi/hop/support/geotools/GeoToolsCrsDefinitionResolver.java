@@ -63,6 +63,9 @@ public final class GeoToolsCrsDefinitionResolver implements CrsDefinitionResolve
           "undefined");
     GeoToolsRuntimeSupport.initialize();
     var crs = org.geotools.referencing.CRS.decode("EPSG:" + srid, true);
-    return new Definition(srid, crs.getName().toString(), "EPSG", srid, crs.toWKT());
+    var formatter = new org.geotools.referencing.wkt.Formatter();
+    formatter.setAuthority(org.geotools.metadata.iso.citation.Citations.ESRI);
+    formatter.append(crs);
+    return new Definition(srid, crs.getName().toString(), "EPSG", srid, formatter.toString());
   }
 }

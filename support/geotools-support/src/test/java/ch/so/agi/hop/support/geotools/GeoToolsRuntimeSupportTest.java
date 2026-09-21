@@ -31,6 +31,16 @@ class GeoToolsRuntimeSupportTest {
   }
 
   @Test
+  void resolvesKnownCrsAsEsriWkt() throws Exception {
+    var definition = new GeoToolsCrsDefinitionResolver().resolve(2056);
+
+    assertThat(definition.wkt())
+        .contains("PROJECTION[\"Hotine_Oblique_Mercator_Azimuth_Center\"")
+        .contains("AUTHORITY[\"EPSG\",\"2056\"]");
+    assertThat(CRS.lookupEpsgCode(CRS.parseWKT(definition.wkt()), true)).isEqualTo(2056);
+  }
+
+  @Test
   void fallsBackWhenNumberSystemServiceIsInvisible() throws Exception {
     URL pluginClasses =
         GeoToolsRuntimeSupport.class.getProtectionDomain().getCodeSource().getLocation();

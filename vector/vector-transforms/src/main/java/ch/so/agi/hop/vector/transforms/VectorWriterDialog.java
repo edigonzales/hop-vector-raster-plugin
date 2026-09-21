@@ -1,6 +1,8 @@
 package ch.so.agi.hop.vector.transforms;
 
+import com.atolcd.hop.core.row.value.ValueMetaGeometry;
 import org.apache.hop.core.variables.IVariables;
+import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.ui.core.PropsUi;
 import org.apache.hop.ui.core.dialog.BaseDialog;
@@ -109,13 +111,14 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wFileName.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Geometry field");
     wGeometryField = new ComboVar(variables, body, SWT.BORDER);
+    IRowMeta previousFields = null;
     try {
-      wGeometryField.setItems(
-          pipelineMeta.getPrevTransformFields(variables, transformName).getFieldNames());
+      previousFields = pipelineMeta.getPrevTransformFields(variables, transformName);
+      if (previousFields != null) wGeometryField.setItems(previousFields.getFieldNames());
     } catch (Exception ignored) {
       /* Upstream metadata may not be available yet. */
     }
-    wGeometryField.setText(String.valueOf(input.getGeometryField()));
+    wGeometryField.setText(initialGeometryField(input.getGeometryField(), previousFields));
     wGeometryField.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     layerOptions = new Composite(body, SWT.NONE);
     layerOptions.setLayout(new GridLayout(2, false));
@@ -418,6 +421,19 @@ public class VectorWriterDialog extends BaseTransformDialog {
     shell.setSize(860, Math.min(820, getParent().getDisplay().getClientArea().height - 100));
     BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
     return transformName;
+  }
+
+  static String initialGeometryField(String configured, IRowMeta previousFields) {
+    String value = configured == null ? "" : configured;
+    if (previousFields == null || !(value.isBlank() || value.equals("geometry"))) return value;
+
+    java.util.List<String> geometryFields = new java.util.ArrayList<>();
+    for (int i = 0; i < previousFields.size(); i++) {
+      var field = previousFields.getValueMeta(i);
+      if (field instanceof ValueMetaGeometry) geometryFields.add(field.getName());
+    }
+    if (value.equals("geometry") && geometryFields.contains(value)) return value;
+    return geometryFields.size() == 1 ? geometryFields.getFirst() : "";
   }
 
   private void updateFormat() {

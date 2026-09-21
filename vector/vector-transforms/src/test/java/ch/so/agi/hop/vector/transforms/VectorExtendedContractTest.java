@@ -17,6 +17,7 @@ import org.apache.hop.pipeline.transforms.sort.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.locationtech.jts.geom.*;
+import org.geotools.referencing.CRS;
 
 class VectorExtendedContractTest {
   @TempDir Path dir;
@@ -86,6 +87,7 @@ class VectorExtendedContractTest {
       var meta = new VectorWriterMeta();
       Path file = dir.resolve("empty." + ext);
       meta.setFileName(file.toString());
+      meta.setGeometryField("geometry");
       meta.setLayerGeometryType("POINT");
       meta.setLayerDimension("XY");
       meta.setCrsOverride("EPSG:2056");
@@ -106,6 +108,7 @@ class VectorExtendedContractTest {
     var meta = new VectorWriterMeta();
     Path file = dir.resolve("limit.shp");
     meta.setFileName(file.toString());
+    meta.setGeometryField("geometry");
     var w = writer(meta, () -> new Object[] {1L, null});
     for (int i = 0; i < 10000; i++) assertThat(w.processRow()).isTrue();
     assertThatThrownBy(w::processRow).hasMessageContaining("10000");
@@ -147,6 +150,7 @@ class VectorExtendedContractTest {
     sort.setSortFields(List.of(new SortRowsField("id", true, false, false, 0, false)));
     var writer = new VectorWriterMeta();
     writer.setFileName(target.toString());
+    writer.setGeometryField("geometry");
     var pm = new PipelineMeta();
     pm.setName("Shapefile sort with disk spill");
     var a = new TransformMeta("read", reader);
@@ -182,6 +186,41 @@ class VectorExtendedContractTest {
         assertThat(g.getCoordinate().getZ()).isEqualTo(3);
       }
       assertThat(input.read()).isNull();
+    }
+  }
+
+  @Test
+  void shapefilePrjUsesQgisCompatibleWktForKnownCrs() throws Exception {
+    Path file = dir.resolve("epsg2056.shp");
+    var gf = new GeometryFactory(new PrecisionModel(), 2056);
+    var point = gf.createPoint(new CoordinateXY(2600000, 1200000));
+    var provider = VectorProviders.get(VectorFormat.SHAPEFILE);
+    var definition = new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver().resolve(2056);
+    var schema = GeometrySchema.explicit("POINT", "XY", definition);
+
+    try (var sink =
+        provider.create(
+            new WriteRequest(
+                file,
+                "epsg2056",
+                rm(),
+                1,
+                point,
+                schema,
+                ShapefileOptions.defaults(),
+                Diagnostics.NONE))) {
+      sink.write(new Object[] {1L, point});
+      sink.finish();
+    }
+
+    String wkt = Files.readString(dir.resolve("epsg2056.prj"));
+    assertThat(wkt).contains("Hotine_Oblique_Mercator_Azimuth_Center");
+    assertThat(CRS.lookupEpsgCode(CRS.parseWKT(wkt), true)).isEqualTo(2056);
+    try (var source = provider.open(file, "", "geometry")) {
+      var row = source.read();
+      assertThat(row[0]).isEqualTo(1L);
+      assertThat(((Geometry) row[1]).getCoordinate()).isEqualTo(point.getCoordinate());
+      assertThat(source.read()).isNull();
     }
   }
 }

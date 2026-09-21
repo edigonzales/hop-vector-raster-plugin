@@ -48,7 +48,7 @@ Die Wahl unter *Format* steuert die sichtbaren Formatoptionen.
 |Format |`AUTO` |`.shp`, `.gpkg`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
 |Layer (optional) |Leer |Freies Eingabefeld mit Variablenunterstützung. Ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung; für GENERATE ist das Feld ohne Bedeutung.
 |Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren.
-|Geometry field |`geometry` |Geometry-Spalte aus den Eingabezeilen.
+|Geometry field |Leer |Geometry-Spalte aus den Eingabezeilen. Bei genau einem eingehenden Geometry-Feld wird dieses automatisch ausgewählt; bei mehreren oder keinem Geometry-Feld bleibt die Auswahl leer.
 |Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie bei Shapefile/FlatGeobuf/Parquet.
 |Layer dimension |`AUTO` |`XY`, `XYZ`, `XYM`, `XYZM` oder Ableitung; für die genannten Formate.
 |DBF encoding (empty: UTF-8) |Leer |Bei Shapefile-Ausgabe standardmässig UTF-8 mit CPG-Datei.

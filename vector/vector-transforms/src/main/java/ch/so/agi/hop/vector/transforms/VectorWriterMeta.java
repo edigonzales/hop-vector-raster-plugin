@@ -280,6 +280,10 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
       throws org.apache.hop.core.exception.HopXmlException {
     super.loadXml(node, provider);
+    // Pipelines written before the geometry-field default became empty did not always
+    // serialize this property. Keep their historical default when the tag is absent.
+    if (org.apache.hop.core.xml.XmlHandler.getNodes(node, "geometryField").isEmpty())
+      geometryField = "geometry";
     if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "fileGdbPrecisionMode") == null)
       fileGdbPrecisionMode = "LEGACY";
   }
@@ -305,7 +309,7 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
     fileName = "";
     format = "AUTO";
     layerName = "";
-    geometryField = "geometry";
+    geometryField = "";
     geometryType = "LINE";
     dimension = "XY";
     idField = "";

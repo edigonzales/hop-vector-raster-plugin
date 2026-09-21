@@ -87,6 +87,7 @@ class CloudFormatsContractTest {
         rm.addValueMeta(new ValueMetaGeometry("geometry"));
         var meta = new VectorWriterMeta();
         meta.setFileName(dir.resolve(ext + empty + "." + ext).toString());
+        meta.setGeometryField("geometry");
         meta.setFlatGeobufIndex(false);
         if (empty) {
           meta.setLayerGeometryType("POINT");

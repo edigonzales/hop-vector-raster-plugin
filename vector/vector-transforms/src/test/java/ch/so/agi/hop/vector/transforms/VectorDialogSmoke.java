@@ -227,6 +227,11 @@ public class VectorDialogSmoke {
                 throw new AssertionError("Interpolation disabled");
               ((Combo) field(dialog, "wLayerType")).setText("POINT");
               ((Combo) field(dialog, "wLayerDimension")).setText("XYZM");
+              org.apache.hop.ui.core.widget.ComboVar geometryField =
+                  (org.apache.hop.ui.core.widget.ComboVar) field(dialog, "wGeometryField");
+              if (!geometryField.getText().isBlank())
+                throw new AssertionError("Geometry field must be empty without input metadata");
+              geometryField.setText("geometry");
               ((org.apache.hop.ui.core.widget.TextVar) field(dialog, "wCharset"))
                   .setText("windows-1252");
               var save = VectorWriterDialog.class.getDeclaredMethod("ok");

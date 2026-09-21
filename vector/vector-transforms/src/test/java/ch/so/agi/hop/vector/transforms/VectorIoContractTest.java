@@ -178,6 +178,7 @@ class VectorIoContractTest {
     VectorWriterMeta meta = new VectorWriterMeta();
     meta.setFormat("AUTO");
     meta.setFileName("${OUTPUT_PATH}");
+    meta.setGeometryField("geometry");
     PipelineMeta pm = new PipelineMeta();
     TransformMeta tm = new TransformMeta("writer", meta);
     pm.addTransform(tm);
