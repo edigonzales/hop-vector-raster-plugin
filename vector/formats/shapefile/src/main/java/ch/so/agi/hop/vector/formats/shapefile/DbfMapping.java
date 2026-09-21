@@ -80,8 +80,17 @@ final class DbfMapping {
 
   static Object read(DbfField f, String raw, ZoneId zone) {
     String s = raw.strip();
-    if (f.type() == DbfFieldType.CHARACTER) return raw.stripTrailing();
+    if (f.type() == DbfFieldType.CHARACTER) {
+      // Some DBF writers represent NULL text with a field filled with NUL bytes.
+      if (!raw.isEmpty() && raw.chars().allMatch(c -> c == '\0')) return null;
+      return raw.stripTrailing();
+    }
     if (s.isEmpty() || s.equals("?")) return null;
+    // DBF date NULLs may be stored as eight zeroes or a space-padded zero.
+    if (f.type() == DbfFieldType.DATE && (s.equals("00000000") || s.equals("0"))) return null;
+    // DBF numeric NULLs may be represented by a field filled with asterisks.
+    if ((f.type() == DbfFieldType.NUMERIC || f.type() == DbfFieldType.FLOAT)
+        && s.chars().allMatch(c -> c == '*')) return null;
     return switch (f.type()) {
       case CHARACTER -> s;
       case NUMERIC, FLOAT ->

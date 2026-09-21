@@ -58,14 +58,37 @@ Geometriespalte, Geometrietyp, Dimension und CRS, soweit verfügbar.
 Eine noch nicht auflösbare Variable oder ein Probe-Fehler wird im Dialog angezeigt;
 das tatsächliche Lesen kann erst mit einem gültigen Pfad gelingen.
 
+[[dbf-zeichenkodierung]]
+=== DBF-Zeichenkodierung
+
+Für Shapefiles bestimmt das Feld *DBF encoding (empty: auto)* die Zeichenkodierung der DBF-Attribute.
+Der Reader verwendet zuerst eine explizite Eingabe, andernfalls die CPG-Datei und danach eine erkannte
+DBF-Codepage (LDID). Fehlen diese Angaben, verwendet er `ISO-8859-1` und meldet `encoding-fallback`.
+Es gibt keine automatische Erkennung anhand der Textbytes.
+
+Gültige Eingaben sind beispielsweise `UTF-8`, `ISO-8859-1`, `Latin1` und `windows-1252`.
+`Latin1` ist ein Alias für `ISO-8859-1`; die Schreibweise `Latin-1` wird dagegen nicht akzeptiert.
+Wählen Sie die tatsächliche Kodierung der Quelldatei: UTF-8-Daten erscheinen mit `ISO-8859-1`
+beispielsweise als `GewÃ¤sser`, mit `UTF-8` korrekt als `Gewässer`.
+Tragen Sie in diesem Fall `UTF-8` ein, übernehmen Sie die Einstellung mit *OK* und führen Sie
+die Pipeline erneut aus.
+
+Jede Änderung im Encoding-Feld löst sofort eine neue Schema-Abfrage aus, auch während des Tippens.
+Bei einem unbekannten Encoding-Namen leert der Dialog die Layer-Auswahl und zeigt
+`No schema information available.` sowie den nicht erkannten Namen, beispielsweise `Latin-1`.
+Die Meldung bedeutet in diesem Fall, dass die Zeichenkodierung nicht unterstützt wird.
+Nach Eingabe eines gültigen Namens wird das Schema erneut geladen.
+Eine erfolgreiche Schema-Abfrage bestätigt jedoch nicht, dass die Textwerte mit dieser Kodierung
+korrekt dargestellt werden; kontrollieren Sie dazu die gelesenen Zeilen.
+
 === Ausgabe und Fehler
 
 Die Ausgabe enthält die typisierten Attribute und die Geometry-Spalte.
 GeoPackage-Geometrie steht am Ende der Zeile. Ein Geometry-Ausgabename darf nicht mit einem Attribut kollidieren.
 Die Quelldatei bleibt unverändert; der Reader legt keine räumlichen Indizes an.
 
-Shapefile-Charset-Reihenfolge: explizite Angabe, CPG-Datei, erkannte DBF-Codepage,
-sonst ISO-8859-1 mit Warnung. Fehlende PRJ bedeutet unbekanntes CRS mit Warnung;
+Die Auswahl der Zeichenkodierung ist unter <<dbf-zeichenkodierung,DBF-Zeichenkodierung>> beschrieben.
+Fehlende PRJ bedeutet unbekanntes CRS mit Warnung;
 tragen Sie nur dann einen Override ein, wenn Sie das tatsächliche Koordinatensystem kennen.
 Fehlerhafte Kodierung, widersprüchliche Dateikomponenten oder ungültige Geometrieheader führen zum Fehler.
 Vektor-I/O meldet solche technischen Fehler als fehlgeschlagenen Transform; die Raster-Error-Hop-Regeln gelten hier nicht automatisch.

@@ -8,6 +8,8 @@
 |ClassNotFound / NoSuchMethod |Hop 2.19.0 und passende Geometry-Version verwenden; keine doppelten JTS-/GeoTools-JARs installieren.
 |Unbekannte Transform-ID |Plugin-ID und installierte Transforms anhand der <<installation,Plugin-Kontrolle>> prüfen.
 |Datei oder Layer fehlt |Variablenauflösung und lokalen Pfad prüfen; Reader-Layerliste und Available fields verwenden.
+|Falsche Umlaute in DBF-Texten |Tatsächliche Kodierung unter DBF encoding eintragen, mit OK übernehmen und Pipeline erneut ausführen. Bei UTF-8-Daten wird beispielsweise `GewÃ¤sser` mit `UTF-8` zu `Gewässer`; siehe <<dbf-zeichenkodierung,DBF-Zeichenkodierung>>.
+|Unbekannter Encoding-Name / No schema information available. |Wird zusätzlich etwa `Latin-1` angezeigt, ist der Name nicht unterstützt. Gültig sind beispielsweise `Latin1`, `ISO-8859-1` oder `UTF-8`; passend zur Quelldatei wählen. Siehe <<dbf-zeichenkodierung,DBF-Zeichenkodierung>>.
 |Geometrie wird als String erkannt |WKT/WKB zuerst ausdrücklich in den gemeinsamen Geometry-Typ umwandeln.
 |CRS fehlt oder SRID widerspricht |Tatsächliches CRS ermitteln. Assign CRS beschreibt Koordinaten, reprojiziert sie nicht. Raster-CRS darf nicht fehlen.
 |Ausschnitt an falschem Ort |XY-/Longitude-Latitude-Reihenfolge, Box-CRS und Einheiten kontrollieren. Clip-Box liegt im expliziten CRS, Reproject-Box im Ziel-CRS.

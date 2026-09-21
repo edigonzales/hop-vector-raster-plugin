@@ -285,6 +285,136 @@ class ShapefileAdapterTest {
   }
 
   @Test
+  void nullDateBytesPreserveRowsAndFollowingRecords() throws Exception {
+    RowMeta rm = new RowMeta();
+    rm.addValueMeta(new ValueMetaDate("when"));
+    rm.addValueMeta(new ValueMetaString("name"));
+    rm.addValueMeta(new ValueMetaGeometry("shape"));
+    var date = java.util.Date.from(Instant.parse("2024-02-29T00:00:00Z"));
+    var options = new ShapefileOptions("UTF-8", "UTC", List.of());
+    Path file = dir.resolve("null-dates.shp");
+    List<String> rawDates = List.of("00000000", "       0", "        ", "?       ");
+    try (var sink = provider.create(request(file, rm, point("XY"), options, Diagnostics.NONE))) {
+      for (int i = 0; i <= rawDates.size(); i++) {
+        sink.write(new Object[] {date, "row" + i, gf.createPoint(new CoordinateXY(i, i + 1))});
+      }
+      sink.finish();
+    }
+    Path dbf = dir.resolve("null-dates.dbf");
+    byte[] bytes = Files.readAllBytes(dbf);
+    ByteBuffer header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+    int headerLength = Short.toUnsignedInt(header.getShort(8));
+    int recordLength = Short.toUnsignedInt(header.getShort(10));
+    for (int i = 0; i < rawDates.size(); i++) {
+      byte[] raw = rawDates.get(i).getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+      System.arraycopy(raw, 0, bytes, headerLength + i * recordLength + 1, raw.length);
+    }
+    Files.write(dbf, bytes);
+    var warnings = new ArrayList<String>();
+    try (var source =
+        provider.open(
+            new ReadRequest(
+                file,
+                "",
+                "shape",
+                "",
+                options,
+                (field, cause, message) -> warnings.add(cause)))) {
+      for (int i = 0; i <= rawDates.size(); i++) {
+        Object[] row = source.read();
+        assertThat(row).isNotNull();
+        assertThat(row[0]).isEqualTo(i < rawDates.size() ? null : date);
+        assertThat(row[1]).isEqualTo("row" + i);
+        assertThat(((Point) row[2]).getX()).isEqualTo(i);
+        assertThat(((Point) row[2]).getY()).isEqualTo(i + 1);
+      }
+      assertThat(source.read()).isNull();
+    }
+    // This fixture has no PRJ; NULL date values must not add any warnings.
+    assertThat(warnings).containsExactly("unknown-crs");
+  }
+
+  @Test
+  void numericNullBytesPreserveRowsAndFollowingRecords() throws Exception {
+    RowMeta rm = new RowMeta();
+    var decimal = new ValueMetaBigNumber("decimal");
+    decimal.setLength(33);
+    decimal.setPrecision(3);
+    rm.addValueMeta(decimal);
+    var integer = new ValueMetaInteger("integer");
+    integer.setLength(9);
+    rm.addValueMeta(integer);
+    rm.addValueMeta(new ValueMetaGeometry("shape"));
+    Path file = dir.resolve("null-numbers.shp");
+    var options = new ShapefileOptions("UTF-8", "UTC", List.of());
+    try (var sink = provider.create(request(file, rm, point("XY"), options, Diagnostics.NONE))) {
+      for (int i = 0; i < 3; i++) {
+        sink.write(
+            new Object[] {
+              new BigDecimal("12.500"), 2L, gf.createPoint(new CoordinateXY(i, i + 1))
+            });
+      }
+      sink.finish();
+    }
+    Path dbf = dir.resolve("null-numbers.dbf");
+    byte[] bytes = Files.readAllBytes(dbf);
+    ByteBuffer header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+    int headerLength = Short.toUnsignedInt(header.getShort(8));
+    int recordLength = Short.toUnsignedInt(header.getShort(10));
+    // Both numeric fields in the second record use the DBF NULL representation.
+    int start = headerLength + recordLength + 1;
+    Arrays.fill(bytes, start, start + 33 + 9, (byte) '*');
+    Files.write(dbf, bytes);
+    var warnings = new ArrayList<String>();
+    try (var source =
+        provider.open(
+            new ReadRequest(
+                file, "", "shape", "", options,
+                (field, cause, message) -> warnings.add(cause)))) {
+      for (int i = 0; i < 3; i++) {
+        Object[] row = source.read();
+        assertThat(row).isNotNull();
+        assertThat(row[0]).isEqualTo(i == 1 ? null : new BigDecimal("12.500"));
+        assertThat(row[1]).isEqualTo(i == 1 ? null : 2L);
+        assertThat(((Point) row[2]).getX()).isEqualTo(i);
+        assertThat(((Point) row[2]).getY()).isEqualTo(i + 1);
+      }
+      assertThat(source.read()).isNull();
+    }
+    assertThat(warnings).containsExactly("unknown-crs");
+  }
+
+  @Test
+  void nullByteFilledTextPreservesFollowingRows() throws Exception {
+    Path file = dir.resolve("null-text.shp");
+    try (var sink =
+        provider.create(request(file, meta(), point("XY"), ShapefileOptions.defaults(), Diagnostics.NONE))) {
+      for (int i = 0; i < 3; i++) {
+        sink.write(new Object[] {"  Grüezi", gf.createPoint(new CoordinateXY(i, i + 1))});
+      }
+      sink.finish();
+    }
+    Path dbf = dir.resolve("null-text.dbf");
+    byte[] bytes = Files.readAllBytes(dbf);
+    ByteBuffer header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+    int headerLength = Short.toUnsignedInt(header.getShort(8));
+    int recordLength = Short.toUnsignedInt(header.getShort(10));
+    int start = headerLength + recordLength + 1;
+    Arrays.fill(bytes, start, start + 254, (byte) 0);
+    Files.write(dbf, bytes);
+    try (var source = provider.open(file, "", "shape")) {
+      for (int i = 0; i < 3; i++) {
+        Object[] row = source.read();
+        assertThat(row).isNotNull();
+        assertThat(row[0]).isEqualTo(i == 1 ? null : "  Grüezi");
+        assertThat(((Point) row[1]).getX()).isEqualTo(i);
+        assertThat(((Point) row[1]).getY()).isEqualTo(i + 1);
+      }
+      assertThat(source.read()).isNull();
+    }
+  }
+
+  @Test
   void namesPrecisionDatesAndNulls() throws Exception {
     RowMeta rm = meta();
     rm.addValueMeta(new ValueMetaBigNumber("long_field_name"));
