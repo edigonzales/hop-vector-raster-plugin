@@ -10,6 +10,9 @@ Er ist eine Senke ohne nachfolgende Ergebniszeilen. Plugin-ID: `SOGIS_VECTOR_WRI
 Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
 `[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
 `[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+Das Feld *Layer (optional)* ist ein freies Eingabefeld mit Variablenunterstützung.
+Vorhandene GeoPackage-Layer und FileGDB-Datasets werden in der Vorschau angezeigt,
+aber nicht automatisch als Auswahl in dieses Feld übernommen.
 
 [source,text,role="gui-dialog"]
 ----
@@ -43,7 +46,7 @@ Die Wahl unter *Format* steuert die sichtbaren Formatoptionen.
 |Einstellung |Standard |Bedeutung
 |Transform name |Von Hop vergeben |Name dieses Schritts.
 |Format |`AUTO` |`.shp`, `.gpkg`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
-|Layer (optional) |Leer |Layername; ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung. Für GENERATE ohne Bedeutung.
+|Layer (optional) |Leer |Freies Eingabefeld mit Variablenunterstützung. Ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung; für GENERATE ist das Feld ohne Bedeutung.
 |Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren.
 |Geometry field |`geometry` |Geometry-Spalte aus den Eingabezeilen.
 |Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie bei Shapefile/FlatGeobuf/Parquet.

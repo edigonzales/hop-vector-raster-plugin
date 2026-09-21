@@ -64,7 +64,9 @@ public class VectorDialogSmoke {
       meta.setFileName("/tmp/demo.gpkg");
       PipelineMeta pm = new PipelineMeta();
       pm.addTransform(new TransformMeta("Writer", meta));
-      VectorWriterDialog dialog = new VectorWriterDialog(parent, new Variables(), meta, pm);
+      Variables variables = new Variables();
+      variables.setVariable("TARGET_LAYER", "places");
+      VectorWriterDialog dialog = new VectorWriterDialog(parent, variables, meta, pm);
       whenOpen(
           display,
           parent,
@@ -73,6 +75,18 @@ public class VectorDialogSmoke {
               Composite group = (Composite) field(dialog, "generateOptions");
               if (group.getVisible())
                 throw new AssertionError("Generate options visible for GeoPackage");
+              Object layerControl = field(dialog, "wLayer");
+              if (!(layerControl instanceof org.apache.hop.ui.core.widget.TextVar))
+                throw new AssertionError("Layer field must be a TextVar");
+              org.apache.hop.ui.core.widget.TextVar layer =
+                  (org.apache.hop.ui.core.widget.TextVar) layerControl;
+              if (!(field(dialog, "wGeometryField")
+                  instanceof org.apache.hop.ui.core.widget.ComboVar))
+                throw new AssertionError("Geometry field must remain a ComboVar");
+              layer.setText("${TARGET_LAYER}");
+              if (!layer.getText().equals("${TARGET_LAYER}")
+                  || !variables.resolve(layer.getText()).equals("places"))
+                throw new AssertionError("Layer variable was not preserved or resolved");
               Combo format = (Combo) field(dialog, "wFormat");
               format.setText("ARCINFO_GENERATE");
               format.notifyListeners(SWT.Selection, new Event());
@@ -142,7 +156,7 @@ public class VectorDialogSmoke {
               mode.notifyListeners(SWT.Selection, new Event());
               if (((Combo) field(dialog, "wLayerType")).getEnabled())
                 throw new AssertionError("Append schema controls must be disabled");
-              ((org.apache.hop.ui.core.widget.ComboVar) field(dialog, "wLayer")).setText("places");
+              layer.setText("places");
               ((Button) field(dialog, "wGeoPackageLoad"))
                   .notifyListeners(SWT.Selection, new Event());
               if (!((Text) field(dialog, "wGeoPackagePreview"))
@@ -219,7 +233,8 @@ public class VectorDialogSmoke {
               save.setAccessible(true);
               save.invoke(dialog);
               if (!meta.getLayerDimension().equals("XYZM")
-                  || !meta.getCharset().equals("windows-1252"))
+                  || !meta.getCharset().equals("windows-1252")
+                  || !meta.getLayerName().equals("places"))
                 throw new AssertionError("Dialog settings not saved");
               System.out.println(
                   "Writer dialog: all five formats, conditional controls and save OK");
@@ -304,6 +319,56 @@ public class VectorDialogSmoke {
                 throw new AssertionError("Wrong reader formats");
               VectorReaderDialogComposite content =
                   (VectorReaderDialogComposite) field(rd, "content");
+              if (VectorReaderDialog.usesDirectoryBrowser("AUTO")
+                  || VectorReaderDialog.usesDirectoryBrowser("SHAPEFILE")
+                  || VectorReaderDialog.usesDirectoryBrowser("GEOPACKAGE")
+                  || !VectorReaderDialog.usesDirectoryBrowser("FILEGEODATABASE")
+                  || !VectorReaderDialog.browseButtonLabel("FILEGEODATABASE")
+                      .equals("Browse folder...")
+                  || !VectorReaderDialog.browseButtonLabel("AUTO").equals("Browse..."))
+                throw new AssertionError("Wrong reader browse mode selection");
+              Button browse = (Button) field(rd, "wbFile");
+              if (!browse.getText().equals("Browse..."))
+                throw new AssertionError("Default browse label is wrong: " + browse.getText());
+              formats.setText("FILEGEODATABASE");
+              formats.notifyListeners(SWT.Selection, new Event());
+              if (!browse.getText().equals("Browse folder..."))
+                throw new AssertionError("FileGDB browse label is wrong: " + browse.getText());
+              formats.setText("GEOPACKAGE");
+              formats.notifyListeners(SWT.Selection, new Event());
+              if (!browse.getText().equals("Browse..."))
+                throw new AssertionError("File browse label was not restored: " + browse.getText());
+              java.nio.file.Path fgdb =
+                  java.nio.file.Files.createTempDirectory("hop-reader-dialog-").resolve("sample.gdb");
+              var readerRows = new org.apache.hop.core.row.RowMeta();
+              readerRows.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("name"));
+              readerRows.addValueMeta(new com.atolcd.hop.core.row.value.ValueMetaGeometry("shape"));
+              var readerPoint =
+                  new org.locationtech.jts.geom.GeometryFactory(
+                          new org.locationtech.jts.geom.PrecisionModel(), 2056)
+                      .createPoint(new org.locationtech.jts.geom.Coordinate(2600000, 1200000));
+              var readerProvider =
+                  new ch.so.agi.hop.vector.formats.filegeodatabase.FileGeodatabaseProvider(
+                      new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
+              try (var sink =
+                  readerProvider.create(
+                      new ch.so.agi.hop.vector.core.WriteRequest(
+                          fgdb, "places", readerRows, 1, readerPoint, null, null, null))) {
+                sink.write(new Object[] {"place", readerPoint});
+                sink.finish();
+              }
+              formats.setText("FILEGEODATABASE");
+              formats.notifyListeners(SWT.Selection, new Event());
+              ((org.apache.hop.ui.core.widget.TextVar) field(content, "fileName"))
+                  .setText(fgdb.toString());
+              if (!((Text) field(rd, "wAvailableFieldsPreview"))
+                  .getText()
+                  .contains("Layer: places"))
+                throw new AssertionError("FileGDB folder path did not load schema");
+              try (var paths = java.nio.file.Files.walk(fgdb.getParent())) {
+                for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList())
+                  java.nio.file.Files.delete(path);
+              }
               Text preview = content.getAvailableFieldsPreview();
               int initialHeight = preview.getSize().y;
               if (containsLabel(content, "FileGDB X min (source CRS)"))

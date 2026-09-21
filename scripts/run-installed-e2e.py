@@ -38,6 +38,8 @@ def run_command(command: list[str], env: dict[str, str], timeout: int = 180) -> 
     if result.returncode:
         print(log.read_text(encoding="utf-8", errors="replace")[-20000:])
     result.check_returncode()
+    if "Rejected registry class" in log.read_text(encoding="utf-8", errors="replace"):
+        raise AssertionError(f"ImageN rejected a registry class; see {log}")
 
 
 def extract_plugin(zip_path: Path, hop_home: Path, plugin_root: str) -> None:

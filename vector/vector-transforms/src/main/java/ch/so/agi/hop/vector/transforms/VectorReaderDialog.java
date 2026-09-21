@@ -142,6 +142,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
         SWT.Selection,
         e -> {
           input.setChanged();
+          updateBrowseButton();
           loadLayersAndPreview();
         });
     for (var option : new TextVar[] {wCharset, wTimezone, wCrs})
@@ -150,6 +151,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
             if (!suppressSchemaRefresh) loadLayersAndPreview();
           });
     getData();
+    updateBrowseButton();
     loadLayersAndPreview();
     input.setChanged(changed);
     BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
@@ -157,6 +159,10 @@ public class VectorReaderDialog extends BaseTransformDialog {
   }
 
   private void browse() {
+    if (usesDirectoryBrowser(wFormat.getText())) {
+      BaseDialog.presentDirectoryDialog(shell, wFileName, variables);
+      return;
+    }
     FileDialog dialog = new FileDialog(shell, SWT.OPEN);
     dialog.setFilterExtensions(new String[] {"*.shp;*.gpkg", "*.*"});
     dialog.setFilterNames(new String[] {"Vector files", "All files"});
@@ -167,6 +173,20 @@ public class VectorReaderDialog extends BaseTransformDialog {
     String selected = dialog.open();
     if (selected != null) {
       wFileName.setText(selected);
+    }
+  }
+
+  static boolean usesDirectoryBrowser(String format) {
+    return "FILEGEODATABASE".equalsIgnoreCase(format);
+  }
+
+  static String browseButtonLabel(String format) {
+    return usesDirectoryBrowser(format) ? "Browse folder..." : "Browse...";
+  }
+
+  private void updateBrowseButton() {
+    if (wbFile != null && !wbFile.isDisposed()) {
+      wbFile.setText(browseButtonLabel(wFormat.getText()));
     }
   }
 

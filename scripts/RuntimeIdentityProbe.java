@@ -25,6 +25,27 @@ public class RuntimeIdentityProbe {
    if(!origin.startsWith(central)) throw new AssertionError("Runtime outside central Geometry plugin: "+origin);
    System.out.println("IDENTITY OK "+args[0]+" "+n+" "+ca.getProtectionDomain().getCodeSource().getLocation());
   }
+  // The Geometry bootstrap must have initialized ImageN during HopEnvironment.init().
+  // Keep Hop's original context loader here: changing it would mask missing bootstrap logic.
+  {
+   Class<?> imagen = a.loadClass("org.eclipse.imagen.ImageN");
+   Object instance = imagen.getMethod("getDefaultInstance").invoke(null);
+   Object registry = imagen.getMethod("getOperationRegistry").invoke(instance);
+   Class<?> registryClass = a.loadClass("org.eclipse.imagen.OperationRegistry");
+   for (String operation : List.of("ColorReduction", "ColorInversion")) {
+    for (String kind : List.of("Descriptor", "Factory")) {
+     Object value = registryClass.getMethod("get" + kind, String.class, String.class)
+         .invoke(registry, "rendered", "org.geotools." + operation);
+     String expected = "org.geotools.image.palette." + operation
+         + (kind.equals("Descriptor") ? "Descriptor" : "CRIF");
+     if (value == null || !value.getClass().getName().equals(expected))
+      throw new AssertionError("Missing ImageN registration: " + expected);
+     if (value.getClass().getClassLoader() != a)
+      throw new AssertionError("ImageN registration outside shared plugin loader: " + expected);
+    }
+    System.out.println("IMAGEN REGISTRY OK " + args[0] + " " + operation);
+   }
+  }
   Set<String> registrations=new HashSet<>();
   List<URL> resources=java.util.Collections.list(a.getResources("META-INF/registryFile.imagen"));
   if(resources.isEmpty()) throw new AssertionError("No Imagen registry resource from Geometry Type");

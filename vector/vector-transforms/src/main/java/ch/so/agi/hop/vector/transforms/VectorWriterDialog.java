@@ -17,7 +17,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private final VectorWriterMeta input;
   private TextVar wFileName;
   private Combo wFormat;
-  private ComboVar wLayer;
+  private TextVar wLayer;
   private Composite generateOptions, layerOptions, shapeOptions;
   private TextVar wCrs, wCharset, wTimezone;
   private Combo wLayerType, wLayerDimension;
@@ -100,7 +100,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
         });
     wFormat.setText(input.getFormat());
     new Label(body, SWT.NONE).setText("Layer (optional)");
-    wLayer = new ComboVar(variables, body, SWT.BORDER);
+    wLayer = new TextVar(variables, body, SWT.BORDER);
     wLayer.setText(input.getLayerName() == null ? "" : input.getLayerName());
     wLayer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Output file");
@@ -304,7 +304,6 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wGeoPackagePreview.setLayoutData(previewData);
     wGeoPackageLoad.addListener(SWT.Selection, e -> loadGeoPackageLayers());
     wGeoPackageCheck.addListener(SWT.Selection, e -> previewGeoPackage(true));
-    wLayer.addListener(SWT.Selection, e -> previewGeoPackage(false));
     wGeoPackageMode.addListener(SWT.Selection, e -> updateFormat());
     fileGdbOptions = optionGroup();
     new Label(fileGdbOptions, SWT.NONE).setText("Schreibmodus");
@@ -353,7 +352,6 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wFileGdbPreview.setLayoutData(fileGdbPreviewData);
     wFileGdbLoad.addListener(SWT.Selection, e -> loadFileGdbDatasets());
     wFileGdbCheck.addListener(SWT.Selection, e -> previewFileGdb(true));
-    wLayer.addListener(SWT.Selection, e -> previewFileGdb(false));
     flatGeobufOptions = optionGroup();
     new Label(flatGeobufOptions, SWT.NONE).setText("Spatial index (reorders features)");
     wFlatGeobufIndex = new Button(flatGeobufOptions, SWT.CHECK);
@@ -493,22 +491,14 @@ public class VectorWriterDialog extends BaseTransformDialog {
 
   private void loadFileGdbDatasets() {
     try (var db = ch.so.agi.filegdb.FileGeodatabase.open(geoPackagePath())) {
-      String current = wLayer.getText();
-      wLayer.setItems(
-          db.featureClasses().stream()
-              .map(ch.so.agi.filegdb.catalog.Dataset::name)
-              .toArray(String[]::new));
-      if (current.isBlank()
-          && wFileGdbWriteMode.getSelectionIndex() == 2
-          && !db.featureClasses().isEmpty()) current = db.featureClasses().getFirst().name();
-      wLayer.setText(current);
-      if (wFileGdbWriteMode.getSelectionIndex() == 2) previewFileGdb(false);
-      else
-        wFileGdbPreview.setText(
-            "Vorhandene Datasets: "
-                + String.join(
-                    ", ",
-                    db.datasets().stream().map(ch.so.agi.filegdb.catalog.Dataset::name).toList()));
+      String available =
+          "Vorhandene Datasets: "
+              + String.join(
+                  ", ",
+                  db.datasets().stream().map(ch.so.agi.filegdb.catalog.Dataset::name).toList());
+      if (wFileGdbWriteMode.getSelectionIndex() == 2 && !wLayer.getText().isBlank())
+        previewFileGdb(false);
+      else wFileGdbPreview.setText(available);
     } catch (Exception e) {
       wFileGdbPreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
     }
@@ -536,19 +526,14 @@ public class VectorWriterDialog extends BaseTransformDialog {
       var layers =
           geoPackageProvider()
               .layers(new ch.so.agi.hop.vector.core.ReadRequest(geoPackagePath(), "", ""));
-      String current = wLayer.getText();
-      wLayer.setItems(
-          layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toArray(String[]::new));
-      if (current.isBlank() && wGeoPackageMode.getSelectionIndex() == 2 && !layers.isEmpty())
-        current = layers.getFirst().name();
-      wLayer.setText(current);
-      if (wGeoPackageMode.getSelectionIndex() == 2) previewGeoPackage(false);
-      else
-        wGeoPackagePreview.setText(
-            "Vorhandene Layer: "
-                + String.join(
-                    ", ",
-                    layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toList()));
+      String available =
+          "Vorhandene Layer: "
+              + String.join(
+                  ", ",
+                  layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toList());
+      if (wGeoPackageMode.getSelectionIndex() == 2 && !wLayer.getText().isBlank())
+        previewGeoPackage(false);
+      else wGeoPackagePreview.setText(available);
     } catch (Exception e) {
       wGeoPackagePreview.setText(e.getMessage() == null ? e.toString() : e.getMessage());
     }
