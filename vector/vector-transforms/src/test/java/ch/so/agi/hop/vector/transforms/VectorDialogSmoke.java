@@ -88,6 +88,26 @@ public class VectorDialogSmoke {
                   || !variables.resolve(layer.getText()).equals("places"))
                 throw new AssertionError("Layer variable was not preserved or resolved");
               Combo format = (Combo) field(dialog, "wFormat");
+              if (!java.util.Arrays.equals(
+                  VectorWriterDialog.fileDialogFilterExtensions("AUTO"),
+                  new String[] {"*.*"}))
+                throw new AssertionError("AUTO save dialog must preserve the typed suffix");
+              if (!java.util.Arrays.equals(
+                  VectorWriterDialog.fileDialogFilterExtensions("SHAPEFILE"),
+                  new String[] {"*.shp"}))
+                throw new AssertionError("Shapefile save dialog filter is wrong");
+              var writerFileDialog = new org.eclipse.swt.widgets.FileDialog(parent, SWT.SAVE);
+              var initializeFileDialog =
+                  VectorWriterDialog.class.getDeclaredMethod(
+                      "initializeFileDialog",
+                      org.eclipse.swt.widgets.FileDialog.class,
+                      String.class);
+              initializeFileDialog.setAccessible(true);
+              initializeFileDialog.invoke(dialog, writerFileDialog, "/tmp/hop-out/foo.shp");
+              if (!"/tmp/hop-out".equals(writerFileDialog.getFilterPath())
+                  || !"foo.shp".equals(writerFileDialog.getFileName()))
+                throw new AssertionError(
+                    "Writer save dialog was not initialized with the current path and name");
               format.setText("ARCINFO_GENERATE");
               format.notifyListeners(SWT.Selection, new Event());
               if (!group.getVisible()) throw new AssertionError("Generate options hidden");

@@ -1,6 +1,8 @@
 package ch.so.agi.hop.vector.transforms;
 
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
+import java.nio.file.Path;
+import java.util.Locale;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -106,7 +108,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
     wLayer.setText(input.getLayerName() == null ? "" : input.getLayerName());
     wLayer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Output file");
-    wFileName = fileInput(body, true, "*.gpkg;*.shp;*.gen;*.fgb;*.parquet");
+    wFileName = fileInput(body, true);
     wFileName.setText(String.valueOf(input.getFileName()));
     wFileName.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     new Label(body, SWT.NONE).setText("Geometry field");
@@ -688,7 +690,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
     box.open();
   }
 
-  private TextVar fileInput(Composite parent, boolean save, String extensions) {
+  private TextVar fileInput(Composite parent, boolean save) {
     Composite group = new Composite(parent, SWT.NONE);
     group.setLayout(new GridLayout(2, false));
     group.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -717,11 +719,54 @@ public class VectorWriterDialog extends BaseTransformDialog {
           FileDialog dialog =
               new FileDialog(shell, save && !existingGeoPackage ? SWT.SAVE : SWT.OPEN);
           if (existingGeoPackage) dialog.setText("Bestehendes GeoPackage auswählen");
-          dialog.setFilterExtensions(new String[] {extensions, "*.*"});
+          String format = wFormat == null ? "AUTO" : wFormat.getText();
+          dialog.setFilterExtensions(fileDialogFilterExtensions(format));
+          dialog.setFilterNames(fileDialogFilterNames(format));
+          initializeFileDialog(dialog, text.getText());
           String selected = dialog.open();
           if (selected != null) text.setText(selected);
         });
     return text;
+  }
+
+  static String[] fileDialogFilterExtensions(String format) {
+    String normalized = format == null ? "AUTO" : format.trim().toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case "SHAPEFILE" -> new String[] {"*.shp"};
+      case "GEOPACKAGE" -> new String[] {"*.gpkg"};
+      case "ARCINFO_GENERATE" -> new String[] {"*.gen"};
+      case "FLATGEOBUF" -> new String[] {"*.fgb"};
+      case "PARQUET" -> new String[] {"*.parquet"};
+      default -> new String[] {"*.*"};
+    };
+  }
+
+  static String[] fileDialogFilterNames(String format) {
+    String normalized = format == null ? "AUTO" : format.trim().toUpperCase(Locale.ROOT);
+    return switch (normalized) {
+      case "SHAPEFILE" -> new String[] {"Shapefile (*.shp)"};
+      case "GEOPACKAGE" -> new String[] {"GeoPackage (*.gpkg)"};
+      case "ARCINFO_GENERATE" -> new String[] {"ArcInfo GENERATE (*.gen)"};
+      case "FLATGEOBUF" -> new String[] {"FlatGeobuf (*.fgb)"};
+      case "PARQUET" -> new String[] {"Parquet (*.parquet)"};
+      default -> new String[] {"All files"};
+    };
+  }
+
+  private void initializeFileDialog(FileDialog dialog, String current) {
+    String resolved = variables.resolve(current == null ? "" : current);
+    if (resolved == null || resolved.isBlank() || resolved.contains("${")) return;
+    Path path;
+    try {
+      path = Path.of(resolved).toAbsolutePath().normalize();
+    } catch (RuntimeException ignored) {
+      return;
+    }
+    Path parent = path.getParent();
+    if (parent != null) dialog.setFilterPath(parent.toString());
+    Path fileName = path.getFileName();
+    if (fileName != null && !fileName.toString().isBlank())
+      dialog.setFileName(fileName.toString());
   }
 
   private void cancel() {

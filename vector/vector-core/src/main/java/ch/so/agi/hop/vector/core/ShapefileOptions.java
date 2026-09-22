@@ -2,9 +2,14 @@ package ch.so.agi.hop.vector.core;
 
 import java.util.*;
 
-public record ShapefileOptions(String charset, String timezone, List<Field> fields)
+public record ShapefileOptions(
+    String charset, String timezone, List<Field> fields, boolean overwrite)
     implements FormatOptions {
   public record Field(String source, String target, int width, int scale) {}
+
+  public ShapefileOptions(String charset, String timezone, List<Field> fields) {
+    this(charset, timezone, fields, false);
+  }
 
   public ShapefileOptions {
     charset = charset == null ? "" : charset;
@@ -14,6 +19,6 @@ public record ShapefileOptions(String charset, String timezone, List<Field> fiel
   }
 
   public static ShapefileOptions defaults() {
-    return new ShapefileOptions("", "UTC", List.of());
+    return new ShapefileOptions("", "UTC", List.of(), false);
   }
 }

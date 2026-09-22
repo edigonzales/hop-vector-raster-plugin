@@ -558,7 +558,8 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
                   v ->
                       new ShapefileOptions.Field(
                           v.getSource(), v.getTarget(), v.getWidth(), v.getScale()))
-              .toList());
+              .toList(),
+          overwrite);
     return new FormatOptions.None();
   }
 

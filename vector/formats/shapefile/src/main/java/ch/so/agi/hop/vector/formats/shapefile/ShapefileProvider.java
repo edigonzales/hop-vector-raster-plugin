@@ -223,6 +223,8 @@ public final class ShapefileProvider implements VectorProvider {
 
   private static final class Sink implements VectorSink {
     static final Set<Path> ACTIVE = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    static final List<String> SIDECAR_EXTENSIONS =
+        List.of(".shp", ".shx", ".dbf", ".cpg", ".prj", ".qix", ".fix", ".sbn", ".sbx");
     final WriteRequest r;
     Path output, staging;
     FileChannel shp, shx, dbfChannel;
@@ -233,6 +235,7 @@ public final class ShapefileProvider implements VectorProvider {
     GeometrySchema schema;
     ShapeType type;
     boolean owned, finished, closed, failed;
+    boolean overwrite;
     int records;
     Envelope bounds = new Envelope();
     double zmin = Double.POSITIVE_INFINITY,
@@ -251,9 +254,9 @@ public final class ShapefileProvider implements VectorProvider {
         if (!ACTIVE.add(output)) throw new IOException("Another Shapefile writer owns output");
         owned = true;
         String base = base(output);
-        for (String ext :
-            List.of(".shp", ".shx", ".dbf", ".cpg", ".prj", ".qix", ".fix", ".sbn", ".sbx"))
-          if (sidecarExists(output.getParent(), base + ext))
+        overwrite = r.shapefile().overwrite();
+        for (String ext : SIDECAR_EXTENSIONS)
+          if (!overwrite && sidecarExists(output.getParent(), base + ext))
             throw new IOException("Shapefile output/sidecar already exists: " + base + ext);
         schema = Objects.requireNonNull(r.geometry(), "Output geometry schema required");
         type = ShapeCodec.type(schema);
@@ -379,6 +382,8 @@ public final class ShapefileProvider implements VectorProvider {
 
     public void finish() throws Exception {
       if (closed) throw new IOException("Writer closed");
+      Path backup = null;
+      List<Path> backups = new ArrayList<>();
       try {
         if (failed) throw new IOException("Cannot publish a failed Shapefile export");
         dbf.writeEndOfFile();
@@ -386,20 +391,51 @@ public final class ShapefileProvider implements VectorProvider {
         patch(shp, shp.size());
         patch(shx, shx.size());
         release();
+        List<Path> bundle;
         try (var files = Files.list(staging)) {
-          var bundle = files.toList();
-          for (var f : bundle)
-            if (sidecarExists(output.getParent(), f.getFileName().toString()))
-              throw new IOException("Shapefile sidecar already exists: " + f.getFileName());
+          bundle = files.toList();
+        }
+        if (overwrite) {
+          backup = Files.createTempDirectory(output.getParent(), ".hop-shapefile-backup-");
+        }
+        try {
+          if (overwrite) {
+            String base = base(output);
+            for (String ext : SIDECAR_EXTENSIONS) {
+              Path target = output.getParent().resolve(base + ext);
+              if (Files.exists(target)) {
+                Path saved = backup.resolve(target.getFileName());
+                Files.move(target, saved);
+                backups.add(saved);
+              }
+            }
+          } else {
+            for (var f : bundle)
+              if (sidecarExists(output.getParent(), f.getFileName().toString()))
+                throw new IOException("Shapefile sidecar already exists: " + f.getFileName());
+          }
           for (var f : bundle) {
             Path target = output.getParent().resolve(f.getFileName());
             Files.move(f, target);
             published.add(target);
           }
+          finished = true;
+        } catch (Exception e) {
+          for (var target : published) Files.deleteIfExists(target);
+          for (var saved : backups)
+            Files.move(saved, output.getParent().resolve(saved.getFileName()));
+          throw e;
         }
-        finished = true;
       } finally {
-        close();
+        try {
+          if (backup != null)
+            try (var files = Files.walk(backup)) {
+              for (var p : files.sorted(Comparator.reverseOrder()).toList())
+                Files.deleteIfExists(p);
+            }
+        } finally {
+          close();
+        }
       }
     }
 

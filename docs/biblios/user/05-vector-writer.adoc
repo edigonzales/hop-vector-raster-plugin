@@ -47,14 +47,14 @@ Die Wahl unter *Format* steuert die sichtbaren Formatoptionen.
 |Transform name |Von Hop vergeben |Name dieses Schritts.
 |Format |`AUTO` |`.shp`, `.gpkg`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
 |Layer (optional) |Leer |Freies Eingabefeld mit Variablenunterstützung. Ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung; für GENERATE ist das Feld ohne Bedeutung.
-|Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren.
+|Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren. Bei `AUTO` bleibt die im Speicherdialog eingegebene Endung erhalten; ein explizites Format verwendet seine passende Endung.
 |Geometry field |Leer |Geometry-Spalte aus den Eingabezeilen. Bei genau einem eingehenden Geometry-Feld wird dieses automatisch ausgewählt; bei mehreren oder keinem Geometry-Feld bleibt die Auswahl leer.
 |Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie bei Shapefile/FlatGeobuf/Parquet.
 |Layer dimension |`AUTO` |`XY`, `XYZ`, `XYM`, `XYZM` oder Ableitung; für die genannten Formate.
 |DBF encoding (empty: UTF-8) |Leer |Bei Shapefile-Ausgabe standardmässig UTF-8 mit CPG-Datei.
 |Date timezone |`UTC` |Zeitzone für Datumsumwandlungen.
 |Assign CRS (EPSG or WKT) |Leer |EPSG/WKT zuweisen, keine Reprojektion; bekannte widersprüchliche SRIDs werden abgelehnt.
-|Overwrite existing file |Aus |Für GENERATE, FlatGeobuf und Parquet verfügbar. Shapefile und GeoPackage verlangen neue Dateien.
+|Overwrite existing file |Aus |Für GENERATE, FlatGeobuf, Parquet und Shapefile verfügbar. Beim Shapefile werden vorhandene bekannte Sidecars ersetzt; GeoPackage verwendet eigene nicht-destruktive Schreibmodi.
 |===
 
 Für leere oder ausschliesslich NULL-haltige Shapefile-/FlatGeobuf-/Parquet-Ausgaben geben Sie Typ und Dimension explizit an.

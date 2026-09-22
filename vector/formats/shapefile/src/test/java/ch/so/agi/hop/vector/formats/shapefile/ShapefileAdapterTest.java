@@ -498,6 +498,33 @@ class ShapefileAdapterTest {
   }
 
   @Test
+  void overwriteReplacesShapefileAndRemovesStaleSidecars() throws Exception {
+    Path file = dir.resolve("overwrite.shp");
+    var oldPoint = point("XY");
+    try (var sink =
+        provider.create(request(file, meta(), oldPoint, ShapefileOptions.defaults(), Diagnostics.NONE))) {
+      sink.write(new Object[] {"old", oldPoint});
+      sink.finish();
+    }
+    Files.writeString(dir.resolve("overwrite.qix"), "stale index");
+
+    var options = new ShapefileOptions("", "UTC", List.of(), true);
+    var newPoint = gf.createPoint(new CoordinateXY(9, 8));
+    try (var sink = provider.create(request(file, meta(), newPoint, options, Diagnostics.NONE))) {
+      sink.write(new Object[] {"new", newPoint});
+      sink.finish();
+    }
+
+    assertThat(dir.resolve("overwrite.qix")).doesNotExist();
+    try (var source = provider.open(file, "", "shape")) {
+      var row = source.read();
+      assertThat(row[0]).isEqualTo("new");
+      assertThat(((Geometry) row[1]).equalsExact(newPoint)).isTrue();
+      assertThat(source.read()).isNull();
+    }
+  }
+
+  @Test
   void deletedDbfRowsStayAlignedAndCountMismatchFails() throws Exception {
     Path f = dir.resolve("deleted.shp");
     try (var s =

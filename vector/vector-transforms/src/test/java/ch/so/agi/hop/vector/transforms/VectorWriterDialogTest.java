@@ -65,4 +65,23 @@ class VectorWriterDialogTest {
         null);
     assertThat(empty.getGeometryField()).isEmpty();
   }
+
+  @Test
+  void usesFormatSpecificFileDialogFilters() {
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("AUTO")).containsExactly("*.*");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("SHAPEFILE"))
+        .containsExactly("*.shp");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("GEOPACKAGE"))
+        .containsExactly("*.gpkg");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("ARCINFO_GENERATE"))
+        .containsExactly("*.gen");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("FLATGEOBUF"))
+        .containsExactly("*.fgb");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("PARQUET"))
+        .containsExactly("*.parquet");
+    assertThat(VectorWriterDialog.fileDialogFilterExtensions("FILEGEODATABASE"))
+        .containsExactly("*.*");
+    assertThat(VectorWriterDialog.fileDialogFilterNames("SHAPEFILE"))
+        .containsExactly("Shapefile (*.shp)");
+  }
 }

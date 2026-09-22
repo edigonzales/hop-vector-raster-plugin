@@ -85,6 +85,17 @@ class VectorIoContractTest {
   }
 
   @Test
+  void shapefileOverwriteSettingReachesFormatOptions() {
+    VectorWriterMeta meta = new VectorWriterMeta();
+    meta.setFileName("out.shp");
+    meta.setFormat("SHAPEFILE");
+    meta.setGeometryField("shape");
+    meta.setOverwrite(true);
+
+    assertThat(((ShapefileOptions) meta.options()).overwrite()).isTrue();
+  }
+
+  @Test
   void sharedWriterAndReaderWorkForShapefileAndGeoPackage() throws Exception {
     for (String extension : List.of("shp", "gpkg")) {
       Path file = dir.resolve("places." + extension);
