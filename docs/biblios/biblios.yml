@@ -10,8 +10,8 @@ output:
 ui:
   theme: default
   show_version_badge: false
-  show_edit_link: true
-  show_source_link: true
+  show_edit_link: false
+  show_source_link: false
   edit_url_pattern: "https://github.com/edigonzales/hop-vector-raster-plugin/edit/main/{path}"
   source_url_pattern: "https://github.com/edigonzales/hop-vector-raster-plugin/blob/main/{path}"
   syntax_highlighting: prism

@@ -3,9 +3,11 @@
 
 === Voraussetzungen
 
-* Java 21 oder neuer; diese Plugin-Version wird gegen Apache Hop 2.19.0 gebaut.
+* Java 21; zusätzlich wird Java 25 geprüft. Diese Plugin-Version wird gegen Apache Hop 2.19.0 gebaut.
 * Das separate https://github.com/edigonzales/hop-geometry-type-plugin[Geometry-Type-Plugin],
   mindestens `0.2.0-SNAPSHOT` mit Z/M-Serialisierungsupdate oder ein kompatibler neuerer Build.
+* Das separate https://github.com/edigonzales/hop-raster-type-plugin[Raster-Type-Plugin]
+  passend zur Vector/Raster-Version; der aktuelle Build verwendet `0.1.0-SNAPSHOT`.
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
 
 Das Plugin-ZIP enthält seine Rasterbibliotheken sowie SQLite JDBC.
@@ -30,13 +32,14 @@ Es werden weder GDAL noch eine Hadoop-Installation benötigt.
 HOP_HOME/
 └── plugins/
     ├── misc/
-    │   └── hop-geometry-type/
+    │   ├── hop-geometry-type/
+    │   └── hop-raster-type/
     └── transforms/
         └── vector-raster/
 ----
 
 Kopieren Sie keine zusätzlichen JTS- oder Geometry-JARs manuell in andere Plugin-Verzeichnisse; verwenden Sie die mitgelieferten ZIPs.
-Fehlende Transforms oder Fehler beim Laden von Geometry deuten oft auf eine unvollständige oder doppelte Installation hin.
+Fehlende Transforms oder Fehler beim Laden von Geometry beziehungsweise Raster deuten oft auf eine unvollständige oder doppelte Installation hin.
 
 === Plugin-Kontrolle
 
@@ -45,20 +48,31 @@ Unter *Geospatial* stehen diese Transforms zur Verfügung:
 [cols="2,2",options="header"]
 |===
 |Transform |Plugin-ID
-|Vector Reader |`SOGIS_VECTOR_READER`
-|Vector Writer |`SOGIS_VECTOR_WRITER`
-|Raster Clip (GeoTools) |`SOGIS_RASTER_CLIP`
-|Raster Reproject / Resample (GeoTools) |`SOGIS_RASTER_REPROJECT`
-|Raster Zonal Statistics (GeoTools) |`SOGIS_RASTER_ZONAL_STATS`
+|<<vector-reader,Vector Reader>> |`SOGIS_VECTOR_READER`
+|<<vector-writer,Vector Writer>> |`SOGIS_VECTOR_WRITER`
+|<<filegdb-catalog-reader,FileGDB Catalog Reader>> |`SOGIS_FILEGDB_CATALOG_READER`
+|<<filegdb-writer,FileGDB Writer>> |`SOGIS_FILEGDB_WRITER`
+|<<raster-reader,Raster Reader (GeoTools)>> |`SOGIS_RASTER_READER`
+|<<raster-clip-dialog,Raster Clip (GeoTools)>> |`SOGIS_RASTER_VALUE_CLIP`
+|<<raster-reproject,Raster Reproject (GeoTools)>> |`SOGIS_RASTER_VALUE_REPROJECT`
+|<<raster-statistik,Raster ZonalStats (GeoTools)>> |`SOGIS_RASTER_VALUE_ZONAL_STATS`
+|<<raster-info,Raster Info (GeoTools)>> |`SOGIS_RASTER_INFO`
+|<<raster-writer,Raster Writer (GeoTools)>> |`SOGIS_RASTER_WRITER`
 |===
 
 Die Pipeline speichert die Plugin-ID im `type`-Element des Transforms.
 Bei einem unbekannten Transform prüfen Sie diese ID und die Installation.
 
+Die alten IDs `SOGIS_RASTER_CLIP`, `SOGIS_RASTER_REPROJECT` und `SOGIS_RASTER_ZONAL_STATS`
+bezeichnen nur Legacy-Transforms. Sie melden einen Migrationsfehler; die neue Verarbeitung verwendet
+Rasterwerte. Die <<raster-migration,Migrationsanleitung>> beschreibt den Umstieg.
+
 === Für Entwickler
 
 Build und lokale Installation sind in der {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung] beschrieben.
-Das Skript `scripts/dev-sync-hop-plugin.sh` baut und installiert beide Plugins und startet Hop GUI neu.
+Bauen und installieren Sie zuerst die Maven-Artefakte des Raster-Type-Repositories und entpacken Sie
+dessen passendes ZIP in Hop. Das Skript `scripts/dev-sync-hop-plugin.sh` baut und installiert danach
+Geometry Type und Vector/Raster und startet Hop GUI neu; Raster Type bereitet es nicht selbst vor.
 Für die normale Benutzung genügt die Installation der Release-ZIPs.
 
 Raster Type stellt den gemeinsamen Raster-Datentyp bereit. Seine Klassen werden nur einmal installiert;

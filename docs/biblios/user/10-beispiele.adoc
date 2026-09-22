@@ -5,7 +5,10 @@ Die Vorlagen liegen unter {repo}/tree/main/examples[examples im Repository].
 Die hier angebotenen Downloads werden beim Handbuchbuild aus demselben Git-Stand übernommen.
 Öffnen Sie die HPL-Datei in Hop GUI und setzen Sie die Parameter in der Ausführungskonfiguration.
 Ausgabeordner müssen existieren; verwenden Sie neue Ausgabedateien oder ändern Sie bewusst die Overwrite-Einstellung.
-Raster-Clip und Reproject starten mit einer Generate-Rows-Zeile; die Statistik erhält eine Zeile pro Polygon aus Vector Reader.
+Die migrierten Clip-/Reproject-Vorlagen starten mit Generate Rows → Raster Reader und schreiben
+über einen Raster Writer. Die Statistik erhält eine Zeile pro Polygon aus Vector Reader → Raster Reader.
+Ein abschliessender Select-Values-Schritt entfernt jeweils das Hilfs-Rasterfeld.
+Die Generate-Rows-Zeile ist eine Eigenschaft dieser Vorlagen; ein Raster Reader kann auch selbst eine Zeile erzeugen.
 
 === Vektorkonvertierung
 
@@ -33,11 +36,12 @@ link:downloads/raster-clip/clip-cog.hpl[Parametrisierte Clip-Pipeline herunterla
 |OUTPUT_FILE |`/data/solothurn-clip.tif`
 |===
 
-Band ist in den Clip- und Statistikvorlagen im Dialog auf `1` gesetzt (kein variabler Parameter).
+In der Clip-Vorlage steht *Bands (ALL or 1-based list)* (`bands`) auf `1`;
+in der Statistikvorlage steht *band* auf `1`. Beides sind feste Einstellungen, keine variablen Parameter.
 
 Die URL ist ein Beispiel, keine dauerhaft zugesicherte Datenversion. Dieselbe Pipeline akzeptiert lokale GeoTIFFs.
 Sie schneidet genau ein Band auf dem Quellraster aus; sie erzeugt keine neue Auflösung.
-Im Ergebnis stehen `raster_output_file` und `raster_status = OK`.
+Der eingebundene Raster Writer ergänzt `raster_output_file` und `raster_status = OK`.
 
 === Reprojektion und Auflösungsänderung
 
@@ -69,8 +73,28 @@ Zum Speichern fügen Sie einen Vector Writer mit neuem Zielpfad hinzu.
 Überprüfen Sie neben `raster_mean`, `raster_min`, `raster_max` stets `raster_count` und `raster_status`.
 NULL-Statistikwerte bei `NO_VALID_PIXELS` sind keine Höhe null.
 
+[[rasterwerte-beispiel]]
+=== Rasterwerte direkt verketten
+
+link:downloads/raster-values/clip-reproject.hpl[Raster Reader → Clip → Reproject → Writer herunterladen]
+
+Diese Pipeline gibt das Feld `raster` direkt von Operation zu Operation weiter und schreibt erst am Ende.
+Setzen Sie die in der HPL-Datei definierten Parameter auf Ihre Daten; es entstehen keine Zwischendateien.
+
 === Lokale Prüfung
 
 `scripts/check-doc-examples.py` führt Clip und Statistik aus den echten HPL-Dateien mit kleinen,
-lokal erzeugten Testdaten aus. Es benötigt den vorher gebauten Plugin-ZIP und Java 21; siehe
-{repo}/blob/main/docs/dev-setup.md[Entwickleranleitung]. Externe COGs gehören nicht zur verpflichtenden Prüfung.
+lokal erzeugten Testdaten aus. Benötigt werden Java 21 einschliesslich `javac`, Python 3 und eine saubere,
+entbehrliche Apache-Hop-2.19.0-Installation ohne bereits installierte Geometry-, Raster-Type- oder Vector/Raster-Plugins.
+Das Skript installiert die Plugins in diese Testinstallation.
+Bauen Sie zuerst die passenden Raster-Type- und Geometry-Artefakte sowie das Vector/Raster-ZIP;
+siehe {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung].
+In `assemblies/assemblies-hop-vector-raster/target` muss genau ein Vector/Raster-ZIP liegen.
+Setzen Sie `HOP_HOME`, `GEOMETRY_ZIP` und `RASTER_TYPE_ZIP` auf absolute Pfade und führen Sie vom Repository-Stamm aus:
+
+[source,bash]
+----
+python3 scripts/check-doc-examples.py --hop-home "$HOP_HOME" --geometry-zip "$GEOMETRY_ZIP" --raster-type-zip "$RASTER_TYPE_ZIP"
+----
+
+Externe COGs gehören nicht zur verpflichtenden Prüfung.

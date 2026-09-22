@@ -12,6 +12,7 @@ Die GeoPackage-Ausgabe verarbeitet XY-Geometrien.
 . Prüfen Sie Layer und Schema in der Vorschau. Für eine Shapefile ist ein einzelner Layer vorhanden.
 . Konfigurieren Sie den Writer mit `Format = GEOPACKAGE`, einem neuen Ausgabepfad,
   `Layer (optional) = parcels` und `Geometry field = geometry`.
+  Verwenden Sie den voreingestellten Schreibmodus *Neue Datei erstellen* (`CREATE_FILE`).
 . Lassen Sie das CRS leer, wenn das richtige CRS aus der Quelle bekannt ist.
   Bei fehlender PRJ-Datei müssen Sie das tatsächliche Quell-CRS kennen und explizit zuweisen.
 . Führen Sie die Pipeline aus. Öffnen Sie die Ausgabe anschliessend mit einem zweiten Vector Reader

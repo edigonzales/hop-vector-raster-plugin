@@ -1,8 +1,9 @@
 # Benutzerhandbuch mit Thoth Biblios
 
 Die deutschen AsciiDoc-Kapitel in `user/` sind die zentrale Benutzerdokumentation.
-`master.adoc` bindet sie zu einer Seite ein; `biblios.yml` konfiguriert Navigation,
-Suche und öffentliche GitHub-Quelllinks. PDF und DOCX sind deaktiviert.
+`master.adoc` bindet sie zu einer Seite ein; `biblios.yml` konfiguriert Navigation
+und Suche. Die Links „Edit this page“ und „View source“ am Dokumentanfang
+sowie PDF und DOCX sind deaktiviert.
 
 ## Lokal bauen und ansehen
 
@@ -31,10 +32,14 @@ python3 docs/biblios/build.py --revision <commit-sha>
 python3 -m unittest discover -s docs/biblios/tools -p 'test_*.py'
 ```
 
-Mit `--revision` werden ausschliesslich Dateien dieses Commits verwendet, auch bei
-PR-Merge-Commits oder detached HEAD. Konfiguration und Downloads stammen ebenfalls
-aus diesem Stand. Öffentliche Source-/Edit-Links zeigen weiterhin nach GitHub/main.
+Mit `--revision` stammen Handbuchquellen, Beispiele, Biblios-Konfiguration und CSS aus diesem
+Commit, auch bei PR-Merge-Commits oder detached HEAD. Buildhelfer und abschliessender Site-Checker
+stammen aus dem aufrufenden Checkout. Der Biblios-Snapshot wird separat aufgelöst oder mit `--jar` fixiert.
 Die Suche wird mit Enter gestartet. `site.css` ergänzt das Standardtheme für schmale Tabellenansichten.
+ASCII-Dialoge verwenden `[.gui-mockup]` vor einem geschlossenen `----`-Listing
+gemäss dem [zentralen Repository-Vertrag](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/plugin-repository-contract.md#gui-documentation).
+Die GUI-Regeln (`font-size: 0.75em`, `line-height: 1.25`) werden nach dem Theme
+geladen; gewöhnliche Codeblöcke behalten ihre Schriftgrösse.
 Der Build prüft lokale Links, Includes/Referenzen, Anker, HPL-Downloads und Suchindex.
 Downloads, Cache, generierte Konfiguration und HTML sind ignoriert.
 
@@ -42,8 +47,9 @@ Downloads, Cache, generierte Konfiguration und HTML sind ignoriert.
 
 `.github/workflows/biblios-docs.yml` läuft automatisch **nur bei Änderungen unter
 `docs/biblios/**`**: PRs bauen und prüfen, Pushes auf `main` veröffentlichen danach.
-README-, Java-, Beispiel-, Buildskript- oder Workflow-Änderungen allein lösen keinen
-Biblios-Lauf aus. Bei geänderten Beispielen das zugehörige Handbuchkapitel ebenfalls
+Änderungen ausserhalb dieses Verzeichnisses, etwa an der Root-README, Java-Code, Beispielen,
+Buildskripten unter `scripts/` oder Workflows, lösen allein keinen Biblios-Lauf aus.
+Änderungen an `docs/biblios/build.py` lösen ihn dagegen aus. Bei geänderten Beispielen das zugehörige Handbuchkapitel ebenfalls
 aktualisieren, damit Downloads neu veröffentlicht werden.
 
 `workflow_dispatch` erlaubt einen ausdrücklich manuellen Build. Auch dann wird nur

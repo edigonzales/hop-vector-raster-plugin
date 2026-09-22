@@ -59,6 +59,8 @@ Pipelines ohne diese Einstellung behalten `LEGACY`. Die Auflösung bestimmt das 
 die Toleranz ist Metadateninformation und keine Linearisierungsgenauigkeit.
 
 Vier optionale Reader-Grenzen filtern inklusiv nach der Geometrie-Boundingbox im Quell-CRS.
+Diese Einstellungen haben derzeit keine Controls im Reader-Dialog. Für fortgeschrittene HPL-/Metadatenkonfiguration
+setzen Sie `fileGdbXMin`, `fileGdbYMin`, `fileGdbXMax` und `fileGdbYMax` gemeinsam; einzelne Grenzen reichen nicht aus.
 Neue FileGDB-Indizes und fremde Punktindizes werden verwendet; fremde Linien-/Polygonindizes
 führen für diese Abfragesemantik zu einem Scan. Der Schema-Dialog zeigt die gespeicherten
 XY-Einstellungen. Beim Erstellen wird eine eingehende `OBJECTID` als `SOURCE_OBJECTID` exportiert; eine
@@ -69,6 +71,92 @@ im Geoprocessing-Plugin. Bei Coverages müssen dessen Zielraster und das Writer-
 
 Ob ein Layername bereits existiert, wird aus dem Katalog gelesen; die Auswahl eines
 Layers beim Lesen entspricht Verhalten und Fehlermeldungen von GeoPackage.
+
+[[filegdb-catalog-reader]]
+==== FileGDB Catalog Reader
+
+Plugin-ID: `SOGIS_FILEGDB_CATALOG_READER`. Dieser separate Transform liest Katalogmetadaten als Hop-Zeilen.
+Öffnen Sie seine Eigenschaften; er ist kein Unterdialog des Vector Reader.
+Die Ansicht verwendet einen Beispielpfad, die übrigen Einstellungen zeigen die Defaults;
+siehe <<dialog-legende,Dialoglegende>>. Der Verzeichnispfad ist anfangs leer und wird direkt eingegeben.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| FileGDB Catalog Reader                                                       |
++------------------------------------------------------------------------------+
+| Transform name                 [ Katalog lesen ]                             |
+| Geodatabase directory          [ ${PROJECT_HOME}/data.gdb ]                  |
+| Catalog output                 [ DOMAINS v ]                                 |
+| Exact name filter (optional)   [ <leer> ]                                    |
+|                                                                              |
+| [ OK ] [ Cancel ]                                                            |
++------------------------------------------------------------------------------+
+----
+
+*Catalog output* bestimmt das Ausgabeschema. Alle Ausgabespalten sind Strings.
+*Exact name filter (optional)* ist anfangs leer und lässt dann alle Einträge durch.
+Sonst wird der Name exakt und unter Beachtung der Gross-/Kleinschreibung verglichen.
+
+[cols="2,3,2",options="header"]
+|===
+|Modus |Inhalt |Filter bezieht sich auf
+|`DOMAINS` (Standard) |Domaindefinitionen, Typen und Wertebereiche |Domainname
+|`DOMAIN_VALUES` |Codes und Beschreibungen |Domainname
+|`FIELD_DOMAINS` |Zuordnung von Feldern zu Domains |Datasetname
+|`RELATIONSHIPS` |Relationship Classes |Beziehungsname
+|`RELATIONSHIP_KEYS` |Schlüsselfelder und Rollen |Beziehungsname
+|===
+
+[[filegdb-writer]]
+==== FileGDB Writer
+
+Plugin-ID: `SOGIS_FILEGDB_WRITER`. Dieser separate Writer ordnet mehrere benannte Eingänge
+Datasets zu. Verbinden Sie die benötigten Eingangstransforms mit ihm und öffnen Sie seine Eigenschaften.
+Die Ansicht zeigt ein ausgefülltes Append-Beispiel. Ein neuer Dialog startet mit *Neue GDB erstellen*,
+leeren Pfad-/Schemafeldern und ohne Zuordnungszeilen.
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------------------------------------+
+| FileGDB Writer                                                                                               |
++--------------------------------------------------------------------------------------------------------------+
+| Transform name                  [ GDB ergänzen ]                                                             |
+| Geodatabase                     [ ${PROJECT_HOME}/data.gdb ]                                                 |
+| Schreibmodus                    [ Bestehende GDB ergänzen v ]                                                |
+| JSON-Schema (für neue Datasets)  [ <leer> ]                                                                  |
+| [ GDB auswählen… ] [ Schema auswählen… ] [ Datasets laden ] [ Eingang hinzufügen ] [ Eingangsschema prüfen ] |
+|                                                                                                              |
+| Dataset     Aktion                     Eingangstransform     Quellgeometrie     Index anlegen                |
+| [parcels]   [Datensätze anhängen v]    [Read parcels v]      [geometry]         [x]             [Entfernen]  |
+|                                                                                                              |
+| <schreibgeschützte Vorschau>                                                                                 |
+| Eine Arbeitskopie sichert den gesamten Lauf ab. Andere Programme müssen die GDB schließen.                   |
+| Vorhandene räumliche Indizes werden immer nachgeführt.                                                       |
+|                                                                                                              |
+| [ OK ] [ Cancel ]                                                                                            |
++--------------------------------------------------------------------------------------------------------------+
+----
+
+*GDB auswählen…* öffnet eine Ordnerauswahl, *Schema auswählen…* eine Dateiauswahl für JSON.
+Nach der Auswahl kehren Sie zum Writer zurück. *Datasets laden* ergänzt Zuordnungszeilen aus dem
+JSON-Schema und bei *Bestehende GDB ergänzen* auch aus der vorhandenen GDB.
+Mit *Eingang hinzufügen* legen Sie eine weitere Zeile an; *Entfernen* entfernt die jeweilige Zuordnung.
+Wählen Sie pro gewünschtem Dataset genau einen Eingangstransform und entfernen Sie nicht benötigte Zuordnungen.
+*Eingangsschema prüfen* zeigt Kompatibilität oder Fehler in der schreibgeschützten Vorschau.
+
+[cols="2,3,3",options="header"]
+|===
+|GUI-Aktion |Voraussetzung |Quellgeometrie
+|Dataset anlegen (`CREATE_DATASET`) |JSON-Schema für das neue Dataset erforderlich |Aus JSON übernommen, Control deaktiviert
+|Datensätze anhängen (`APPEND_ROWS`) |Bestehendes Dataset; reines Append benötigt kein JSON |Editierbar; für Feature Classes die Geometry-Spalte angeben, für Attributtabellen leer
+|===
+
+Bei *Neue GDB erstellen* ist die Aktion auf *Dataset anlegen* fixiert und deaktiviert.
+Im Modus *Bestehende GDB ergänzen* können beide Aktionen kombiniert werden.
+Die Indexcheckbox ist bei neuen Zuordnungen standardmässig eingeschaltet; bei Neuanlage können die
+Vorgaben aus dem JSON-Schema übernommen werden. Vorhandene räumliche Indizes werden immer nachgeführt.
+Der Lauf verwendet eine Arbeitskopie; andere Programme müssen die GDB währenddessen schliessen.
 
 [[shapefile]]
 === Shapefile
@@ -99,14 +187,15 @@ DBF-Feldnamen sind ASCII, maximal zehn Zeichen; Kollisionen erhalten stabile Suf
 |Number / BigNumber |Standardbreite 33, Skala 15; HALF_UP-Rundung mit Warnung. BigDecimal wird nicht über Double geführt.
 |Dezimalwerte beim Lesen |Hop BigNumber; ganzzahlige Felder bis Breite 20 werden Hop Integer.
 |Date / Timestamp |DBF enthält nur das Datum; verlorene Uhrzeit wird gemeldet. Date timezone beachten.
-|NULL |Leere Zahlen-, Datums- und logische Felder ergeben NULL; leere Zeichenfelder ergeben einen leeren String.
+|NULL |Leere Zahlen-, Datums- und logische Felder ergeben NULL. Mit Leerzeichen gefüllte Zeichenfelder ergeben einen leeren String; vollständig mit Nullbytes gefüllte Zeichenfelder werden als NULL gelesen.
 |Binary / komplexe Typen |Vorher in unterstützte Attribute umwandeln.
 |===
 
-NULL und leerer String sind in DBF-Zeichenfeldern nicht unterscheidbar.
+Vom Writer ausgegebene NULL-Werte und leere Strings sind in DBF-Zeichenfeldern nicht unterscheidbar.
 Keine Append-/Update-Funktion, QIX-Erzeugung oder räumliche Reader-Filterung; Komponenten über 2 GiB werden nicht unterstützt.
 Der Writer stellt die Sidecar-Dateien zunächst temporär bereit. Ihre Veröffentlichung ist kein atomarer Austausch des gesamten Dateibündels.
-Vorhandene Zieldateien werden abgelehnt.
+Ohne *Overwrite existing file* werden vorhandene Zieldateien beziehungsweise Sidecars abgelehnt.
+Mit aktivierter Option werden bekannte Sidecars ersetzt und veraltete entfernt.
 
 [[geopackage]]
 === GeoPackage
@@ -128,7 +217,10 @@ Bei einer Namenskollision mit `fid` wählt der Writer einen anderen internen Sch
 
 Der Vector Writer bietet drei GeoPackage-Schreibmodi: neue Datei erstellen (`CREATE_FILE`),
 neuen Layer in einer bestehenden Datei anlegen (`ADD_LAYER`) und Features an einen bestehenden Layer anhängen (`APPEND_FEATURES`).
-Bei Neuanlage kann das Geometrieschema explizit angegeben oder aus der ersten Geometrie ermittelt werden.
+Bei Neuanlage kann das Geometrieschema explizit angegeben oder aus der ersten nichtleeren Geometrie ermittelt werden.
+Der aktuelle Writer benötigt auch bei explizitem Schema zusätzlich ein Geometriebeispiel.
+Ein explizites Schema genügt daher nicht für leere Quellen oder Quellen, deren erste Zeile eine NULL-Geometrie enthält.
+Ohne explizites Schema werden anfängliche NULL/EMPTY-Zeilen bis zur Schemaableitung gepuffert; reine NULL-Streams lassen sich nicht ableiten.
 Beim Anhängen gilt das vorhandene Zielschema; dies funktioniert auch mit leeren Eingängen.
 Attribute werden ohne Beachtung der Gross-/Kleinschreibung nach Namen zugeordnet. Die ausgewählte Quellgeometrie
 wird der Zielgeometriespalte zugeordnet. Fehlende Attribute benötigen Nullable oder einen Datenbank-Default;

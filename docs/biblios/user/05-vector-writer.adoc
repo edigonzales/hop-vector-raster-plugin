@@ -1,39 +1,39 @@
 [[vector-writer]]
 == Vector Writer
 
-*Vector Writer* schreibt eingehende Hop-Zeilen in eine lokale Vektordatei.
-Er benötigt eine ausgewählte Geometry-Spalte und passende Attributmetadaten.
+*Vector Writer* schreibt eingehende Hop-Zeilen in eine lokale Vektordatei oder File Geodatabase.
+Für Feature-Ausgaben benötigt er eine Geometry-Spalte und passende Attributmetadaten.
+Bei FileGDB-Neuanlage kann ein JSON-Schema auch eine reine Attributtabelle definieren.
 Er ist eine Senke ohne nachfolgende Ergebniszeilen. Plugin-ID: `SOGIS_VECTOR_WRITER`.
 
 === Dialogansicht
 
-Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
-`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
-`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+Die schematische Ansicht zeigt eine ausgefüllte Beispielkonfiguration; siehe <<dialog-legende,Dialoglegende>>.
+Ein leeres Eingabefeld übernimmt nur dort eine Vorgabe, wo dies in der Einstellungstabelle beschrieben ist.
 Das Feld *Layer (optional)* ist ein freies Eingabefeld mit Variablenunterstützung.
 Vorhandene GeoPackage-Layer und FileGDB-Datasets werden in der Vorschau angezeigt,
 aber nicht automatisch als Auswahl in dieses Feld übernommen.
 
-[source,text,role="gui-dialog"]
+[.gui-mockup]
 ----
-+==============================================================================+
++------------------------------------------------------------------------------+
 | Vector Writer                                                                |
-| ============================================================================ |
++------------------------------------------------------------------------------+
 | Transform name                         [ Parzellen schreiben ]               |
 | Format                                 [ FLATGEOBUF v]                       |
 | Layer (optional)                       [ parcels ]                           |
 | Output file                                                                  |
-|   [ ${PROJECT_HOME}/parcels.fgb ] [ Browse... ]                              |
+| [ ${PROJECT_HOME}/parcels.fgb ]                                              |
 | Geometry field                         [ geometry v]                         |
 | Layer geometry type                    [ MULTIPOLYGON v]                     |
 | Layer dimension                        [ XY v]                               |
-| Assign CRS (EPSG or WKT)               [ ]                                   |
+| Assign CRS (EPSG or WKT)               [ <leer> ]                            |
 | Overwrite existing file                [ ]                                   |
 | Spatial index (reorders features)      [x]                                   |
 | Skip NULL/EMPTY geometries with warning [ ]                                  |
 |                                                                              |
-|                                                          [ OK ] [ Cancel ]   |
-+==============================================================================+
+|                                                            [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------+
 ----
 
 Die dargestellte Konfiguration schreibt Parzellen als indiziertes FlatGeobuf.
@@ -45,16 +45,16 @@ Die Wahl unter *Format* steuert die sichtbaren Formatoptionen.
 |===
 |Einstellung |Standard |Bedeutung
 |Transform name |Von Hop vergeben |Name dieses Schritts.
-|Format |`AUTO` |`.shp`, `.gpkg`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
-|Layer (optional) |Leer |Freies Eingabefeld mit Variablenunterstützung. Ohne Angabe verwendet der Writer den Dateinamen ohne Erweiterung; für GENERATE ist das Feld ohne Bedeutung.
-|Output file |Leer |Lokaler Zielpfad; Variablen möglich. Elternverzeichnis muss existieren. Bei `AUTO` bleibt die im Speicherdialog eingegebene Endung erhalten; ein explizites Format verwendet seine passende Endung.
+|Format |`AUTO` |`.shp`, `.gpkg`, `.gdb`, `.fgb`, `.parquet`, `.gen` erkennen oder Format explizit wählen.
+|Layer (optional) |Leer |Freies Eingabefeld mit Variablenunterstützung. Bei Neuanlage verwendet der Writer ohne Angabe den Dateinamen ohne Erweiterung. Beim Append ist der Ziel-Layer trotz „optional“ im Label erforderlich. Für GENERATE ist das Feld deaktiviert.
+|Output file |Leer |Lokaler Zielpfad mit Variablenunterstützung; bei FileGDB ein `.gdb`-Verzeichnis. Elternverzeichnis muss existieren. Bei `AUTO` erkennt die Endung das Format. Bei expliziter Formatwahl den vollständigen passenden Zielpfad selbst eingeben; es gibt keinen Browse-Button.
 |Geometry field |Leer |Geometry-Spalte aus den Eingabezeilen. Bei genau einem eingehenden Geometry-Feld wird dieses automatisch ausgewählt; bei mehreren oder keinem Geometry-Feld bleibt die Auswahl leer.
-|Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie bei Shapefile/FlatGeobuf/Parquet.
-|Layer dimension |`AUTO` |`XY`, `XYZ`, `XYM`, `XYZM` oder Ableitung; für die genannten Formate.
+|Layer geometry type |`AUTO` |Expliziter Typ oder Ableitung aus erster nichtleerer Geometrie. Ausser bei GENERATE sichtbar; beim GeoPackage-/FileGDB-Append deaktiviert. GeoPackage benötigt bei Neuanlage zusätzlich ein Geometriebeispiel.
+|Layer dimension |`AUTO` |`XY`, `XYZ`, `XYM`, `XYZM` oder Ableitung; GeoPackage unterstützt nur XY. Beim GeoPackage-/FileGDB-Append deaktiviert.
 |DBF encoding (empty: UTF-8) |Leer |Bei Shapefile-Ausgabe standardmässig UTF-8 mit CPG-Datei.
 |Date timezone |`UTC` |Zeitzone für Datumsumwandlungen.
 |Assign CRS (EPSG or WKT) |Leer |EPSG/WKT zuweisen, keine Reprojektion; bekannte widersprüchliche SRIDs werden abgelehnt.
-|Overwrite existing file |Aus |Für GENERATE, FlatGeobuf, Parquet und Shapefile verfügbar. Beim Shapefile werden vorhandene bekannte Sidecars ersetzt; GeoPackage verwendet eigene nicht-destruktive Schreibmodi.
+|Overwrite existing file |Aus |Für GENERATE, FlatGeobuf, Parquet und Shapefile verfügbar. Beim Shapefile werden vorhandene bekannte Sidecars ersetzt; GeoPackage und FileGDB verwenden eigene Schreibmodi ohne Overwrite-Schalter.
 |===
 
 Für leere oder ausschliesslich NULL-haltige Shapefile-/FlatGeobuf-/Parquet-Ausgaben geben Sie Typ und Dimension explizit an.
@@ -66,21 +66,21 @@ Eine zweite Geometry-Spalte und komplexe Werte müssen vor der Ausgabe auf ein u
 
 === Shapefile: DBF-Schema
 
-[source,text,role="gui-dialog"]
+[.gui-mockup]
 ----
-+==============================================================================+
++------------------------------------------------------------------------------+
 | Vector Writer: Format = SHAPEFILE (Formatoptionen)                           |
-| ============================================================================ |
++------------------------------------------------------------------------------+
 | DBF encoding (empty: UTF-8)            [ UTF-8 ]                             |
 | Date timezone                          [ UTC ]                               |
 |                                                                              |
 | DBF fields (double-click to edit)                            [ Get fields ]  |
-|   Source field   Target name   Width   Decimal places                        |
-|   name           NAME          80      0                                     |
-|   area           AREA          18      2                                     |
+| Source field   Target name   Width   Decimal places                          |
+| name           NAME          80      0                                       |
+| area           AREA          18      2                                       |
 |                                                                              |
 | [ Remove selected mapping ]  [ Preview DBF schema ]                          |
-+==============================================================================+
++------------------------------------------------------------------------------+
 ----
 
 *Get fields* übernimmt die eingehenden Felder in die DBF-Zuordnung.
@@ -103,16 +103,16 @@ Ohne Index bleibt die Eingabereihenfolge erhalten. Die <<flatgeobuf,Formatbeschr
 
 === Parquet
 
-[source,text,role="gui-dialog"]
+[.gui-mockup]
 ----
-+==============================================================================+
++------------------------------------------------------------------------------+
 | Vector Writer: Format = PARQUET (Formatoptionen)                             |
-| ============================================================================ |
++------------------------------------------------------------------------------+
 | Logical geometry type                  [ GEOMETRY v]                         |
-| Geography interpolation                [ SPHERICAL v]                        |
+| Geography interpolation                [ SPHERICAL v] (deaktiviert)          |
 | Compression                            [ GZIP v]                             |
 | Row group size (bytes)                 [ 134217728 ]                         |
-+==============================================================================+
++------------------------------------------------------------------------------+
 ----
 
 [cols="2,1,4",options="header"]
@@ -126,22 +126,25 @@ Ohne Index bleibt die Eingabereihenfolge erhalten. Die <<flatgeobuf,Formatbeschr
 
 Es entsteht <<parquet,natives räumliches Parquet>>, kein GeoParquet-Metadatendokument.
 
+*Geography interpolation* bleibt bei `GEOMETRY` sichtbar, ist aber deaktiviert.
+Erst die Auswahl `GEOGRAPHY` aktiviert das Feld.
+
 === ArcInfo GENERATE
 
-[source,text,role="gui-dialog"]
+[.gui-mockup]
 ----
-+==============================================================================+
++------------------------------------------------------------------------------+
 | Vector Writer: Format = ARCINFO_GENERATE (Formatoptionen)                    |
-| ============================================================================ |
++------------------------------------------------------------------------------+
 | Geometry type                          [ LINE v]                             |
 | Dimension                              [ XY v]                               |
-| ID field (empty: sequential IDs)       [ ]                                   |
+| ID field (empty: sequential IDs)       [ <leer> v ]                          |
 | Sequential start ID                    [ 1 ]                                 |
 | Discard extra Z/M ordinates            [ ]                                   |
 | Decimal places (-1: preserve precision, 0–15: fixed) [ -1 ]                  |
 | Comma delimiter (default: space)       [ ]                                   |
 | Skip null / empty geometries           [ ]                                   |
-+==============================================================================+
++------------------------------------------------------------------------------+
 ----
 
 [cols="2,1,4",options="header"]
@@ -160,9 +163,83 @@ Es entsteht <<parquet,natives räumliches Parquet>>, kein GeoParquet-Metadatendo
 Nur einfache Point-, LineString- und Polygon-Geometrien ohne Löcher werden akzeptiert.
 Die sechs Ausgabedialekte und Einschränkungen stehen unter <<generate,GENERATE>>.
 
+[[vector-writer-geopackage]]
+=== GeoPackage: Schreibmodi
+
+Wählen Sie *GEOPACKAGE* im Hauptdialog. Der folgende Ausschnitt zeigt die Formatoptionen
+mit den Vorgaben für eine neue Datei; die gemeinsamen Felder stehen darüber.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Vector Writer: GEOPACKAGE (Optionsausschnitt)                                |
++------------------------------------------------------------------------------+
+| Schreibmodus [ Neue Datei erstellen v ]                                      |
+| Räumlichen Index erstellen, falls nicht vorhanden [x]                        |
+| [ Layer laden ] (deaktiviert)  [ Eingangsschema prüfen ] (deaktiviert)       |
+| <schreibgeschützte Vorschau>                                                 |
++------------------------------------------------------------------------------+
+----
+
+*Layer laden* zeigt vorhandene Layer und bei Append das Zielschema in der Vorschau.
+*Eingangsschema prüfen* vergleicht die Eingabefelder mit dem Append-Ziel.
+Tragen Sie den gewünschten Layer selbst in *Layer (optional)* ein; die Vorschau füllt das Feld nicht aus.
+Die <<geopackage,Formatbeschreibung>> erläutert Transaktionen, Indexpflege und Schemaeinschränkungen.
+
+[[vector-writer-filegdb]]
+=== File Geodatabase: Schreibmodi
+
+Wählen Sie *FILEGEODATABASE*. Der Ausschnitt zeigt die Vorgaben für eine neue GDB.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Vector Writer: FILEGEODATABASE (Optionsausschnitt)                           |
++------------------------------------------------------------------------------+
+| Schreibmodus [ Neue GDB erstellen v ]                                        |
+| JSON schema file (optional; overrides schema/XY options) [ <leer> ]          |
+| FileGDB precision defaults [ AUTO v ]                                        |
+| XY resolution (CRS units; empty: default) [ <leer> ]                         |
+| XY cluster tolerance (CRS units) [ <leer> ]                                  |
+| X grid origin (optional) [ <leer> ]                                          |
+| Y grid origin (optional) [ <leer> ]                                          |
+| Create native spatial index [x]                                              |
+| [ Datasets laden ] (deaktiviert)  [ Eingangsschema prüfen ] (deaktiviert)    |
+| <schreibgeschützte Vorschau>                                                 |
++------------------------------------------------------------------------------+
+----
+
+Neue Transforms verwenden `AUTO` für CRS-abhängige Präzisionsvorgaben. Alte HPLs ohne diese
+Einstellung behalten `LEGACY`. Leere XY-Felder übernehmen die Vorgaben des gewählten Modus.
+Ein JSON-Schema überschreibt die Schema-/XY-Einstellungen. Für mehrere Datasets oder Beziehungen
+verwenden Sie den separaten <<filegdb-writer,FileGDB Writer>>.
+*Datasets laden* zeigt vorhandene Datasets; *Eingangsschema prüfen* prüft das Append-Ziel.
+Die <<filegeodatabase,Formatbeschreibung>> erläutert Präzision, Domains und Einschränkungen.
+
+==== Verfügbare Controls nach Schreibmodus
+
+Die Bezeichnungen vor den Klammern stehen in der GUI, die Werte in Klammern in der HPL-Konfiguration.
+
+[cols="3,1,1,2,2",options="header"]
+|===
+|Format / Schreibmodus |Laden |Schema prüfen |Typ / Dimension / CRS |FileGDB JSON / XY
+|GeoPackage: Neue Datei erstellen (`CREATE_FILE`) |Deaktiviert |Deaktiviert |Aktiv |–
+|GeoPackage: Neuen Layer hinzufügen (`ADD_LAYER`) |Aktiv |Deaktiviert |Aktiv |–
+|GeoPackage: Features hinzufügen (`APPEND_FEATURES`) |Aktiv |Aktiv |Deaktiviert |–
+|FileGDB: Neue GDB erstellen (`CREATE_DATABASE`) |Deaktiviert |Deaktiviert |Aktiv |Aktiv
+|FileGDB: Dataset hinzufügen (`ADD_DATASET`) |Aktiv |Deaktiviert |Aktiv |Aktiv
+|FileGDB: Datensätze hinzufügen (`APPEND_ROWS`) |Aktiv |Aktiv |Deaktiviert |Deaktiviert
+|===
+
+Beim Append ist ein Ziel-Layer erforderlich. Das Ziel bestimmt Geometrietyp, Dimension und CRS;
+diese Controls bleiben sichtbar, aber deaktiviert. Bei FileGDB muss das JSON-Schemafeld für Append leer sein;
+löschen Sie einen zuvor gesetzten Pfad vor dem Moduswechsel.
+Die Indexcheckbox bleibt aktiv; vorhandene Indizes werden immer nachgeführt.
+*Overwrite existing file* ist bei beiden Formaten ausgeblendet.
+
 === Abschluss, Fehler und Beispiel
 
-Verwenden Sie einen eindeutigen Zielpfad pro Writer/Kopie. Die Ausgabe wird erst nach erfolgreichem EOF veröffentlicht.
+Verwenden Sie einen eindeutigen Zielpfad pro Writer und genau eine Transform-Kopie. Die Ausgabe wird erst nach erfolgreichem EOF veröffentlicht.
 Ein Abbruch soll keine teilweise geschriebene Zieldatei hinterlassen; Details unterscheiden sich nach Format.
 Fehler bei Schema, Geometrie, CRS, Kodierung oder Dateikonflikten stoppen den Writer.
 

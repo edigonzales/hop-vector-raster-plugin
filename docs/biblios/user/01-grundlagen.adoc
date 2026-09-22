@@ -11,9 +11,14 @@ Vektorformate verwenden eigene Java-Adapter, GeoPackage zusätzlich SQLite JDBC.
 |Aufgabe |Transform
 |Vektordatei lesen |<<vector-reader,Vector Reader>>
 |Vektordatei schreiben |<<vector-writer,Vector Writer>>
+|FileGDB-Domains und Beziehungen lesen |<<filegdb-catalog-reader,FileGDB Catalog Reader>>
+|Mehrere FileGDB-Datasets schreiben |<<filegdb-writer,FileGDB Writer>>
+|Rasterwert erzeugen |<<raster-reader,Raster Reader (GeoTools)>>
+|Rastermetadaten ergänzen |<<raster-info,Raster Info (GeoTools)>>
+|Rasterwert als GeoTIFF schreiben |<<raster-writer,Raster Writer (GeoTools)>>
 |Raster ausschneiden, Quellauflösung erhalten |<<raster-clip,Raster Clip (GeoTools)>>
-|Raster-CRS oder Pixelgrösse ändern |<<raster-reproject,Raster Reproject / Resample (GeoTools)>>
-|Rasterwerte innerhalb von Polygonen auswerten |<<raster-statistik,Raster Zonal Statistics (GeoTools)>>
+|Raster-CRS oder Pixelgrösse ändern |<<raster-reproject,Raster Reproject (GeoTools)>>
+|Rasterwerte innerhalb von Polygonen auswerten |<<raster-statistik,Raster ZonalStats (GeoTools)>>
 |===
 
 === Wie Daten durch die Pipeline fliessen
@@ -23,14 +28,17 @@ Der Vector Reader erzeugt pro Feature eine Zeile. Die Geometrie liegt als gemein
 nicht als WKT-Text. Das separate Geometry-Type-Plugin stellt diesen Typ bereit.
 
 Der Vector Writer ist ein Senken-Transform: Er schreibt die eingehenden Zeilen und gibt keine Ergebniszeilen aus.
-Raster Clip und Reproject verarbeiten *pro Eingabezeile einen Auftrag* und hängen Dateipfad und Status an.
-Zonal Statistics ergänzt pro Polygonzeile die gewünschten Kennzahlen.
+Raster Reader erzeugt einen typisierten Rasterwert, standardmässig im Feld `raster`.
+Ohne vorgelagerten Transform liefert er eine Zeile, mit Eingaben ergänzt er jede Zeile.
+Clip und Reproject ersetzen das Rasterfeld oder ergänzen ein neues; sie schreiben keine Datei.
+Erst Raster Writer ergänzt beim Schreiben `<prefix>output_file` und `<prefix>status`.
+ZonalStats ergänzt pro Polygonzeile die gewünschten Kennzahlen.
 Rasterpixel werden nicht einzeln als Hop-Zeilen transportiert.
 
 [TIP]
 ====
-Ein konstanter Rasterpfad allein startet noch keinen Clip.
-Für einen einzelnen Auftrag schalten Sie *Generate Rows* mit `Limit = 1` davor.
+Für einen einzelnen Auftrag genügt *Raster Reader → Raster Clip → Raster Writer*.
+*Generate Rows* ist optional vor dem Reader; Clip selbst benötigt bereits ein Rasterfeld.
 ====
 
 === Konstante, Variable oder Feldname
@@ -40,11 +48,27 @@ Die Variable wird beim Ausführen aufgelöst.
 Ein Eingabefeld, etwa `raster_url`, wird bei den Raster-Transforms über das zugehörige Kontrollkästchen ausgewählt.
 Ohne dieses Kästchen wird der Text als konstanter Wert interpretiert.
 
-Bei Clip können Quelle, Ausgabepfad und Bounding-Box-Werte aus Feldern stammen.
-Bei Reproject sind zusätzlich Ziel-CRS und Pixelgrössen feldgebunden möglich.
-Bei Zonal Statistics kann die Rasterquelle aus einem Feld stammen; das Geometriefeld bezeichnet immer eine Spalte.
+Raster Reader bindet den Quellpfad über *source Field* an eine Eingabespalte;
+Raster Writer bindet den Ausgabepfad über *output Field*.
+Clip und Reproject lesen mit *bbox Fields* alle vier Bounding-Box-Werte aus Spalten.
+Reproject bietet zusätzlich *target Crs Field* und *resolution Fields* für Ziel-CRS und beide Pixelgrössen.
+Raster- und Geometriefelder bezeichnen immer Spalten und benötigen keine zusätzliche Checkbox.
+Die Beschriftungen entsprechen der GUI; in HPL-Dateien heissen die Eigenschaften beispielsweise
+`sourceField`, `outputField`, `bboxFields`, `targetCrsField` und `resolutionFields`.
 NoData- und Präfix-Einstellungen akzeptieren Hop-Variablen, keine impliziten Feldreferenzen.
 Vector Reader/Writer verwenden konfigurierte Dateipfade mit Variablen, keine Dateiauswahl pro Eingabezeile.
+
+[[dialog-legende]]
+=== Dialogansichten lesen
+
+Die ASCII-Ansichten zeigen schematische Dialoge mit generischen Beispielwerten.
+`<leer>` bedeutet ein leeres Eingabefeld, `[ Wert v ]` ein Auswahlfeld;
+`[ ]` und `[x]` kennzeichnen ausgeschaltete beziehungsweise eingeschaltete Checkboxen.
+`(deaktiviert)` bedeutet sichtbar, aber nicht editierbar. Das `v` ersetzt den Auswahlpfeil.
+Pfade, Transformnamen und ausgefüllte Beispielwerte sind keine Vorgaben;
+Defaults werden bei den Einstellungen erklärt. Öffnen Sie die Eigenschaften des jeweiligen
+Transforms in Hop GUI. *OK* übernimmt die Konfiguration, *Cancel* verwirft die Dialogänderungen.
+Lange Skizzen können im Handbuch horizontal gescrollt werden.
 
 === Koordinatensystem und Zellraster
 
@@ -69,7 +93,7 @@ Maskierte und nichtendliche Werte werden bei der Rasterauswertung ausgeschlossen
 Ein NoData-Override ersetzt den deklarierten Sentinel. Details zu Interpolation und Ausgabe stehen in den Raster-Kapiteln.
 
 Rohwerte können eine bandweise Skalierung besitzen: `physikalischer Wert = Rohwert × scale + offset`.
-Statistiken verwenden physikalische Werte. Clip und Reproject schreiben Rohwerte und erhalten Scale/Offset.
+Statistiken verwenden physikalische Werte. Clip und Reproject verarbeiten Rohwerte und erhalten Scale/Offset; erst der Writer schreibt die Datei.
 
 Raster werden als typisierte Werte weitergegeben: *Raster Reader → Raster Clip → Raster Reproject → Raster Writer*.
 Installieren Sie zusätzlich das passende Raster-Type-ZIP. Clip und Reproject erzeugen keine Zwischendateien;

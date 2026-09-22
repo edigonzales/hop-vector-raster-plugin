@@ -1,41 +1,49 @@
 [[vector-reader]]
 == Vector Reader
 
-*Vector Reader* liest einen Layer aus einer lokalen Shapefile oder GeoPackage-Datei.
+*Vector Reader* liest einen Layer aus einer lokalen Shapefile, einer GeoPackage-Datei
+oder einer File Geodatabase (`.gdb`-Verzeichnis).
 Er benötigt keinen vorgelagerten Generate-Rows-Transform und erzeugt für jedes Feature eine Hop-Zeile.
 Die Plugin-ID lautet `SOGIS_VECTOR_READER`.
 
 === Dialogansicht
 
-Die schematische Ansicht zeigt eine ausgefüllte Konfiguration.
-`[ ]` kennzeichnet ein ausgeschaltetes, `[x]` ein eingeschaltetes Kontrollkästchen;
-`[ Wert v]` steht für ein Auswahlfeld. Ein leeres Eingabefeld übernimmt die in der Einstellungstabelle erklärte Vorgabe.
+Die schematische Ansicht zeigt eine ausgefüllte Beispielkonfiguration; siehe <<dialog-legende,Dialoglegende>>.
+Ein leeres Eingabefeld übernimmt nur dort eine Vorgabe, wo dies in der Einstellungstabelle beschrieben ist.
 
-[source,text,role="gui-dialog"]
+[.gui-mockup]
 ----
-+==============================================================================+
++------------------------------------------------------------------------------+
 | Vector Reader                                                                |
-| ============================================================================ |
++------------------------------------------------------------------------------+
 | Transform name                         [ Gebäude lesen ]                     |
 | Format                                 [ GEOPACKAGE v]                       |
 | Vector file                                                                  |
-|   [ ${PROJECT_HOME}/buildings.gpkg ] [ Browse... ]                           |
+| [ ${PROJECT_HOME}/buildings.gpkg ] [ Browse... ]                             |
 | Layer name (optional)                  [ buildings v]                        |
-| DBF encoding (empty: auto)             [ ]                                   |
+| DBF encoding (empty: auto)             [ <leer> ]                            |
 | Date timezone                          [ UTC ]                               |
-| Assign CRS (EPSG or WKT)               [ ]                                   |
+| Assign CRS (EPSG or WKT)               [ <leer> ]                            |
 |                                                                              |
 | Available fields                                                             |
-|   name       String                                                          |
-|   geometry   Geometry (Polygon, XY, EPSG:2056)                               |
+|   Layer: buildings                                                           |
+|   Geometry type: POLYGON                                                     |
+|   Geometry field: geometry                                                   |
+|   Dimension: XY                                                              |
+|   CRS: 2056                                                                  |
+|   Fields:                                                                    |
+|   - name (STRING) length=-1 precision=-1                                     |
 |                                                                              |
 | Geometry output field                  [ geometry ]                          |
 |                                                                              |
-|                                                          [ OK ] [ Cancel ]   |
-+==============================================================================+
+|                                                            [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------+
 ----
 
-Die Ansicht verwendet den Layer `buildings`; dessen Beispielschema enthält `name` und `geometry`.
+Die Ansicht verwendet den beispielhaften Layer `buildings` mit Attribut `name` und Geometriespalte `geometry`.
+Feldlängen und Präzision hängen von der Quelldatei ab.
+Für die Ordnerauswahl einer FileGDB wählen Sie ausdrücklich *FILEGEODATABASE*;
+der Button lautet dann *Browse folder...*. Bei *AUTO* bleibt der normale Dateiauswahldialog erhalten.
 
 === Einstellungen und Vorschau
 
@@ -43,8 +51,8 @@ Die Ansicht verwendet den Layer `buildings`; dessen Beispielschema enthält `nam
 |===
 |Einstellung |Standard |Bedeutung
 |Transform name |Von Hop vergeben |Name dieses Pipeline-Schritts.
-|Format |`AUTO` |Erkennt `.shp` oder `.gpkg`; alternativ `SHAPEFILE`/`GEOPACKAGE` wählen.
-|Vector file |Leer |Lokale Eingabedatei; Hop-Variablen sind möglich.
+|Format |`AUTO` |Erkennt `.shp`, `.gpkg` oder `.gdb`; alternativ `SHAPEFILE`, `GEOPACKAGE` oder `FILEGEODATABASE` wählen.
+|Vector file |Leer |Lokale Eingabedatei beziehungsweise `.gdb`-Verzeichnis; Hop-Variablen sind möglich.
 |Layer name (optional) |Leer |Ein Layer pro Reader. Ohne Angabe wird der erste verfügbare Layer verwendet.
 |Geometry output field |Leer |Leer übernimmt den Quellnamen der Geometriespalte; sonst wird nur das Hop-Ausgabefeld umbenannt.
 |DBF encoding (empty: auto) |Leer |Bei Shapefile explizite DBF-Kodierung; sonst automatische Ermittlung.
@@ -83,7 +91,8 @@ korrekt dargestellt werden; kontrollieren Sie dazu die gelesenen Zeilen.
 
 === Ausgabe und Fehler
 
-Die Ausgabe enthält die typisierten Attribute und die Geometry-Spalte.
+Feature-Layer liefern die typisierten Attribute und die Geometry-Spalte.
+FileGDB-Attributtabellen können auch ohne Geometriespalte gelesen werden.
 GeoPackage-Geometrie steht am Ende der Zeile. Ein Geometry-Ausgabename darf nicht mit einem Attribut kollidieren.
 Die Quelldatei bleibt unverändert; der Reader legt keine räumlichen Indizes an.
 

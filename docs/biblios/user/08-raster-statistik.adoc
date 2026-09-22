@@ -1,5 +1,5 @@
 [[raster-statistik]]
-== Raster Zonal Statistics (GeoTools)
+== Raster ZonalStats (GeoTools): zonale Statistik
 
 `SOGIS_RASTER_VALUE_ZONAL_STATS` liest ein Rasterfeld und ein Polygonfeld und ergänzt Kennzahlen.
 Typische Pipeline: Vector Reader → Raster Reader → Zonal Statistics → Select Values → Vector Writer.
@@ -9,12 +9,37 @@ Einstellungen: Rasterfeld (`raster`), Geometriefeld (`geometry`), explizites Geo
 Bandnummer ab 1, optionales NoData-Override, Ausgabepräfix (`raster_`) und Statistikliste (`mean min max`).
 Alle Eingabeattribute bleiben erhalten. Unterstützte Kennzahlen: mean, min, max, sum, stddev und count.
 
+=== Dialogansicht
+
+Die Skizze zeigt die Default-Einstellungen; Transformname ist ein Beispiel.
+Die Auswahlfelder sind editierbar, *explicit Crs* und *no Data* sind anfangs leer.
+Siehe <<dialog-legende,Dialoglegende>>. Der Dialogtitel lautet `Raster STATS (GeoTools)`.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Raster STATS (GeoTools)                                                      |
++------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel STATS ]       |
+| Input raster field / Reader output field            [ raster v ]             |
+| geometry Field                                      [ geometry v ]           |
+| explicit Crs                                        [ <leer> ]               |
+| band                                                [ 1 ]                    |
+| no Data                                             [ <leer> ]               |
+| statistics                                          [ mean min max ]         |
+| prefix                                              [ raster_ ]              |
+|                                                                              |
+|                                                            [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------+
+----
+
 === Auswahl der Pixel und Kennzahlen
 
 Ein Pixel wird gezählt, wenn sein Zentrum vom Polygon überdeckt wird, einschliesslich Zentren genau auf der Grenze.
 Löcher und MultiPolygone sind möglich. Ungültige oder gekrümmte Geometrien müssen vorgelagert behandelt werden.
 Die Geometrie wird bei Bedarf als Kopie in das Raster-CRS transformiert; Originalgeometrie und Attribute bleiben erhalten.
-Rasterwerte stammen aus der Originalauflösung, ohne Resampling.
+ZonalStats wertet das Rasterfeld auf dessen aktuellem Zellraster aus und führt selbst kein zusätzliches
+Resampling durch. Vorgeschaltete Clip-/Reproject-Operationen werden dabei ausgewertet.
 
 NoData, Masken und nichtendliche Werte werden vor Scale/Offset ausgeschlossen.
 Die Kennzahlen beziehen sich danach auf physikalische Werte. Nullwerte werden berücksichtigt.
@@ -41,7 +66,8 @@ height_mean, height_min, height_max, height_stddev, height_count, height_status
 |===
 
 Vorhandene Felder dürfen nicht mit den neuen Feldnamen kollidieren.
-Technische Fehler werden über einen Error Hop behandelt oder stoppen den Transform;
+Technische Fehler während der zeilenweisen Verarbeitung gehen an einen konfigurierten Error Hop oder stoppen den Transform;
 sie werden niemals als erfolgreiche count-0-Zeile kaschiert.
-Für HTTP-COGs gelten die Range-/Authentifizierungsgrenzen aus <<raster-clip,Raster Clip>>.
+Ungültige Metadaten beziehungsweise Ausgabeschemata stoppen bereits die Initialisierung.
+Für HTTP-COGs gelten die Range-/Authentifizierungsgrenzen aus <<raster-cog,Öffentliche HTTP/HTTPS-COGs>>.
 Leser schliessen bei Quellenwechsel, EOF, Fehler und Disposal.

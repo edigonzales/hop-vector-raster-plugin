@@ -1,11 +1,49 @@
 [[raster-reproject]]
-== Raster Reproject / Resample (GeoTools)
+== Raster Reproject (GeoTools): Reprojektion und Resampling
 
 `SOGIS_RASTER_VALUE_REPROJECT` liest ein Rasterfeld und liefert einen abgeleiteten Rasterwert.
 Ein leeres Ausgabefeld ersetzt das Eingabefeld, ein anderer Name ergänzt eine Spalte. Es wird keine Datei geschrieben.
 Verbinden Sie anschliessend Raster Writer oder Zonal Statistics.
 
-=== Einstellungen
+=== Dialog und Einstellungen
+
+Die Ansicht folgt der <<dialog-legende,Dialoglegende>>. Die Auflösung `2` ist ein Beispiel für
+Meterkoordinaten; beide Auflösungsfelder sind anfangs leer und müssen gesetzt werden.
+Der Dialogtitel lautet `Raster REPROJECT (GeoTools)`.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Raster REPROJECT (GeoTools)                                                  |
++------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel REPROJECT ]   |
+| Input raster field / Reader output field            [ raster v ]             |
+| Output raster field (empty: replace input)          [ <leer> ]               |
+| target Crs                                          [ <leer> ]               |
+| target Crs Field                                    [ ]                      |
+| resolution X                                        [ 2 ]                    |
+| resolution Y                                        [ 2 ]                    |
+| resolution Fields                                   [ ]                      |
+| Extent (AUTO / BOUNDING_BOX)                        [ AUTO v ]               |
+| min X                                               [ <leer> ]               |
+| min Y                                               [ <leer> ]               |
+| max X                                               [ <leer> ]               |
+| max Y                                               [ <leer> ]               |
+| bbox Fields                                         [ ]                      |
+| Interpolation (NEAREST / BILINEAR)                  [ NEAREST v ]            |
+| Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)    [ AUTO v ]               |
+| source No Data                                      [ <leer> ]               |
+| output No Data                                      [ <leer> ]               |
+|                                                                              |
+|                                                            [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------+
+----
+
+*target Crs Field*, *resolution Fields* und *bbox Fields* sind standardmässig ausgeschaltet.
+Sie binden Ziel-CRS, beide Auflösungen beziehungsweise alle vier Grenzen an Eingabespalten.
+Boxfelder bleiben auch bei `AUTO` sichtbar; ausgewertet werden sie nur bei `BOUNDING_BOX`.
+Explizite Grenzen liegen im Ziel-CRS. Ausgabefeld, Ziel-CRS, Grenzen und NoData-Overrides sind anfangs leer.
+
 
 * Rasterfeld: `raster` als Standard.
 * Ziel-CRS: leer übernimmt das Quell-CRS; optional aus einem Eingabefeld.
@@ -62,15 +100,16 @@ RGB-Ausgabe enthält ein nicht vormultipliziertes Alphaband, Grau mit Alpha blei
 
 Die Interpolation erfolgt in der gespeicherten Farbkodierung, ohne zusätzliche Farbraumkonvertierung.
 
-=== Ausgabe, Ressourcen und Beispiel
+=== Ausgabe und Ressourcen
 
-Die Eingabezeile erhält `raster_output_file` und `raster_status = OK` beziehungsweise das konfigurierte Präfix.
-Namenskollisionen sind Fehler. Quelle und Ziel dürfen auch über Dateisystemaliasse nicht dieselbe Datei sein.
-Ausgabeformat: DEFLATE, 512 × 512 Tiles, ab geschätzten 2 GiB Rohdaten BigTIFF, keine COG-Zusage.
-Temporäre Nachbardatei und anschliessende Veröffentlichung schützen bestehende Ziele bei Fehlern und Abbruch.
-Ein konfigurierter Error Hop erhält fehlerhafte Zeilen; sonst stoppt der Transform.
+Reproject gibt einen abgeleiteten Rasterwert weiter. Erst <<raster-writer,Raster Writer>> materialisiert
+ihn als GeoTIFF und ergänzt Dateipfad und Status. Ein neues Raster-Ausgabefeld darf nicht mit einem
+vorhandenen Feld kollidieren. Pixel-Lesefehler treten beim Verbraucher auf;
+Planungs- und Konfigurationsfehler können bereits Reproject betreffen.
+Fehler während der zeilenweisen Verarbeitung können an einen Error Hop gehen;
+ungültige Metadaten beziehungsweise Ausgabeschemata stoppen bereits die Initialisierung.
 
-Quelle und Leser werden wiederverwendet, solange die Quelle gleich bleibt.
+Beim Verbraucher werden Quelle und Leser wiederverwendet, solange die Quelle gleich bleibt.
 Quellcache: höchstens 64 MiB pro Kopie; zusätzliche Ausgabe-/Operationscaches: 16/8 MiB.
 Quellblöcke werden auf höchstens 262144 Pixel begrenzt und bei starker Vergröberung weiter unterteilt.
 Diese Cache-Limits sind keine Gesamtgrenze für den JVM-Heap. Gelesen wird in Originalauflösung ohne Overviews.

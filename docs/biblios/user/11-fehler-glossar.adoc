@@ -4,9 +4,10 @@
 [cols="2,4",options="header"]
 |===
 |Symptom |Prüfung und Abhilfe
-|Transform fehlt / Geometry unbekannt |Geometry-Plugin und vector-raster-Ordner prüfen, genau eine Plugin-Version installieren, Hop neu starten; <<installation,Installationskontrolle>>.
-|ClassNotFound / NoSuchMethod |Hop 2.19.0 und passende Geometry-Version verwenden; keine doppelten JTS-/GeoTools-JARs installieren.
+|Transform fehlt / Geometry oder Raster unbekannt |Geometry-Type-, Raster-Type- und vector-raster-Ordner prüfen, genau eine Plugin-Version installieren, Hop neu starten; <<installation,Installationskontrolle>>.
+|ClassNotFound / NoSuchMethod |Hop 2.19.0 sowie passende Geometry-Type- und Raster-Type-Versionen verwenden; keine doppelten JTS-/GeoTools-JARs installieren.
 |Unbekannte Transform-ID |Plugin-ID und installierte Transforms anhand der <<installation,Plugin-Kontrolle>> prüfen.
+|Legacy raster configuration |Die alte Pipeline gemäss <<raster-migration,Migrationsanleitung>> auf Raster Reader, Operation und gegebenenfalls Writer umstellen.
 |Datei oder Layer fehlt |Variablenauflösung und lokalen Pfad prüfen; Reader-Layerliste und Available fields verwenden.
 |Falsche Umlaute in DBF-Texten |Tatsächliche Kodierung unter DBF encoding eintragen, mit OK übernehmen und Pipeline erneut ausführen. Bei UTF-8-Daten wird beispielsweise `GewÃ¤sser` mit `UTF-8` zu `Gewässer`; siehe <<dbf-zeichenkodierung,DBF-Zeichenkodierung>>.
 |Unbekannter Encoding-Name / No schema information available. |Wird zusätzlich etwa `Latin-1` angezeigt, ist der Name nicht unterstützt. Gültig sind beispielsweise `Latin1`, `ISO-8859-1` oder `UTF-8`; passend zur Quelldatei wählen. Siehe <<dbf-zeichenkodierung,DBF-Zeichenkodierung>>.
@@ -15,17 +16,18 @@
 |Ausschnitt an falschem Ort |XY-/Longitude-Latitude-Reihenfolge, Box-CRS und Einheiten kontrollieren. Clip-Box liegt im expliziten CRS, Reproject-Box im Ziel-CRS.
 |Rasterauflösung falsch |Beide Pixelgrössen in Ziel-CRS-Einheiten eingeben. Nach aussen gerundete Ausdehnung ist beabsichtigt.
 |HTTP-Range-Fehler |Öffentliche direkte COG-URL verwenden; Server/Proxy muss Byte-Ranges mit 206 liefern. Kein Voll-Download-Fallback.
-|NoData-Sentinel fehlt / kollidiert |Darstellbaren, fachlich unbenutzten Sentinel wählen. Integer braucht einen Sentinel; gültige Null nicht pauschal als NoData erklären.
+|NoData-Sentinel fehlt / kollidiert |Darstellbaren, fachlich unbenutzten Sentinel wählen. Bei Integer-Clip-/Reproject-Ausgaben die jeweiligen Sentinelregeln beachten; unveränderte Integer-Raster benötigen nicht pauschal einen neuen Sentinel; gültige Null nicht pauschal als NoData erklären.
 |NO_VALID_PIXELS |Überlappung, Band, Polygonpixelzentren und NoData kontrollieren. Count ist 0; Statistik-NULL ist kein Messwert.
 |Palette nicht schreibbar |Für Nearest einen vorhandenen unbenutzten NoData-Index wählen oder BILINEAR mit RGBA-Konvertierung verwenden.
 |Z/M-/Schemakonflikt |Typ/Dimension explizit festlegen, Werte vereinheitlichen; GeoPackage unterstützt hier nur XY. Zusätzliche Dimensionen nicht still verlieren.
-|Leere Vektorausgabe scheitert |Für Shapefile/FlatGeobuf/Parquet Typ und Dimension explizit setzen; FlatGeobuf-NULL-Regeln beachten. GeoPackage benötigt eine nicht-NULL-Geometrie zur Inferenz.
-|Datei existiert / Konflikt |Eindeutiger Zielpfad pro Zeile und Transform-Kopie; Elternordner anlegen. Eingabe darf nicht Ausgabe sein. Overwrite nur bei unterstützten Formaten aktivieren.
+|Leere Vektorausgabe scheitert |Für Shapefile/FlatGeobuf/Parquet Typ und Dimension explizit setzen; FlatGeobuf-NULL-Regeln beachten. GeoPackage benötigt bei Neuanlage auch mit explizitem Schema ein Geometriebeispiel; siehe <<geopackage,GeoPackage>>.
+|Datei existiert / Konflikt |Raster Writer: geeigneten Zielpfad pro Ausgabeauftrag wählen. Vector Writer: ein Ziel pro Transform und genau eine Kopie. Elternordner anlegen; Quellen nicht überschreiben. Overwrite nur bei unterstützten Formaten aktivieren.
 |Dezimalüberlauf / DBF-Kürzung |DBF-Zuordnung oder Parquet-precision/scale prüfen; Quellmetadaten vorgelagert korrigieren.
 |===
 
-Bei Rasterfehlern kann ein Error Hop die fehlerhafte Zeile und Hop-Fehlerinformationen aufnehmen.
-Ohne Error Hop stoppt der Transform. Protokolle geben den konkreten Datei-, CRS- oder Wertfehler an;
+Bei Fehlern während der zeilenweisen Rasterverarbeitung kann ein konfigurierter Error Hop
+die fehlerhafte Zeile und Hop-Fehlerinformationen aufnehmen. Ohne Error Hop stoppt der Transform.
+Ungültige Metadaten beziehungsweise Ausgabeschemata stoppen bereits die Initialisierung. Protokolle geben den konkreten Datei-, CRS- oder Wertfehler an;
 Statusfelder ersetzen technische Fehler nicht. Geben Sie bei Fehlermeldungen Plugin-Version, Hop-/Java-Version,
 Konfiguration und möglichst ein kleines reproduzierbares Beispiel an. Zugangsdaten gehören nicht in öffentliche Tickets.
 
@@ -40,6 +42,7 @@ Geometry:: Gemeinsamer Hop-Datentyp des separat installierten Geometry-Plugins; 
 Grid / Zielraster:: Zellnetz aus Auflösung, Ursprung, Ausdehnung und CRS.
 NoData:: Fehlender Messwert, bezeichnet durch Sentinel, Maske oder nichtendlichen Wert. Zahl 0 ist grundsätzlich gültig.
 NULL / EMPTY:: Fehlender Geometriewert gegenüber vorhandener Geometrie ohne Koordinaten; Formate unterscheiden dies unterschiedlich.
+Raster:: Typisierter Wert des separaten Raster-Type-Plugins; beschreibt eine Quelle und gegebenenfalls verzögert ausgewertete Operationen. Erst ein Verbraucher wie Writer oder Statistik fordert die Pixel an.
 Reprojektion:: Transformation von Koordinaten zwischen CRS; beim Raster mit Resampling auf ein Zielraster verbunden.
 Resampling:: Bestimmung neuer Rasterwerte auf einem anderen Zellnetz; hier Nearest oder Bilinear.
 Scale / Offset:: Physikalischer Wert = Rohwert × Scale + Offset. Reproject interpoliert Rohwerte, Statistik verwendet physikalische Werte.

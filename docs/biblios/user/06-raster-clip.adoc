@@ -1,18 +1,73 @@
 [[raster-clip]]
 == Rasterwerte: Reader, Clip, Info und Writer (GeoTools)
 
+Die <<dialog-legende,Dialoglegende>> gilt auch für diese Ansichten. Die Rasterdialoge besitzen
+vertikal scrollbar angelegten Inhalt und editierbare Auswahlfelder. Die gemischte Gross-/Kleinschreibung
+der Labels entspricht der aktuellen GUI. Pfade und Transformnamen in den Skizzen sind Beispiele.
+
+[[raster-reader]]
+=== Raster Reader (GeoTools)
+
+Plugin-ID: `SOGIS_RASTER_READER`.
+
+[.gui-mockup]
+----
++-------------------------------------------------------------------------------------+
+| Raster READER (GeoTools)                                                            |
++-------------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel READER ]             |
+| Local GeoTIFF / public COG URL                      [ ${PROJECT_HOME}/terrain.tif ] |
+| source Field                                        [ ]                             |
+| Input raster field / Reader output field            [ raster v ]                    |
+|                                                                                     |
+|                                                                   [ OK ] [ Cancel ] |
++-------------------------------------------------------------------------------------+
+----
+
 Raster Reader erzeugt einen typisierten Hop-Rasterwert aus einer lokalen GeoTIFF-Datei oder einer öffentlichen HTTP/HTTPS-COG-Adresse.
-Ohne Eingabe erzeugt er eine Zeile; mit Eingabe ergänzt er jede Zeile um das Rasterfeld. `sourceField` bezieht die Adresse aus einer Spalte.
+Ohne Eingabe erzeugt er eine Zeile; mit Eingabe ergänzt er jede Zeile um das Rasterfeld. *source Field* (`sourceField` in HPL) bezieht die Adresse aus einer Spalte.
+Der Quellpfad ist anfangs leer, die Checkbox ausgeschaltet.
 Reader liest Metadaten, keine vollständigen Pixelbestände. Standard-Rasterfeld: `raster`.
+
+[[raster-clip-dialog]]
+=== Raster Clip (GeoTools)
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Raster CLIP (GeoTools)                                                       |
++------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel CLIP ]        |
+| Input raster field / Reader output field            [ raster v ]             |
+| Output raster field (empty: replace input)          [ <leer> ]               |
+| Clip method (POLYGON / BOUNDING_BOX)                [ POLYGON v ]            |
+| geometry Field                                      [ geometry v ]           |
+| explicit Crs                                        [ <leer> ]               |
+| Bands (ALL or 1-based list)                         [ ALL ]                  |
+| no Data                                             [ <leer> ]               |
+| min X                                               [ <leer> ]               |
+| min Y                                               [ <leer> ]               |
+| max X                                               [ <leer> ]               |
+| max Y                                               [ <leer> ]               |
+| bbox Fields                                         [ ]                      |
+|                                                                              |
+|                                                            [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------+
+----
 
 Raster Clip (`SOGIS_RASTER_VALUE_CLIP`) liest dieses Rasterfeld. Das leere Ausgabefeld ersetzt die Eingabe;
 ein anderer Name ergänzt einen zweiten Rasterwert. Andere Attribute bleiben erhalten. Er schreibt keine Datei.
 
-* Clip-Methode: `POLYGON` oder `BOUNDING_BOX`.
+* Clip-Methode: `POLYGON` (Standard) oder `BOUNDING_BOX`.
 * Polygonfeld: standardmässig `geometry`; explizites CRS oder Geometry-SRID erforderlich.
 * Bounding Box: minX/minY/maxX/maxY und explizites CRS; Werte können aus Eingabefeldern stammen.
 * Bänder: `ALL` (Standard) oder eine geordnete Liste ab 1, zum Beispiel `1 3`.
 * NoData: optionaler Override; Integer-Messraster ohne Sentinel benötigen einen darstellbaren Wert.
+
+Alle Boxfelder bleiben auch bei `POLYGON` sichtbar. Bei `BOUNDING_BOX` geben Sie die vier Grenzen
+und das CRS in *explicit Crs* ein; *bbox Fields* bindet die Grenzen stattdessen an Eingabespalten.
+Die Grenzen und das explizite CRS sind anfangs leer, *bbox Fields* ist ausgeschaltet.
+Bei `POLYGON` wird *geometry Field* verwendet; dessen SRID genügt, wenn kein explizites CRS gesetzt ist.
 
 Die Box wird vor dem Zuschnitt ins Raster-CRS transformiert und auf die überlappenden Quellpixel beschränkt.
 Polygonmasken verwenden Pixelzentren inklusive Rand, berücksichtigen Löcher und MultiPolygone.
@@ -20,18 +75,83 @@ Ungültige/gekrümmte Geometrien müssen vorgelagert behandelt werden. Leere und
 RGB/RGBA bleibt bei vollständiger Bandauswahl Farbe; Polygonmasken verwenden Alpha. Teilmengen werden gegebenenfalls numerisch.
 Paletten bleiben bei Zuschnitt erhalten; Polygonmasken benötigen einen gültigen NoData-Palettenindex.
 
+[[raster-info]]
+=== Raster Info (GeoTools)
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------+
+| Raster INFO (GeoTools)                                                         |
++--------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel INFO ]          |
+| Input raster field / Reader output field            [ raster v ]               |
+| Metadata fields (width height crs bands)            [ width height crs bands ] |
+| prefix                                              [ raster_ ]                |
+|                                                                                |
+|                                                              [ OK ] [ Cancel ] |
++--------------------------------------------------------------------------------+
+----
+
 Raster Info (`SOGIS_RASTER_INFO`) ergänzt ausgewählte Felder `width height crs bands` mit einem Präfix.
 Breite/Höhe sind Integer, CRS ist WKT, Bänder sind ein JSON-String. Dabei werden keine Pixel berechnet.
+Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width`,
+`raster_height`, `raster_crs` und `raster_bands`. Bereits vorhandene gleichnamige Felder sind Fehler.
+
+[[raster-writer]]
+=== Raster Writer (GeoTools)
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------------+
+| Raster WRITER (GeoTools)                                                           |
++------------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel WRITER ]            |
+| Input raster field / Reader output field            [ raster v ]                   |
+| Output GeoTIFF                                      [ ${PROJECT_HOME}/result.tif ] |
+| output Field                                        [ ]                            |
+| overwrite                                           [ ]                            |
+| prefix                                              [ raster_ ]                    |
+|                                                                                    |
+|                                                                  [ OK ] [ Cancel ] |
++------------------------------------------------------------------------------------+
+----
 
 Raster Writer (`SOGIS_RASTER_WRITER`) schreibt einen Rasterwert als lokale GeoTIFF-Datei und ergänzt
 `<prefix>output_file` sowie `<prefix>status = OK`. Standardpräfix: `raster_`.
-Ausgabepfad, Feldbindung und explizites Überschreiben werden unterstützt. Quellen dürfen nicht überschrieben werden.
-Ausgabe: DEFLATE, 512 × 512 Pixel, grössenabhängig BigTIFF; keine zugesicherte COG-Erzeugung.
+Der Ausgabepfad ist anfangs leer. *output Field* liest ihn aus einer Eingabespalte;
+*overwrite* erlaubt das Ersetzen vorhandener Ziele. Beide Checkboxen sind standardmässig ausgeschaltet.
+Quellen dürfen auch über Dateisystemaliasse nicht überschrieben werden. Alle Eingabeattribute bleiben erhalten;
+Namenskollisionen mit den Ergebnisfeldern sind Fehler. Verwenden Sie pro Ausgabeauftrag einen geeigneten Zielpfad.
+Ausgabe: DEFLATE, 512 × 512 Pixel grosse Tiles, ab geschätzten 2 GiB Rohdaten BigTIFF; keine zugesicherte COG-Erzeugung.
 Das Elternverzeichnis muss existieren. Fehler/Abbruch entfernen die temporäre Nachbardatei und erhalten ein bestehendes Ziel.
 
-Pixel werden erst von Writer oder Statistik angefordert. Pixel-Lesefehler erreichen deren Error Hop;
+=== Auswertung und Fehler
+
+Pixel werden erst von Writer oder Statistik angefordert. Pixel-Lesefehler erreichen deren konfigurierten Error Hop; ohne Fehlerbehandlung bricht der Lauf ab.
 Fehlermeldungen enthalten Quelle und Operationskontext. Konfigurationsfehler werden bereits bei der jeweiligen Operation erkannt.
 
-Die alten Datei-Transforms benötigen eine Migration. `scripts/migrate-raster-values.py old.hpl new.hpl`
-erzeugt eine neue Pipeline mit Reader/Operation/Writer und erhält die alte Einzelbandauswahl.
-Danach können Zwischen-Writer entfernt und Rasterwerte direkt verbunden werden.
+[[raster-cog]]
+=== Öffentliche HTTP/HTTPS-COGs
+
+Raster Reader akzeptiert direkte öffentliche COG-URLs. Server und Proxy müssen gültige
+Byte-Range-Antworten mit HTTP 206 und passendem `Content-Range` liefern.
+Ein Server, der stattdessen die vollständige Datei liefert, wird abgelehnt; es gibt keinen Voll-Download-Fallback.
+Der Reader-Dialog bietet keine Konfiguration für Zugangsdaten oder eigene HTTP-Header.
+
+[[raster-migration]]
+=== Bestehende Dateipipelines migrieren
+
+Die alten Datei-Transforms benötigen eine Migration:
+
+[source,bash]
+----
+python3 scripts/migrate-raster-values.py old.hpl new.hpl
+----
+
+Das Skript erhält die alte Pipeline und schreibt eine neue. Für Clip/Reproject ergänzt es
+Reader, Operation und Writer; für Statistik einen Reader vor der Operation.
+Die alte Clip-Einzelbandauswahl wird als `bands` übernommen. Ein zusätzlicher Select-Values-Schritt
+entfernt das Hilfs-Rasterfeld aus den Ergebniszeilen; konfigurierte Error Hops erhalten ebenfalls passende Bereinigung.
+Für direkte Rasterwertketten können Zwischen-Writer und die zugehörige Bereinigung entfernt werden.
+Verbinden Sie dann die Operationen über dasselbe Rasterfeld und entfernen Sie es erst nach dem letzten Verbraucher.
+Ein <<rasterwerte-beispiel,Beispiel ohne Zwischendateien>> steht zum Download bereit.
