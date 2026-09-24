@@ -64,7 +64,8 @@ ein anderer Name ergänzt einen zweiten Rasterwert. Andere Attribute bleiben erh
 * Bänder: `ALL` (Standard) oder eine geordnete Liste ab 1, zum Beispiel `1 3`.
 * NoData: optionaler Override; Integer-Messraster ohne Sentinel benötigen einen darstellbaren Wert.
 
-Alle Boxfelder bleiben auch bei `POLYGON` sichtbar. Bei `BOUNDING_BOX` geben Sie die vier Grenzen
+Alle methodenspezifischen Felder bleiben sichtbar; die für die gewählte Clip-Methode unpassenden
+Felder sind ausgegraut und nicht editierbar. Bei `BOUNDING_BOX` geben Sie die vier Grenzen
 und das CRS in *explicit Crs* ein; *bbox Fields* bindet die Grenzen stattdessen an Eingabespalten.
 Die Grenzen und das explizite CRS sind anfangs leer, *bbox Fields* ist ausgeschaltet.
 Bei `POLYGON` wird *geometry Field* verwendet; dessen SRID genügt, wenn kein explizites CRS gesetzt ist.
@@ -92,10 +93,23 @@ Paletten bleiben bei Zuschnitt erhalten; Polygonmasken benötigen einen gültige
 +--------------------------------------------------------------------------------+
 ----
 
-Raster Info (`SOGIS_RASTER_INFO`) ergänzt ausgewählte Felder `width height crs bands` mit einem Präfix.
-Breite/Höhe sind Integer, CRS ist WKT, Bänder sind ein JSON-String. Dabei werden keine Pixel berechnet.
+Raster Info (`SOGIS_RASTER_INFO`) ergänzt ausgewählte Metadatenfelder mit einem Präfix.
+Unterstützt werden genau `width`, `height`, `crs` und `bands`; andere Namen werden abgelehnt.
+Breite/Höhe sind Integer, `crs` enthält das Koordinatenreferenzsystem als WKT und `bands` ist ein JSON-String.
+Dabei werden keine Pixel berechnet.
 Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width`,
 `raster_height`, `raster_crs` und `raster_bands`. Bereits vorhandene gleichnamige Felder sind Fehler.
+
+`raster_bands` enthält ein JSON-Array mit einem Eintrag pro Band. Jeder Eintrag hat diese Schlüssel:
+
+`band`:: Bandnummer ab 1.
+`name`:: Name des Bands.
+`dataType`:: Datentyp des Bands.
+`noData`:: NoData-Wert; `null`, wenn keiner definiert ist. Endliche Werte sind JSON-Zahlen,
+  nichtendliche Werte werden als Text (`"NaN"`, `"Infinity"` oder `"-Infinity"`) ausgegeben.
+`scale` und `offset`:: Skalierung und Offset des Bands.
+`color`:: Farbinterpretation des Rasters.
+`alpha`:: `true`, wenn dieses Band das Alpha-Band ist, sonst `false`.
 
 [[raster-writer]]
 === Raster Writer (GeoTools)

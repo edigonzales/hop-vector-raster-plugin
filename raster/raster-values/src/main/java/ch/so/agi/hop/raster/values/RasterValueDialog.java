@@ -15,6 +15,8 @@ import org.apache.hop.ui.core.widget.TextVar;
 import org.apache.hop.ui.pipeline.transform.BaseTransformDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.*;
 import org.eclipse.swt.widgets.*;
 
@@ -83,6 +85,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
     wTransformName.setText(transformName);
     wTransformName.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
     var controls = new LinkedHashMap<String, Control>();
+    var fieldLabels = new LinkedHashMap<String, Label>();
     String fields =
         switch (input.operation()) {
           case "READER" -> "rasterField";
@@ -120,7 +123,9 @@ public final class RasterValueDialog extends BaseTransformDialog {
         if (name.isEmpty()) continue;
         var field = RasterValueMeta.class.getDeclaredField(name);
         field.setAccessible(true);
-        new Label(body, SWT.NONE).setText(label(name, input.operation()));
+        var fieldLabel = new Label(body, SWT.NONE);
+        fieldLabel.setText(label(name, input.operation()));
+        fieldLabels.put(name, fieldLabel);
         Control control;
         if (field.getType() == boolean.class) {
           var button = new Button(body, SWT.CHECK);
@@ -164,6 +169,19 @@ public final class RasterValueDialog extends BaseTransformDialog {
           control = text;
         }
         controls.put(name, control);
+      }
+      if (input.operation().equals("CLIP")) {
+        var clipMethod = (ComboVar) controls.get("clipMethod");
+        clipMethod.addSelectionListener(
+            new SelectionAdapter() {
+              @Override
+              public void widgetSelected(SelectionEvent event) {
+                updateClipControls(clipMethod.getText(), controls, fieldLabels);
+              }
+            });
+        clipMethod.addModifyListener(
+            event -> updateClipControls(clipMethod.getText(), controls, fieldLabels));
+        updateClipControls(clipMethod.getText(), controls, fieldLabels);
       }
     } catch (Exception e) {
       throw new IllegalStateException(e);
@@ -241,6 +259,31 @@ public final class RasterValueDialog extends BaseTransformDialog {
 
   private static String configuredSource(ValueOrField source) {
     return source.mode() == SourceMode.FIELD ? source.fieldName() : source.configuredValue();
+  }
+
+  private static void updateClipControls(
+      String method, Map<String, Control> controls, Map<String, Label> labels) {
+    boolean polygon = "POLYGON".equalsIgnoreCase(method);
+    boolean boundingBox = "BOUNDING_BOX".equalsIgnoreCase(method);
+    boolean recognized = polygon || boundingBox;
+    setFieldEnabled("geometryField", polygon || !recognized, controls, labels);
+    boolean enableBounds = boundingBox || !recognized;
+    for (String name : java.util.List.of("minX", "minY", "maxX", "maxY", "bboxFields"))
+      setFieldEnabled(name, enableBounds, controls, labels);
+  }
+
+  private static void setFieldEnabled(
+      String name, boolean enabled, Map<String, Control> controls, Map<String, Label> labels) {
+    Control control = controls.get(name);
+    Label fieldLabel = labels.get(name);
+    if (control != null) setControlTreeEnabled(control, enabled);
+    if (fieldLabel != null) fieldLabel.setEnabled(enabled);
+  }
+
+  private static void setControlTreeEnabled(Control control, boolean enabled) {
+    control.setEnabled(enabled);
+    if (control instanceof Composite composite)
+      for (Control child : composite.getChildren()) setControlTreeEnabled(child, enabled);
   }
 
   private String[] inputFieldNames(boolean rastersOnly) {

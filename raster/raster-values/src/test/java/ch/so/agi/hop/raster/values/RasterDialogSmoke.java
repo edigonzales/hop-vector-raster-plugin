@@ -63,6 +63,11 @@ public final class RasterDialogSmoke {
               Button ok = findButtonByText(dialogShell, "OK");
               if (ok == null) throw new AssertionError("Raster dialog is missing its OK button");
               ok.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+            } else if (dialogCase.meta().operation().equals("CLIP")) {
+              verifyClipDialog(dialogShell);
+              Button ok = findButtonByText(dialogShell, "OK");
+              if (ok == null) throw new AssertionError("Raster dialog is missing its OK button");
+              ok.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
             } else if (!(editor instanceof ComboVar)) {
               throw new AssertionError("Input raster field must be a field selector");
             } else {
@@ -98,6 +103,119 @@ public final class RasterDialogSmoke {
     return null;
   }
 
+  private static Label findLabel(Control control, String expected) {
+    if (control instanceof Label label && expected.equals(label.getText())) return label;
+    if (control instanceof org.eclipse.swt.widgets.Composite composite)
+      for (Control child : composite.getChildren()) {
+        Label found = findLabel(child, expected);
+        if (found != null) return found;
+      }
+    return null;
+  }
+
+  private static void verifyFieldEnabled(Shell shell, String labelText, boolean expected) {
+    Control editor = editorAfterLabel(shell, labelText);
+    Label label = findLabel(shell, labelText);
+    if (editor == null || label == null)
+      throw new AssertionError("Raster Clip dialog is missing field: " + labelText);
+    if (!controlTreeEnabled(editor, expected) || label.getEnabled() != expected)
+      throw new AssertionError(
+          "Expected " + labelText + " enabled=" + expected + " but editor="
+              + controlTreeEnabled(editor, true) + ", label=" + label.getEnabled());
+  }
+
+  private static boolean controlTreeEnabled(Control control, boolean expected) {
+    if (control instanceof TextVar text && text.getTextWidget().getEnabled() != expected)
+      return false;
+    if (control instanceof ComboVar combo && combo.getCComboWidget().getEnabled() != expected)
+      return false;
+    if (!(control instanceof TextVar) && !(control instanceof ComboVar)
+        && control.getEnabled() != expected) return false;
+    if (control instanceof org.eclipse.swt.widgets.Composite composite)
+      for (Control child : composite.getChildren())
+        if (!controlTreeEnabled(child, expected)) return false;
+    return true;
+  }
+
+  private static void setTextValue(Shell shell, String labelText, String value) {
+    Control editor = editorAfterLabel(shell, labelText);
+    if (editor instanceof TextVar text) text.setText(value);
+    else if (editor instanceof ComboVar combo) combo.setText(value);
+    else throw new AssertionError("Expected a text editor for " + labelText);
+  }
+
+  private static String textValue(Shell shell, String labelText) {
+    Control editor = editorAfterLabel(shell, labelText);
+    if (editor instanceof TextVar text) return text.getText();
+    if (editor instanceof ComboVar combo) return combo.getText();
+    throw new AssertionError("Expected a text editor for " + labelText);
+  }
+
+  private static void selectCombo(ComboVar combo, int index) {
+    combo.select(index);
+    Event selection = new Event();
+    selection.type = org.eclipse.swt.SWT.Selection;
+    combo.getCComboWidget().notifyListeners(org.eclipse.swt.SWT.Selection, selection);
+  }
+
+  private static void verifyClipDialog(Shell shell) {
+    Control methodEditor = editorAfterLabel(shell, "Clip method (POLYGON / BOUNDING_BOX)");
+    if (!(methodEditor instanceof ComboVar method))
+      throw new AssertionError("Clip method must be a combo box");
+    verifyClipCommonFieldsEnabled(shell);
+    verifyFieldEnabled(shell, "geometry Field", true);
+    verifyFieldEnabled(shell, "explicit Crs", true);
+    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+      verifyFieldEnabled(shell, field, false);
+
+    setTextValue(shell, "geometry Field", "mask_geom");
+    setTextValue(shell, "explicit Crs", "EPSG:2056");
+    setTextValue(shell, "min X", "1");
+    setTextValue(shell, "min Y", "2");
+    setTextValue(shell, "max X", "3");
+    setTextValue(shell, "max Y", "4");
+    Control bboxFieldsEditor = editorAfterLabel(shell, "bbox Fields");
+    if (!(bboxFieldsEditor instanceof Button bboxFields))
+      throw new AssertionError("bbox Fields must be a checkbox");
+    bboxFields.setSelection(true);
+
+    selectCombo(method, 1);
+    if (!"BOUNDING_BOX".equals(method.getText()))
+      throw new AssertionError("Clip method selection did not change to BOUNDING_BOX");
+    verifyClipCommonFieldsEnabled(shell);
+    verifyFieldEnabled(shell, "geometry Field", false);
+    verifyFieldEnabled(shell, "explicit Crs", true);
+    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+      verifyFieldEnabled(shell, field, true);
+
+    selectCombo(method, 0);
+    if (!"POLYGON".equals(method.getText()))
+      throw new AssertionError("Clip method selection did not change back to POLYGON");
+    verifyFieldEnabled(shell, "geometry Field", true);
+    verifyClipCommonFieldsEnabled(shell);
+    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+      verifyFieldEnabled(shell, field, false);
+    if (!"mask_geom".equals(textValue(shell, "geometry Field"))
+        || !"EPSG:2056".equals(textValue(shell, "explicit Crs"))
+        || !"1".equals(textValue(shell, "min X"))
+        || !"2".equals(textValue(shell, "min Y"))
+        || !"3".equals(textValue(shell, "max X"))
+        || !"4".equals(textValue(shell, "max Y"))
+        || !bboxFields.getSelection())
+      throw new AssertionError("Clip field values were lost during method changes");
+
+    selectCombo(method, 1);
+  }
+
+  private static void verifyClipCommonFieldsEnabled(Shell shell) {
+    for (String field :
+        List.of(
+            "Input raster field",
+            "Output raster field (empty: replace input)",
+            "Bands (ALL or 1-based list)",
+            "no Data")) verifyFieldEnabled(shell, field, true);
+  }
+
   private static void verifySourceControl(Control control) {
     ValueOrFieldControl source = findControl(control, ValueOrFieldControl.class);
     if (source == null) throw new AssertionError("Reader source widget is missing");
@@ -113,9 +231,28 @@ public final class RasterDialogSmoke {
     mode.notifyListeners(org.eclipse.swt.SWT.Selection, selection);
     if (source.getValue().mode() != SourceMode.FIELD)
       throw new AssertionError("Reader source field mode could not be selected");
+    if (!browse.isVisible() || browse.isEnabled())
+      throw new AssertionError("Browse must remain visible but disabled in field mode");
+    Combo fieldSelector = findOtherCombo(source, mode);
+    if (fieldSelector == null || !fieldSelector.isVisible() || !fieldSelector.isEnabled())
+      throw new AssertionError("Field selector must stay visible and enabled in field mode");
+    Button refresh = findButtonByText(source, "Refresh");
+    if (refresh == null) refresh = findButtonByText(source, "Aktualisieren");
+    if (refresh == null || !refresh.isVisible() || !refresh.isEnabled())
+      throw new AssertionError("Refresh must stay visible and enabled in field mode");
     source.setValue(new ValueOrField(SourceMode.FIELD, "", "source_path"));
     if (!"source_path".equals(source.getValue().fieldName()))
       throw new AssertionError("Reader source field value was not retained by the widget");
+  }
+
+  private static Combo findOtherCombo(Control control, Combo excluded) {
+    if (control instanceof Combo combo && combo != excluded) return combo;
+    if (control instanceof org.eclipse.swt.widgets.Composite composite)
+      for (Control child : composite.getChildren()) {
+        Combo found = findOtherCombo(child, excluded);
+        if (found != null) return found;
+      }
+    return null;
   }
 
   private static Button findButton(Control control) {
@@ -189,6 +326,17 @@ public final class RasterDialogSmoke {
             throw new AssertionError("Reader source selection was not saved to source/sourceField");
           if (!"reader_raster".equals(reader.getRasterField()))
             throw new AssertionError("Reader output field was not saved");
+        } else if (dialogCase.meta().operation().equals("CLIP")) {
+          var clip = (RasterClipMeta) dialogCase.meta();
+          if (!"BOUNDING_BOX".equals(clip.getClipMethod())
+              || !"mask_geom".equals(clip.getGeometryField())
+              || !"EPSG:2056".equals(clip.getExplicitCrs())
+              || !"1".equals(clip.getMinX())
+              || !"2".equals(clip.getMinY())
+              || !"3".equals(clip.getMaxX())
+              || !"4".equals(clip.getMaxY())
+              || !clip.isBboxFields())
+            throw new AssertionError("Clip method or field values were not saved correctly");
         }
       }
     } finally {
