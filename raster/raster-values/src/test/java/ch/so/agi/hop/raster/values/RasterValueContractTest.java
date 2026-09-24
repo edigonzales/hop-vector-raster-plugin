@@ -4,8 +4,12 @@ import static org.assertj.core.api.Assertions.*;
 
 import ch.so.agi.hop.raster.type.ValueMetaRaster;
 import org.apache.hop.core.row.RowMeta;
+import org.apache.hop.core.row.value.ValueMetaString;
+import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.core.variables.Variables;
 import org.apache.hop.core.xml.XmlHandler;
+import org.apache.hop.pipeline.PipelineMeta;
+import org.eclipse.swt.widgets.Shell;
 import org.junit.jupiter.api.Test;
 
 class RasterValueContractTest {
@@ -48,10 +52,55 @@ class RasterValueContractTest {
   }
 
   @Test
-  void legacyPipelineGetsMigrationMessage() {
-    assertThatThrownBy(() -> new RasterLegacyClipMeta().validateSettings())
-        .hasMessageContaining("migrate");
-    assertThatThrownBy(() -> new RasterLegacyReprojectMeta().validateSettings())
-        .hasMessageContaining("migrate");
+  void existingReaderSourceAndSourceFieldXmlRemainCompatible() throws Exception {
+    var restored = new RasterReaderMeta();
+    restored.loadXml(
+        XmlHandler.loadXmlString(
+                "<transform><source>raster_path</source><sourceField>Y</sourceField></transform>")
+            .getDocumentElement(),
+        null);
+
+    assertThat(restored.getSource()).isEqualTo("raster_path");
+    assertThat(restored.isSourceField()).isTrue();
+
+    var roundTrip = new RasterReaderMeta();
+    roundTrip.loadXml(
+        XmlHandler.loadXmlString("<transform>" + restored.getXml() + "</transform>")
+            .getDocumentElement(),
+        null);
+    assertThat(roundTrip.getSource()).isEqualTo("raster_path");
+    assertThat(roundTrip.isSourceField()).isTrue();
+  }
+
+  @Test
+  void inputRasterSuggestionsOnlyIncludeRasterTypedFields() {
+    var fields = new RowMeta();
+    fields.addValueMeta(new ValueMetaString("raster_path"));
+    fields.addValueMeta(new ValueMetaRaster("raster"));
+    fields.addValueMeta(new ValueMetaString("description"));
+
+    assertThat(RasterValueDialog.rasterFieldNames(fields)).containsExactly("raster");
+    assertThat(RasterValueDialog.rasterFieldNames(null)).isEmpty();
+  }
+
+  @Test
+  void currentRasterMetasExposeHopCompatibleDialogConstructors() throws Exception {
+    var metas =
+        java.util.List.of(
+            new RasterReaderMeta(),
+            new RasterClipMeta(),
+            new RasterReprojectMeta(),
+            new RasterZonalStatsMeta(),
+            new RasterInfoMeta(),
+            new RasterWriterMeta());
+
+    for (var meta : metas) {
+      assertThat(meta.getDialogClassName()).isEqualTo(RasterValueDialog.class.getName());
+      var dialogClass = Class.forName(meta.getDialogClassName());
+      assertThat(
+              dialogClass.getConstructor(
+                  Shell.class, IVariables.class, meta.getClass(), PipelineMeta.class))
+          .isNotNull();
+    }
   }
 }

@@ -6,11 +6,17 @@ This is an intentional compatibility break. Back up existing pipelines and repla
 |---|---|---|
 | `GEOTOOLS_VECTOR_READER` | `SOGIS_VECTOR_READER` | Vector Reader |
 | `GEOTOOLS_VECTOR_WRITER` | `SOGIS_VECTOR_WRITER` | Vector Writer |
-| `GEOTOOLS_RASTER_CLIP` | `SOGIS_RASTER_CLIP` | Raster Clip (GeoTools) |
-| `GEOTOOLS_RASTER_ZONAL_STATS` | `SOGIS_RASTER_ZONAL_STATS` | Raster Zonal Statistics (GeoTools) |
 | `ARCINFO_GENERATE_WRITER` | `SOGIS_VECTOR_WRITER` with `format=ARCINFO_GENERATE` | Vector Writer |
 
 Existing common vector fields `fileName`, `layerName`, `geometryField` (writer) and `geometryFieldName` (reader) retain their meaning. Select SHAPEFILE/GEOPACKAGE explicitly, or AUTO for extension detection. Raster settings retain their existing meaning.
+
+Old file-based raster IDs must be converted to the Raster value pipeline before opening the file in Hop. The standalone migration script supports `GEOTOOLS_RASTER_*`, `SOGIS_RASTER_*` and the documented `SOGEO_RASTER_CLIP` / `SOGEO_RASTER_ZONAL_STATS` IDs:
+
+```bash
+python3 scripts/migrate-raster-values.py old.hpl new.hpl
+```
+
+It inserts a Raster Reader and, for Clip/Reproject, a Raster Writer around the operation. ZonalStats consumes the Raster value directly. The old raster IDs are not registered by the current plugin, so Hop displays those transforms as missing until migrated.
 
 For former GENERATE transforms, rename the `output` setting to `fileName`, set `format` to `ARCINFO_GENERATE`, and keep `geometryField`, `geometryType`, `dimension`, `idField`, `startId`, `discardExtraOrdinates`, `decimals`, `comma`, `skipEmpty` and `overwrite`. Layer is unused. The encoder dialects and EOF terminators are unchanged.
 
@@ -37,6 +43,6 @@ should use the new repository URL.
 
 Java remains 17; GeoTools remains 35.1 for raster and isolated CRS services. GeoPackage I/O now uses JDBC directly. Read the [GeoPackage contract](geopackage.md) for dimensional and file-lifecycle rules.
 
-The interim `SOGEO_VECTOR_READER`, `SOGEO_VECTOR_WRITER`, `SOGEO_RASTER_CLIP` and `SOGEO_RASTER_ZONAL_STATS` IDs must also be replaced with their `SOGIS_` equivalents. There are no aliases. This does not rename the Geometry plugin's numeric type ID or the shared `sogeo-geometry` classloader group.
+The interim `SOGEO_VECTOR_READER` and `SOGEO_VECTOR_WRITER` IDs must also be replaced with their `SOGIS_` equivalents. There are no aliases. This does not rename the Geometry plugin's numeric type ID or the shared `sogeo-geometry` classloader group.
 
 Upgrade the Geometry plugin to the 0.2.0-SNAPSHOT Z/M build at the same time. Shapefile output is UTF-8 with CPG by default, no longer creates QIX, and reports DBF conversions. Existing dataset names and sidecars are protected; append/update/overwrite of Shapefile and GeoPackage remain outside this release. GENERATE retains its existing overwrite option.

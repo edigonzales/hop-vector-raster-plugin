@@ -63,9 +63,8 @@ Unter *Geospatial* stehen diese Transforms zur Verfügung:
 Die Pipeline speichert die Plugin-ID im `type`-Element des Transforms.
 Bei einem unbekannten Transform prüfen Sie diese ID und die Installation.
 
-Die alten IDs `SOGIS_RASTER_CLIP`, `SOGIS_RASTER_REPROJECT` und `SOGIS_RASTER_ZONAL_STATS`
-bezeichnen nur Legacy-Transforms. Sie melden einen Migrationsfehler; die neue Verarbeitung verwendet
-Rasterwerte. Die <<raster-migration,Migrationsanleitung>> beschreibt den Umstieg.
+Die früheren Raster-IDs werden nicht mehr registriert. Migrieren Sie betroffene Pipeline-Dateien
+vor dem Öffnen in Hop mit dem Skript aus der <<raster-migration,Migrationsanleitung>>.
 
 === Für Entwickler
 

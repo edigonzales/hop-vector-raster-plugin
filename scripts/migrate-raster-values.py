@@ -5,7 +5,21 @@ import copy
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-TYPES = {'SOGIS_RASTER_CLIP':'SOGIS_RASTER_VALUE_CLIP', 'SOGIS_RASTER_REPROJECT':'SOGIS_RASTER_VALUE_REPROJECT', 'SOGIS_RASTER_ZONAL_STATS':'SOGIS_RASTER_VALUE_ZONAL_STATS'}
+OPERATIONS = {
+    'SOGIS_RASTER_CLIP':'CLIP',
+    'SOGIS_RASTER_REPROJECT':'REPROJECT',
+    'SOGIS_RASTER_ZONAL_STATS':'STATS',
+    'GEOTOOLS_RASTER_CLIP':'CLIP',
+    'GEOTOOLS_RASTER_REPROJECT':'REPROJECT',
+    'GEOTOOLS_RASTER_ZONAL_STATS':'STATS',
+    'SOGEO_RASTER_CLIP':'CLIP',
+    'SOGEO_RASTER_ZONAL_STATS':'STATS',
+}
+CURRENT_TYPES = {
+    'CLIP':'SOGIS_RASTER_VALUE_CLIP',
+    'REPROJECT':'SOGIS_RASTER_VALUE_REPROJECT',
+    'STATS':'SOGIS_RASTER_VALUE_ZONAL_STATS',
+}
 
 def layout(root):
     """Give converted pipelines a readable left-to-right layout without overlapping nodes."""
@@ -38,7 +52,8 @@ def migrate(root):
     if order is None: order=ET.SubElement(root,'order')
     for t in list(root.findall('transform')):
         old=t.findtext('type')
-        if old not in TYPES: continue
+        operation=OPERATIONS.get(old)
+        if operation is None: continue
         name=t.findtext('name')
         field='__raster_value_'+str(len(names))
         def unique(s):
@@ -56,12 +71,12 @@ def migrate(root):
         for key in ('source','sourceField'):
             original=t.find(key)
             if original is not None:reader.append(copy.deepcopy(original))
-        t.find('type').text=TYPES[old]
+        t.find('type').text=CURRENT_TYPES[operation]
         ET.SubElement(t,'version').text='1'
         ET.SubElement(t,'rasterField').text=field
-        if old=='SOGIS_RASTER_CLIP':ET.SubElement(t,'bands').text=t.findtext('band','1')
+        if operation=='CLIP':ET.SubElement(t,'bands').text=t.findtext('band','1')
         writer=None
-        if old!='SOGIS_RASTER_ZONAL_STATS':
+        if operation!='STATS':
             writer=node('SOGIS_RASTER_WRITER',name+' write')
             for key in ('output','outputField','overwrite','prefix'):
                 original=t.find(key)

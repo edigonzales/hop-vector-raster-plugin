@@ -358,10 +358,8 @@ public abstract class RasterValueMeta
   }
 
   public void validateSettings() {
-    if (version != 1 || operation().equals("LEGACY"))
-      throw new IllegalArgumentException(
-          "Legacy raster configuration: migrate to Raster Reader → Clip/Reproject → Raster Writer"
-              + " (raster value version 1)");
+    if (version != 1)
+      throw new IllegalArgumentException("Unsupported raster value version: " + version);
     if (rasterField == null || rasterField.isBlank())
       throw new IllegalArgumentException("Raster field is required");
     if (operation().equals("READER") && (source == null || source.isBlank()))

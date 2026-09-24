@@ -21,7 +21,7 @@ Siehe <<dialog-legende,Dialoglegende>>. Der Dialogtitel lautet `Raster STATS (Ge
 | Raster STATS (GeoTools)                                                      |
 +------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel STATS ]       |
-| Input raster field / Reader output field            [ raster v ]             |
+| Input raster field                                  [ raster v ]             |
 | geometry Field                                      [ geometry v ]           |
 | explicit Crs                                        [ <leer> ]               |
 | band                                                [ 1 ]                    |

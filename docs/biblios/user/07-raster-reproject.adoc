@@ -17,7 +17,7 @@ Der Dialogtitel lautet `Raster REPROJECT (GeoTools)`.
 | Raster REPROJECT (GeoTools)                                                  |
 +------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel REPROJECT ]   |
-| Input raster field / Reader output field            [ raster v ]             |
+| Input raster field                                  [ raster v ]             |
 | Output raster field (empty: replace input)          [ <leer> ]               |
 | target Crs                                          [ <leer> ]               |
 | target Crs Field                                    [ ]                      |

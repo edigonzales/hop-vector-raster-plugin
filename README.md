@@ -82,8 +82,9 @@ upstream rows; downstream operations carry a typed Raster field and do not write
 TIFFs. See the [complete value-chain example](examples/raster-values/README.md).
 
 File-based raster pipelines require migration with
-`scripts/migrate-raster-values.py old.hpl new.hpl`. The old transform IDs report a migration
-error instead of running a parallel legacy implementation.
+`scripts/migrate-raster-values.py old.hpl new.hpl`. Migrate them before opening the pipeline in Hop,
+because the old transform IDs are no longer registered. The script converts supported old raster
+IDs into the current Raster Reader → operation value pipeline, adding a Raster Writer for file output.
 
 Build, test, local Hop installation and troubleshooting are described in the
 [developer guide](docs/dev-setup.md). The manual sources are in

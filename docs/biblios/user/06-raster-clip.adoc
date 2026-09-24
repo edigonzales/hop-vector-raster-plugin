@@ -16,18 +16,18 @@ Plugin-ID: `SOGIS_RASTER_READER`.
 | Raster READER (GeoTools)                                                            |
 +-------------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel READER ]             |
-| Local GeoTIFF / public COG URL                      [ ${PROJECT_HOME}/terrain.tif ] |
-| source Field                                        [ ]                             |
-| Input raster field / Reader output field            [ raster v ]                    |
+| Local GeoTIFF / public COG URL    [Value / Variable v] [terrain.tif] [Browse...]        |
+| Reader output field               [ raster ]                                            |
 |                                                                                     |
 |                                                                   [ OK ] [ Cancel ] |
 +-------------------------------------------------------------------------------------+
 ----
 
 Raster Reader erzeugt einen typisierten Hop-Rasterwert aus einer lokalen GeoTIFF-Datei oder einer öffentlichen HTTP/HTTPS-COG-Adresse.
-Ohne Eingabe erzeugt er eine Zeile; mit Eingabe ergänzt er jede Zeile um das Rasterfeld. *source Field* (`sourceField` in HPL) bezieht die Adresse aus einer Spalte.
-Der Quellpfad ist anfangs leer, die Checkbox ausgeschaltet.
-Reader liest Metadaten, keine vollständigen Pixelbestände. Standard-Rasterfeld: `raster`.
+Im Modus *Value / Variable* wählen Sie über *Browse* eine lokale TIFF-Datei oder tippen eine öffentliche COG-URL ein.
+Im Modus *Input field* enthält eine Eingabespalte pro Zeile den lokalen Pfad oder die URL. Ohne vorgelagerte Eingabe erzeugt der Reader eine Zeile; mit Eingabe ergänzt er jede Zeile.
+*Reader output field* benennt die neue Spalte, in der der typisierte Rasterwert weitergereicht wird; Standard: `raster`.
+Reader liest zunächst Metadaten, nicht den vollständigen Pixelbestand.
 
 [[raster-clip-dialog]]
 === Raster Clip (GeoTools)
@@ -38,7 +38,7 @@ Reader liest Metadaten, keine vollständigen Pixelbestände. Standard-Rasterfeld
 | Raster CLIP (GeoTools)                                                       |
 +------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel CLIP ]        |
-| Input raster field / Reader output field            [ raster v ]             |
+| Input raster field                                  [ raster v ]             |
 | Output raster field (empty: replace input)          [ <leer> ]               |
 | Clip method (POLYGON / BOUNDING_BOX)                [ POLYGON v ]            |
 | geometry Field                                      [ geometry v ]           |
@@ -84,7 +84,7 @@ Paletten bleiben bei Zuschnitt erhalten; Polygonmasken benötigen einen gültige
 | Raster INFO (GeoTools)                                                         |
 +--------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel INFO ]          |
-| Input raster field / Reader output field            [ raster v ]               |
+| Input raster field                                  [ raster v ]               |
 | Metadata fields (width height crs bands)            [ width height crs bands ] |
 | prefix                                              [ raster_ ]                |
 |                                                                                |
@@ -106,7 +106,7 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 | Raster WRITER (GeoTools)                                                           |
 +------------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel WRITER ]            |
-| Input raster field / Reader output field            [ raster v ]                   |
+| Input raster field                                  [ raster v ]                   |
 | Output GeoTIFF                                      [ ${PROJECT_HOME}/result.tif ] |
 | output Field                                        [ ]                            |
 | overwrite                                           [ ]                            |

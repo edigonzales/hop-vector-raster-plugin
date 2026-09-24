@@ -1,6 +1,12 @@
 package ch.so.agi.hop.raster.values;
 
+import ch.so.agi.hop.commons.core.SourceMode;
+import ch.so.agi.hop.commons.core.ValueOrField;
+import ch.so.agi.hop.commons.ui.EditorKind;
+import ch.so.agi.hop.commons.ui.ValueOrFieldControl;
+import ch.so.agi.hop.raster.type.ValueMetaRaster;
 import java.util.*;
+import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.ui.core.PropsUi;
@@ -17,6 +23,36 @@ public final class RasterValueDialog extends BaseTransformDialog {
   private final RasterValueMeta input;
 
   public RasterValueDialog(
+      Shell parent, IVariables vars, RasterReaderMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
+      Shell parent, IVariables vars, RasterClipMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
+      Shell parent, IVariables vars, RasterReprojectMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
+      Shell parent, IVariables vars, RasterZonalStatsMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
+      Shell parent, IVariables vars, RasterInfoMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
+      Shell parent, IVariables vars, RasterWriterMeta meta, PipelineMeta pipeline) {
+    this(parent, vars, (RasterValueMeta) meta, pipeline);
+  }
+
+  public RasterValueDialog(
       Shell parent, IVariables vars, RasterValueMeta meta, PipelineMeta pipeline) {
     super(parent, vars, meta, pipeline);
     input = meta;
@@ -26,11 +62,18 @@ public final class RasterValueDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE);
     shell.setText("Raster " + input.operation() + " (GeoTools)");
-    shell.setLayout(new GridLayout(1, false));
+    var outerLayout = new FormLayout();
+    outerLayout.marginWidth = 8;
+    outerLayout.marginHeight = 8;
+    shell.setLayout(outerLayout);
     PropsUi.setLook(shell);
     setShellImage(shell, input);
     var scroll = new ScrolledComposite(shell, SWT.V_SCROLL);
-    scroll.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+    var scrollData = new FormData();
+    scrollData.left = new FormAttachment(0, 0);
+    scrollData.right = new FormAttachment(100, 0);
+    scrollData.top = new FormAttachment(0, 0);
+    scroll.setLayoutData(scrollData);
     scroll.setExpandHorizontal(true);
     scroll.setExpandVertical(true);
     var body = new Composite(scroll, SWT.NONE);
@@ -42,7 +85,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
     var controls = new LinkedHashMap<String, Control>();
     String fields =
         switch (input.operation()) {
-          case "READER" -> "source sourceField rasterField";
+          case "READER" -> "rasterField";
           case "CLIP" ->
               "rasterField outputRasterField clipMethod geometryField explicitCrs bands noData minX"
                   + " minY maxX maxY bboxFields";
@@ -56,11 +99,28 @@ public final class RasterValueDialog extends BaseTransformDialog {
           default -> "";
         };
     try {
+      if (input.operation().equals("READER")) {
+        new Label(body, SWT.NONE).setText(label("source", input.operation()));
+        var sourceControl =
+            ValueOrFieldControl.builder(body, variables)
+                .editor(EditorKind.FILE_OPEN)
+                .fileFilters(
+                    new String[] {"*.tif", "*.tiff", "*"},
+                    new String[] {"GeoTIFF", "TIFF", "All files"})
+                .fieldProvider(() -> inputFieldNames(false))
+                .build();
+        sourceControl.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        sourceControl.setValue(
+            input.isSourceField()
+                ? new ValueOrField(SourceMode.FIELD, "", input.getSource())
+                : new ValueOrField(SourceMode.CONFIGURED, input.getSource(), ""));
+        controls.put("source", sourceControl);
+      }
       for (String name : fields.split(" ")) {
         if (name.isEmpty()) continue;
         var field = RasterValueMeta.class.getDeclaredField(name);
         field.setAccessible(true);
-        new Label(body, SWT.NONE).setText(label(name));
+        new Label(body, SWT.NONE).setText(label(name, input.operation()));
         Control control;
         if (field.getType() == boolean.class) {
           var button = new Button(body, SWT.CHECK);
@@ -75,9 +135,18 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 case "outputType" -> new String[] {"AUTO", "SOURCE", "FLOAT32", "FLOAT64"};
                 default -> new String[0];
               };
+          if (name.equals("rasterField") && input.operation().equals("READER")) {
+            var text = new TextVar(variables, body, SWT.BORDER);
+            text.setText(String.valueOf(field.get(input)));
+            text.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+            controls.put(name, text);
+            continue;
+          }
           if (choices.length > 0 || name.equals("rasterField") || name.equals("geometryField")) {
             var combo = new ComboVar(variables, body, SWT.BORDER);
-            if (choices.length == 0)
+            if (name.equals("rasterField")) {
+              choices = inputFieldNames(true);
+            } else if (choices.length == 0)
               try {
                 choices =
                     pipelineMeta.getPrevTransformFields(variables, transformName).getFieldNames();
@@ -102,7 +171,11 @@ public final class RasterValueDialog extends BaseTransformDialog {
     scroll.setContent(body);
     scroll.setMinSize(body.computeSize(SWT.DEFAULT, SWT.DEFAULT));
     var buttons = new Composite(shell, SWT.NONE);
-    buttons.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false));
+    var buttonData = new FormData();
+    buttonData.right = new FormAttachment(100, 0);
+    buttonData.bottom = new FormAttachment(100, 0);
+    buttons.setLayoutData(buttonData);
+    scrollData.bottom = new FormAttachment(buttons, -8);
     buttons.setLayout(new GridLayout(2, true));
     var ok = new Button(buttons, SWT.PUSH);
     ok.setText("OK");
@@ -116,12 +189,18 @@ public final class RasterValueDialog extends BaseTransformDialog {
             for (var entry : controls.entrySet()) {
               var field = RasterValueMeta.class.getDeclaredField(entry.getKey());
               field.setAccessible(true);
-              Object value =
-                  entry.getValue() instanceof Button b
-                      ? b.getSelection()
-                      : entry.getValue() instanceof ComboVar combo
-                          ? combo.getText()
-                          : ((TextVar) entry.getValue()).getText();
+              Object value;
+              if (entry.getValue() instanceof ValueOrFieldControl sourceControl) {
+                var source = sourceControl.getValue();
+                value = configuredSource(source);
+                edited.setSourceField(source.mode() == SourceMode.FIELD);
+              } else if (entry.getValue() instanceof Button b) {
+                value = b.getSelection();
+              } else if (entry.getValue() instanceof ComboVar combo) {
+                value = combo.getText();
+              } else {
+                value = ((TextVar) entry.getValue()).getText();
+              }
               if (field.getType() == int.class) value = Integer.parseInt((String) value);
               field.set(edited, value);
             }
@@ -133,6 +212,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
               field.setAccessible(true);
               field.set(input, field.get(edited));
             }
+            if (controls.containsKey("source")) input.setSourceField(edited.isSourceField());
             transformName = wTransformName.getText();
             input.setChanged();
             shell.dispose();
@@ -153,15 +233,39 @@ public final class RasterValueDialog extends BaseTransformDialog {
     shell.setDefaultButton(ok);
     shell.setSize(760, 720);
     shell.open();
+    var display = shell.getDisplay();
     while (!shell.isDisposed())
-      if (!shell.getDisplay().readAndDispatch()) shell.getDisplay().sleep();
+      if (!display.readAndDispatch()) display.sleep();
     return transformName;
   }
 
-  private static String label(String field) {
+  private static String configuredSource(ValueOrField source) {
+    return source.mode() == SourceMode.FIELD ? source.fieldName() : source.configuredValue();
+  }
+
+  private String[] inputFieldNames(boolean rastersOnly) {
+    try {
+      IRowMeta fields = pipelineMeta.getPrevTransformFields(variables, transformName);
+      if (fields == null) return new String[0];
+      return rastersOnly ? rasterFieldNames(fields) : fields.getFieldNames();
+    } catch (Exception ignored) {
+      return new String[0];
+    }
+  }
+
+  static String[] rasterFieldNames(IRowMeta fields) {
+    if (fields == null) return new String[0];
+    return fields.getValueMetaList().stream()
+        .filter(value -> value.getType() == ValueMetaRaster.TYPE_RASTER)
+        .map(org.apache.hop.core.row.IValueMeta::getName)
+        .toArray(String[]::new);
+  }
+
+  private static String label(String field, String operation) {
     return switch (field) {
       case "source" -> "Local GeoTIFF / public COG URL";
-      case "rasterField" -> "Input raster field / Reader output field";
+      case "rasterField" ->
+          operation.equals("READER") ? "Reader output field" : "Input raster field";
       case "outputRasterField" -> "Output raster field (empty: replace input)";
       case "bands" -> "Bands (ALL or 1-based list)";
       case "clipMethod" -> "Clip method (POLYGON / BOUNDING_BOX)";

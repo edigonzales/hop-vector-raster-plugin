@@ -25,6 +25,11 @@
     </dependency>
     <dependency>
       <groupId>ch.so.agi</groupId>
+      <artifactId>hop-plugin-commons-ui</artifactId>
+      <version>${hop.plugin.commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.so.agi</groupId>
       <artifactId>hop-geometry-type</artifactId>
       <version>${hop.geometry.type.version}</version>
       <scope>provided</scope>

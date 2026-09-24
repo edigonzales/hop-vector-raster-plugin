@@ -39,6 +39,18 @@ with zipfile.ZipFile(zip_path) as archive:
         if not any(fragment in name for name in names):
             raise SystemExit(f"{zip_path.name}: required dependency matching {fragment!r} is missing")
 
+    for fragment in ("hop-plugin-commons-ui-", "hop-plugin-commons-core-"):
+        matches = [entry for entry in entries if fragment in Path(entry).name]
+        if len(matches) != 1 or "/lib/" not in matches[0]:
+            raise SystemExit(f"{fragment} must be packaged exactly once in the plugin lib directory")
+
+    host_runtime = [
+        entry for entry in entries
+        if Path(entry).name.startswith(("hop-core-", "hop-engine-", "hop-ui-", "org.eclipse.swt"))
+    ]
+    if host_runtime:
+        raise SystemExit(f"Hop and SWT host libraries must not be bundled: {host_runtime}")
+
     raster_backend = [
         entry for entry in entries
         if Path(entry).name.lower().startswith("hop-raster-geotools-")
@@ -94,6 +106,27 @@ with zipfile.ZipFile(zip_path) as archive:
             for name in required_content:
                 if name not in nested.namelist():
                     raise SystemExit(f"Missing FileGDB content in {entry}: {name}")
+            if Path(entry).name.startswith("hop-raster-values-"):
+                legacy_classes = [
+                    "ch/so/agi/hop/raster/values/RasterLegacyClipMeta.class",
+                    "ch/so/agi/hop/raster/values/RasterLegacyReprojectMeta.class",
+                    "ch/so/agi/hop/raster/values/RasterLegacyStatsMeta.class",
+                ]
+                present = [name for name in legacy_classes if name in nested.namelist()]
+                if present:
+                    raise SystemExit(f"Legacy raster transforms must not be packaged: {present}")
+                legacy_ids = (
+                    b"SOGIS_RASTER_CLIP",
+                    b"SOGIS_RASTER_REPROJECT",
+                    b"SOGIS_RASTER_ZONAL_STATS",
+                )
+                for name in nested.namelist():
+                    if name.endswith(".class"):
+                        content = nested.read(name)
+                        if any(legacy_id in content for legacy_id in legacy_ids):
+                            raise SystemExit(
+                                f"Legacy raster transform ID remains in {entry}:{name}"
+                            )
             if any("ArcInfoGenerateWriter" in name for name in nested.namelist()):
                 raise SystemExit(f"Legacy separate GENERATE transform in {entry}")
             natives = [n for n in nested.namelist() if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]

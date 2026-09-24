@@ -41,4 +41,36 @@ for error in errors:
 positions=[(t.findtext('GUI/xloc'),t.findtext('GUI/yloc')) for t in nodes.values()]
 assert len(set(positions))==len(positions)
 assert not any(t.findtext('type')=='SOGIS_RASTER_CLIP' for t in nodes.values())
-print('Raster migration: field bindings, variables, band, Error Hops and distinct layout OK')
+
+legacy_types = (
+    'SOGIS_RASTER_CLIP', 'SOGIS_RASTER_REPROJECT', 'SOGIS_RASTER_ZONAL_STATS',
+    'GEOTOOLS_RASTER_CLIP', 'GEOTOOLS_RASTER_REPROJECT', 'GEOTOOLS_RASTER_ZONAL_STATS',
+    'SOGEO_RASTER_CLIP', 'SOGEO_RASTER_ZONAL_STATS',
+)
+current_types = {
+    'CLIP': 'SOGIS_RASTER_VALUE_CLIP',
+    'REPROJECT': 'SOGIS_RASTER_VALUE_REPROJECT',
+    'STATS': 'SOGIS_RASTER_VALUE_ZONAL_STATS',
+}
+operations = {
+    'SOGIS_RASTER_CLIP': 'CLIP', 'GEOTOOLS_RASTER_CLIP': 'CLIP',
+    'SOGEO_RASTER_CLIP': 'CLIP', 'SOGIS_RASTER_REPROJECT': 'REPROJECT',
+    'GEOTOOLS_RASTER_REPROJECT': 'REPROJECT',
+    'SOGIS_RASTER_ZONAL_STATS': 'STATS', 'GEOTOOLS_RASTER_ZONAL_STATS': 'STATS',
+    'SOGEO_RASTER_ZONAL_STATS': 'STATS',
+}
+for legacy_type in legacy_types:
+    fixture = E.fromstring(f'''<pipeline><order/>
+      <transform><name>old</name><type>{legacy_type}</type><source>input.tif</source>
+      <output>output.tif</output></transform></pipeline>''')
+    migrated = migrate(fixture)
+    migrated_types = [t.findtext('type') for t in migrated.findall('transform')]
+    expected = current_types[operations[legacy_type]]
+    assert expected in migrated_types, (legacy_type, migrated_types)
+    assert legacy_type not in migrated_types, (legacy_type, migrated_types)
+    assert 'SOGIS_RASTER_READER' in migrated_types
+    if operations[legacy_type] == 'STATS':
+        assert 'SOGIS_RASTER_WRITER' not in migrated_types
+    else:
+        assert 'SOGIS_RASTER_WRITER' in migrated_types
+print('Raster migration: aliases, field bindings, variables, Error Hops and distinct layout OK')

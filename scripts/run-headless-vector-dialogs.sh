@@ -2,7 +2,7 @@
 set -eu
 
 if ! command -v Xvfb >/dev/null 2>&1; then
-  echo "Xvfb is required for the vector dialog smoke test" >&2
+  echo "Xvfb is required for the Hop dialog smoke tests" >&2
   exit 1
 fi
 
@@ -44,3 +44,4 @@ if [ -z "$display" ]; then
 fi
 
 DISPLAY=":$display" python3 scripts/check-vector-dialogs.py
+DISPLAY=":$display" python3 scripts/check-raster-dialogs.py
