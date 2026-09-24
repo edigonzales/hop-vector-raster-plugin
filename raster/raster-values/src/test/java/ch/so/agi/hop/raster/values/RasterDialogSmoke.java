@@ -68,6 +68,12 @@ public final class RasterDialogSmoke {
               Button ok = findButtonByText(dialogShell, "OK");
               if (ok == null) throw new AssertionError("Raster dialog is missing its OK button");
               ok.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+            } else if (dialogCase.meta().operation().equals("WRITER")) {
+              verifyWriterDialog(
+                  dialogShell, ((RasterWriterMeta) dialogCase.meta()).isOutputField());
+              Button ok = findButtonByText(dialogShell, "OK");
+              if (ok == null) throw new AssertionError("Raster dialog is missing its OK button");
+              ok.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
             } else if (!(editor instanceof ComboVar)) {
               throw new AssertionError("Input raster field must be a field selector");
             } else {
@@ -165,7 +171,13 @@ public final class RasterDialogSmoke {
     verifyClipCommonFieldsEnabled(shell);
     verifyFieldEnabled(shell, "geometry Field", true);
     verifyFieldEnabled(shell, "explicit Crs", true);
-    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+    for (String field :
+        List.of(
+            "Use input fields for bounding box coordinates",
+            "min X",
+            "min Y",
+            "max X",
+            "max Y"))
       verifyFieldEnabled(shell, field, false);
 
     setTextValue(shell, "geometry Field", "mask_geom");
@@ -174,9 +186,13 @@ public final class RasterDialogSmoke {
     setTextValue(shell, "min Y", "2");
     setTextValue(shell, "max X", "3");
     setTextValue(shell, "max Y", "4");
-    Control bboxFieldsEditor = editorAfterLabel(shell, "bbox Fields");
+    String bboxFieldsLabel = "Use input fields for bounding box coordinates";
+    Control bboxFieldsEditor = editorAfterLabel(shell, bboxFieldsLabel);
     if (!(bboxFieldsEditor instanceof Button bboxFields))
-      throw new AssertionError("bbox Fields must be a checkbox");
+      throw new AssertionError("Bounding box field mode must be a checkbox");
+    Control minXEditor = editorAfterLabel(shell, "min X");
+    if (minXEditor == null || bboxFieldsEditor.getBounds().y >= minXEditor.getBounds().y)
+      throw new AssertionError("Bounding box field mode must appear before the coordinate inputs");
     bboxFields.setSelection(true);
 
     selectCombo(method, 1);
@@ -185,7 +201,13 @@ public final class RasterDialogSmoke {
     verifyClipCommonFieldsEnabled(shell);
     verifyFieldEnabled(shell, "geometry Field", false);
     verifyFieldEnabled(shell, "explicit Crs", true);
-    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+    for (String field :
+        List.of(
+            "Use input fields for bounding box coordinates",
+            "min X",
+            "min Y",
+            "max X",
+            "max Y"))
       verifyFieldEnabled(shell, field, true);
 
     selectCombo(method, 0);
@@ -193,7 +215,13 @@ public final class RasterDialogSmoke {
       throw new AssertionError("Clip method selection did not change back to POLYGON");
     verifyFieldEnabled(shell, "geometry Field", true);
     verifyClipCommonFieldsEnabled(shell);
-    for (String field : List.of("min X", "min Y", "max X", "max Y", "bbox Fields"))
+    for (String field :
+        List.of(
+            "Use input fields for bounding box coordinates",
+            "min X",
+            "min Y",
+            "max X",
+            "max Y"))
       verifyFieldEnabled(shell, field, false);
     if (!"mask_geom".equals(textValue(shell, "geometry Field"))
         || !"EPSG:2056".equals(textValue(shell, "explicit Crs"))
@@ -243,6 +271,82 @@ public final class RasterDialogSmoke {
     source.setValue(new ValueOrField(SourceMode.FIELD, "", "source_path"));
     if (!"source_path".equals(source.getValue().fieldName()))
       throw new AssertionError("Reader source field value was not retained by the widget");
+  }
+
+  private static void verifyWriterDialog(Shell dialog, boolean saveByField) {
+    ValueOrFieldControl output = findControl(dialog, ValueOrFieldControl.class);
+    if (output == null) throw new AssertionError("Writer output widget is missing");
+    Button browse = findButton(output);
+    if (browse == null || !browse.isVisible())
+      throw new AssertionError("Writer output widget must expose a visible Browse button");
+    Control[] children = output.getChildren();
+    if (children.length == 0 || !(children[0] instanceof Combo mode))
+      throw new AssertionError("Writer output widget must expose its value/field selector");
+    Combo fieldSelector = findOtherCombo(output, mode);
+    Button refresh = findButtonByText(output, "Refresh");
+    if (refresh == null) refresh = findButtonByText(output, "Aktualisieren");
+    TextVar configuredEditor = findControl(output, TextVar.class);
+    if (fieldSelector == null || refresh == null || configuredEditor == null)
+      throw new AssertionError("Writer output widget is missing one of its editors");
+
+    if (saveByField) {
+      if (output.getValue().mode() != SourceMode.FIELD)
+        throw new AssertionError("Writer field mode was not restored from outputField metadata");
+      if (browse.isEnabled() || !fieldSelector.isEnabled() || !refresh.isEnabled())
+        throw new AssertionError("Writer controls are incorrect in field mode");
+      selectValueMode(mode, 0);
+      if (!browse.isEnabled())
+        throw new AssertionError("Writer Browse must be enabled in configured mode");
+      configuredEditor.setText("/tmp/unused-raster-output.tif");
+      selectValueMode(mode, 1);
+      fieldSelector.setText("destination_path");
+      if (browse.isEnabled() || !fieldSelector.isEnabled() || !refresh.isEnabled())
+        throw new AssertionError("Writer Browse must be disabled while field selection stays active");
+      if (!"/tmp/unused-raster-output.tif".equals(output.getValue().configuredValue()))
+        throw new AssertionError("Writer configured path was lost after switching modes");
+    } else {
+      if (output.getValue().mode() != SourceMode.CONFIGURED)
+        throw new AssertionError("Writer should initially use a configured output path");
+      if (!browse.isEnabled())
+        throw new AssertionError("Writer Browse must be enabled in configured mode");
+      configuredEditor.setText("/tmp/raster-output.tif");
+      selectValueMode(mode, 1);
+      fieldSelector.setText("destination_path");
+      if (browse.isEnabled() || !fieldSelector.isEnabled() || !refresh.isEnabled())
+        throw new AssertionError("Writer Browse must be disabled while field selection stays active");
+      selectValueMode(mode, 0);
+      if (!browse.isEnabled())
+        throw new AssertionError("Writer Browse must be re-enabled in configured mode");
+      if (!"destination_path".equals(output.getValue().fieldName()))
+        throw new AssertionError("Writer output field value was lost after switching modes");
+    }
+
+    Control overwriteEditor = editorAfterLabel(dialog, "Overwrite existing files");
+    if (!(overwriteEditor instanceof Button overwrite))
+      throw new AssertionError("Writer overwrite setting must be a checkbox");
+    overwrite.setSelection(true);
+    setTextValue(dialog, "Result field prefix", "written_");
+
+    Control compressionEditor = editorAfterLabel(dialog, "Compression");
+    if (!(compressionEditor instanceof Combo compression))
+      throw new AssertionError("Writer compression must be a non-editable selection box");
+    var expectedCodecs = new java.util.ArrayList<String>();
+    expectedCodecs.add("None");
+    expectedCodecs.addAll(ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.compressionTypes());
+    if (!Arrays.equals(compression.getItems(), expectedCodecs.toArray(String[]::new)))
+      throw new AssertionError("Writer compression choices do not match the TIFF writer");
+    if (!"Deflate".equals(compression.getText()))
+      throw new AssertionError("Writer compression must default to Deflate");
+    int lzw = compression.indexOf("LZW");
+    if (lzw < 0) throw new AssertionError("Writer compression is missing LZW");
+    compression.select(lzw);
+  }
+
+  private static void selectValueMode(Combo mode, int index) {
+    mode.select(index);
+    Event selection = new Event();
+    selection.type = org.eclipse.swt.SWT.Selection;
+    mode.notifyListeners(org.eclipse.swt.SWT.Selection, selection);
   }
 
   private static Combo findOtherCombo(Control control, Combo excluded) {
@@ -314,7 +418,8 @@ public final class RasterDialogSmoke {
               new DialogCase(
                   new RasterZonalStatsMeta(), "Input raster field", false),
               new DialogCase(new RasterInfoMeta(), "Input raster field", false),
-              new DialogCase(new RasterWriterMeta(), "Input raster field", false));
+              new DialogCase(new RasterWriterMeta(), "Input raster field", false),
+              writerFieldCase());
 
       for (var dialogCase : cases) {
         String title = "Raster " + dialogCase.meta().operation() + " (GeoTools)";
@@ -337,11 +442,27 @@ public final class RasterDialogSmoke {
               || !"4".equals(clip.getMaxY())
               || !clip.isBboxFields())
             throw new AssertionError("Clip method or field values were not saved correctly");
+        } else if (dialogCase.meta().operation().equals("WRITER")) {
+          var writer = (RasterWriterMeta) dialogCase.meta();
+          String expectedOutput =
+              writer.isOutputField() ? "destination_path" : "/tmp/raster-output.tif";
+          if (!expectedOutput.equals(writer.getOutput())
+              || !writer.isOverwrite()
+              || !"written_".equals(writer.getPrefix())
+              || !"LZW".equals(writer.getCompression()))
+            throw new AssertionError("Writer output mode or settings were not saved correctly");
         }
       }
     } finally {
       parent.dispose();
       display.dispose();
     }
+  }
+
+  private static DialogCase writerFieldCase() {
+    var writer = new RasterWriterMeta();
+    writer.setOutput("destination_path");
+    writer.setOutputField(true);
+    return new DialogCase(writer, "Input raster field", false);
   }
 }

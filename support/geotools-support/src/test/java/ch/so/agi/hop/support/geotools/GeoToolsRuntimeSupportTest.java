@@ -1,6 +1,7 @@
 package ch.so.agi.hop.support.geotools;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -28,6 +29,21 @@ class GeoToolsRuntimeSupportTest {
     CoordinateReferenceSystem crs = CRS.decode("EPSG:2056", true);
     assertThat(crs).isNotNull();
     assertThat(crs.getName().getCode()).isNotBlank();
+  }
+
+  @Test
+  void decodesBareEpsgNumberAndAuthorityCodeEquivalently() throws Exception {
+    var bareNumber = CrsSupport.decode("2056");
+    var authorityCode = CrsSupport.decode("EPSG:2056");
+
+    assertThat(CRS.equalsIgnoreMetadata(bareNumber, authorityCode)).isTrue();
+  }
+
+  @Test
+  void doesNotTreatWktAsAnAuthorityCode() throws Exception {
+    var wkt = new GeoToolsCrsDefinitionResolver().resolve(2056).wkt();
+
+    assertThatThrownBy(() -> CrsSupport.decode(wkt)).isInstanceOf(Exception.class);
   }
 
   @Test

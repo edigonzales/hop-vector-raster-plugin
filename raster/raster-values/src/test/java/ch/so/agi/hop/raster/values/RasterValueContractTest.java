@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import ch.so.agi.hop.raster.type.ValueMetaRaster;
 import org.apache.hop.core.row.RowMeta;
+import org.apache.hop.core.row.value.ValueMetaInteger;
 import org.apache.hop.core.row.value.ValueMetaString;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.core.variables.Variables;
@@ -73,6 +74,52 @@ class RasterValueContractTest {
   }
 
   @Test
+  void existingWriterOutputAndOutputFieldXmlRemainCompatible() throws Exception {
+    var restored = new RasterWriterMeta();
+    restored.loadXml(
+        XmlHandler.loadXmlString(
+                "<transform><output>destination_path</output><outputField>Y</outputField>"
+                    + "<overwrite>Y</overwrite><prefix>result_</prefix></transform>")
+            .getDocumentElement(),
+        null);
+
+    assertThat(restored.getOutput()).isEqualTo("destination_path");
+    assertThat(restored.isOutputField()).isTrue();
+    assertThat(restored.getCompression()).isEqualTo("Deflate");
+    assertThat(restored.isOverwrite()).isTrue();
+    assertThat(restored.getPrefix()).isEqualTo("result_");
+
+    var roundTrip = new RasterWriterMeta();
+    roundTrip.loadXml(
+        XmlHandler.loadXmlString("<transform>" + restored.getXml() + "</transform>")
+            .getDocumentElement(),
+        null);
+    assertThat(roundTrip.getOutput()).isEqualTo("destination_path");
+    assertThat(roundTrip.isOutputField()).isTrue();
+    assertThat(roundTrip.getCompression()).isEqualTo("Deflate");
+    assertThat(roundTrip.isOverwrite()).isTrue();
+    assertThat(roundTrip.getPrefix()).isEqualTo("result_");
+  }
+
+  @Test
+  void writerCompressionChoicesRoundTripIncludingUncompressedMode() throws Exception {
+    var modes = new java.util.ArrayList<String>();
+    modes.add("None");
+    modes.addAll(ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.compressionTypes());
+
+    for (String mode : modes) {
+      var writer = new RasterWriterMeta();
+      writer.setCompression(mode);
+      var restored = new RasterWriterMeta();
+      restored.loadXml(
+          XmlHandler.loadXmlString("<transform>" + writer.getXml() + "</transform>")
+              .getDocumentElement(),
+          null);
+      assertThat(restored.getCompression()).isEqualTo(mode);
+    }
+  }
+
+  @Test
   void inputRasterSuggestionsOnlyIncludeRasterTypedFields() {
     var fields = new RowMeta();
     fields.addValueMeta(new ValueMetaString("raster_path"));
@@ -81,6 +128,19 @@ class RasterValueContractTest {
 
     assertThat(RasterValueDialog.rasterFieldNames(fields)).containsExactly("raster");
     assertThat(RasterValueDialog.rasterFieldNames(null)).isEmpty();
+  }
+
+  @Test
+  void writerPathSuggestionsOnlyIncludeStringFields() {
+    var fields = new RowMeta();
+    fields.addValueMeta(new ValueMetaString("destination_path"));
+    fields.addValueMeta(new ValueMetaRaster("raster"));
+    fields.addValueMeta(new ValueMetaInteger("row_number"));
+    fields.addValueMeta(new ValueMetaString("description"));
+
+    assertThat(RasterValueDialog.stringFieldNames(fields))
+        .containsExactly("destination_path", "description");
+    assertThat(RasterValueDialog.stringFieldNames(null)).isEmpty();
   }
 
   @Test

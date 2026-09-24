@@ -283,6 +283,16 @@ public abstract class RasterValueMeta
     outputField = value;
   }
 
+  @HopMetadataProperty private String compression = "Deflate";
+
+  public String getCompression() {
+    return compression;
+  }
+
+  public void setCompression(String value) {
+    compression = value;
+  }
+
   @HopMetadataProperty private boolean overwrite = false;
 
   public boolean isOverwrite() {

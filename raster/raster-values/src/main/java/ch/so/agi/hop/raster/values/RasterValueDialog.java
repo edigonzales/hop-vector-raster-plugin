@@ -90,13 +90,13 @@ public final class RasterValueDialog extends BaseTransformDialog {
         switch (input.operation()) {
           case "READER" -> "rasterField";
           case "CLIP" ->
-              "rasterField outputRasterField clipMethod geometryField explicitCrs bands noData minX"
-                  + " minY maxX maxY bboxFields";
+              "rasterField outputRasterField clipMethod geometryField explicitCrs bands noData"
+                  + " bboxFields minX minY maxX maxY";
           case "REPROJECT" ->
               "rasterField outputRasterField targetCrs targetCrsField resolutionX resolutionY"
                   + " resolutionFields extentMode minX minY maxX maxY bboxFields interpolation"
                   + " outputType sourceNoData outputNoData";
-          case "WRITER" -> "rasterField output outputField overwrite prefix";
+          case "WRITER" -> "rasterField output compression overwrite prefix";
           case "STATS" -> "rasterField geometryField explicitCrs band noData statistics prefix";
           case "INFO" -> "rasterField infoFields prefix";
           default -> "";
@@ -127,6 +127,23 @@ public final class RasterValueDialog extends BaseTransformDialog {
         fieldLabel.setText(label(name, input.operation()));
         fieldLabels.put(name, fieldLabel);
         Control control;
+        if (name.equals("output") && input.operation().equals("WRITER")) {
+          var outputControl =
+              ValueOrFieldControl.builder(body, variables)
+                  .editor(EditorKind.FILE_SAVE)
+                  .fileFilters(
+                      new String[] {"*.tif", "*.tiff", "*"},
+                      new String[] {"GeoTIFF", "TIFF", "All files"})
+                  .fieldProvider(this::inputStringFieldNames)
+                  .build();
+          outputControl.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+          outputControl.setValue(
+              input.isOutputField()
+                  ? new ValueOrField(SourceMode.FIELD, "", input.getOutput())
+                  : new ValueOrField(SourceMode.CONFIGURED, input.getOutput(), ""));
+          controls.put(name, outputControl);
+          continue;
+        }
         if (field.getType() == boolean.class) {
           var button = new Button(body, SWT.CHECK);
           button.setSelection(field.getBoolean(input));
@@ -138,8 +155,19 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 case "extentMode" -> new String[] {"AUTO", "BOUNDING_BOX"};
                 case "interpolation" -> new String[] {"NEAREST", "BILINEAR"};
                 case "outputType" -> new String[] {"AUTO", "SOURCE", "FLOAT32", "FLOAT64"};
+                case "compression" -> compressionChoices();
                 default -> new String[0];
               };
+          if (name.equals("compression")) {
+            var combo = new Combo(body, SWT.DROP_DOWN | SWT.READ_ONLY);
+            combo.setItems(choices);
+            int selection = combo.indexOf(String.valueOf(field.get(input)));
+            if (selection < 0) selection = combo.indexOf("Deflate");
+            if (selection >= 0) combo.select(selection);
+            combo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+            controls.put(name, combo);
+            continue;
+          }
           if (name.equals("rasterField") && input.operation().equals("READER")) {
             var text = new TextVar(variables, body, SWT.BORDER);
             text.setText(String.valueOf(field.get(input)));
@@ -208,12 +236,17 @@ public final class RasterValueDialog extends BaseTransformDialog {
               var field = RasterValueMeta.class.getDeclaredField(entry.getKey());
               field.setAccessible(true);
               Object value;
-              if (entry.getValue() instanceof ValueOrFieldControl sourceControl) {
-                var source = sourceControl.getValue();
-                value = configuredSource(source);
-                edited.setSourceField(source.mode() == SourceMode.FIELD);
+              if (entry.getValue() instanceof ValueOrFieldControl valueOrFieldControl) {
+                var selection = valueOrFieldControl.getValue();
+                value = configuredSource(selection);
+                if (entry.getKey().equals("source"))
+                  edited.setSourceField(selection.mode() == SourceMode.FIELD);
+                else if (entry.getKey().equals("output"))
+                  edited.setOutputField(selection.mode() == SourceMode.FIELD);
               } else if (entry.getValue() instanceof Button b) {
                 value = b.getSelection();
+              } else if (entry.getValue() instanceof Combo combo) {
+                value = combo.getText();
               } else if (entry.getValue() instanceof ComboVar combo) {
                 value = combo.getText();
               } else {
@@ -231,6 +264,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
               field.set(input, field.get(edited));
             }
             if (controls.containsKey("source")) input.setSourceField(edited.isSourceField());
+            if (controls.containsKey("output")) input.setOutputField(edited.isOutputField());
             transformName = wTransformName.getText();
             input.setChanged();
             shell.dispose();
@@ -296,10 +330,33 @@ public final class RasterValueDialog extends BaseTransformDialog {
     }
   }
 
+  private String[] inputStringFieldNames() {
+    try {
+      return stringFieldNames(pipelineMeta.getPrevTransformFields(variables, transformName));
+    } catch (Exception ignored) {
+      return new String[0];
+    }
+  }
+
+  private static String[] compressionChoices() {
+    var codecs = new ArrayList<String>();
+    codecs.add("None");
+    codecs.addAll(ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.compressionTypes());
+    return codecs.toArray(String[]::new);
+  }
+
   static String[] rasterFieldNames(IRowMeta fields) {
     if (fields == null) return new String[0];
     return fields.getValueMetaList().stream()
         .filter(value -> value.getType() == ValueMetaRaster.TYPE_RASTER)
+        .map(org.apache.hop.core.row.IValueMeta::getName)
+        .toArray(String[]::new);
+  }
+
+  static String[] stringFieldNames(IRowMeta fields) {
+    if (fields == null) return new String[0];
+    return fields.getValueMetaList().stream()
+        .filter(value -> value.getType() == org.apache.hop.core.row.IValueMeta.TYPE_STRING)
         .map(org.apache.hop.core.row.IValueMeta::getName)
         .toArray(String[]::new);
   }
@@ -312,11 +369,15 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "outputRasterField" -> "Output raster field (empty: replace input)";
       case "bands" -> "Bands (ALL or 1-based list)";
       case "clipMethod" -> "Clip method (POLYGON / BOUNDING_BOX)";
+      case "bboxFields" -> "Use input fields for bounding box coordinates";
       case "interpolation" -> "Interpolation (NEAREST / BILINEAR)";
       case "outputType" -> "Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)";
       case "extentMode" -> "Extent (AUTO / BOUNDING_BOX)";
       case "infoFields" -> "Metadata fields (width height crs bands)";
-      case "output" -> "Output GeoTIFF";
+      case "output" -> "Output GeoTIFF path";
+      case "compression" -> "Compression";
+      case "overwrite" -> "Overwrite existing files";
+      case "prefix" -> "Result field prefix";
       default -> field.replaceAll("([A-Z])", " $1");
     };
   }

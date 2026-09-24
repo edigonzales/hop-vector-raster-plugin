@@ -106,7 +106,16 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
               Path.of(value(meta.getOutput(), meta.isOutputField(), row))
                   .toAbsolutePath()
                   .normalize();
-          data.backend.write(raster, output, meta.isOverwrite(), this::isStopped);
+          var progress = new RasterWriteProgress(message -> logBasic(message));
+          progress.started(output, meta.getCompression());
+          data.backend.write(
+              raster,
+              output,
+              meta.isOverwrite(),
+              this::isStopped,
+              meta.getCompression(),
+              progress::report);
+          progress.completed();
           result[index(meta.getPrefix() + "output_file")] = output.toString();
           result[index(meta.getPrefix() + "status")] = "OK";
         }

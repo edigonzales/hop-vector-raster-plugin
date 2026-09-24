@@ -45,11 +45,11 @@ Reader liest zunächst Metadaten, nicht den vollständigen Pixelbestand.
 | explicit Crs                                        [ <leer> ]               |
 | Bands (ALL or 1-based list)                         [ ALL ]                  |
 | no Data                                             [ <leer> ]               |
+| Use input fields for bounding box coordinates       [ ]                      |
 | min X                                               [ <leer> ]               |
 | min Y                                               [ <leer> ]               |
 | max X                                               [ <leer> ]               |
 | max Y                                               [ <leer> ]               |
-| bbox Fields                                         [ ]                      |
 |                                                                              |
 |                                                            [ OK ] [ Cancel ] |
 +------------------------------------------------------------------------------+
@@ -59,16 +59,21 @@ Raster Clip (`SOGIS_RASTER_VALUE_CLIP`) liest dieses Rasterfeld. Das leere Ausga
 ein anderer Name ergänzt einen zweiten Rasterwert. Andere Attribute bleiben erhalten. Er schreibt keine Datei.
 
 * Clip-Methode: `POLYGON` (Standard) oder `BOUNDING_BOX`.
-* Polygonfeld: standardmässig `geometry`; explizites CRS oder Geometry-SRID erforderlich.
-* Bounding Box: minX/minY/maxX/maxY und explizites CRS; Werte können aus Eingabefeldern stammen.
+* Polygonfeld: standardmässig `geometry`; dessen SRID wird verwendet, wenn *explicit Crs* leer ist.
+* *explicit Crs*: GeoTools-CRS-Code, zum Beispiel `EPSG:2056` oder `2056`; reine Zahlen werden als EPSG-Code interpretiert. WKT wird nicht unterstützt.
+* Bounding Box: minX/minY/maxX/maxY und ein explizites CRS; die Box wird aus diesem CRS ins Raster-CRS transformiert.
 * Bänder: `ALL` (Standard) oder eine geordnete Liste ab 1, zum Beispiel `1 3`.
 * NoData: optionaler Override; Integer-Messraster ohne Sentinel benötigen einen darstellbaren Wert.
 
 Alle methodenspezifischen Felder bleiben sichtbar; die für die gewählte Clip-Methode unpassenden
-Felder sind ausgegraut und nicht editierbar. Bei `BOUNDING_BOX` geben Sie die vier Grenzen
-und das CRS in *explicit Crs* ein; *bbox Fields* bindet die Grenzen stattdessen an Eingabespalten.
-Die Grenzen und das explizite CRS sind anfangs leer, *bbox Fields* ist ausgeschaltet.
-Bei `POLYGON` wird *geometry Field* verwendet; dessen SRID genügt, wenn kein explizites CRS gesetzt ist.
+Felder sind ausgegraut und nicht editierbar. Bei `BOUNDING_BOX` geben Sie das CRS in *explicit Crs*
+und die vier Grenzen in minX/minY/maxX/maxY ein. Wenn *Use input fields for bounding box coordinates*
+aktiviert ist, enthalten diese vier Felder stattdessen Eingabespaltennamen. Deren Werte werden pro Zeile
+als endliche Zahlen gelesen. Ohne Häkchen sind es Zahlen oder Hop-Variablen. Der gemeinsame Schalter
+ist anfangs ausgeschaltet.
+
+Bei `POLYGON` wird *geometry Field* verwendet. Ist *explicit Crs* leer, wird die SRID der Geometrie
+verwendet; ein eingetragenes CRS bestimmt stattdessen, wie ihre Koordinaten interpretiert werden.
 
 Die Box wird vor dem Zuschnitt ins Raster-CRS transformiert und auf die überlappenden Quellpixel beschränkt.
 Polygonmasken verwenden Pixelzentren inklusive Rand, berücksichtigen Löcher und MultiPolygone.
@@ -121,10 +126,10 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 +------------------------------------------------------------------------------------+
 | Transform name                                      [ Beispiel WRITER ]            |
 | Input raster field                                  [ raster v ]                   |
-| Output GeoTIFF                                      [ ${PROJECT_HOME}/result.tif ] |
-| output Field                                        [ ]                            |
-| overwrite                                           [ ]                            |
-| prefix                                              [ raster_ ]                    |
+| Output GeoTIFF path [ Value / Variable v ]         [ ${PROJECT_HOME}/result.tif ] [ Browse... ] |
+| Compression                                         [ Deflate v ]                   |
+| Overwrite existing files                           [ ]                                      |
+| Result field prefix                                [ raster_ ]                             |
 |                                                                                    |
 |                                                                  [ OK ] [ Cancel ] |
 +------------------------------------------------------------------------------------+
@@ -132,11 +137,22 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 
 Raster Writer (`SOGIS_RASTER_WRITER`) schreibt einen Rasterwert als lokale GeoTIFF-Datei und ergänzt
 `<prefix>output_file` sowie `<prefix>status = OK`. Standardpräfix: `raster_`.
-Der Ausgabepfad ist anfangs leer. *output Field* liest ihn aus einer Eingabespalte;
-*overwrite* erlaubt das Ersetzen vorhandener Ziele. Beide Checkboxen sind standardmässig ausgeschaltet.
-Quellen dürfen auch über Dateisystemaliasse nicht überschrieben werden. Alle Eingabeattribute bleiben erhalten;
-Namenskollisionen mit den Ergebnisfeldern sind Fehler. Verwenden Sie pro Ausgabeauftrag einen geeigneten Zielpfad.
-Ausgabe: DEFLATE, 512 × 512 Pixel grosse Tiles, ab geschätzten 2 GiB Rohdaten BigTIFF; keine zugesicherte COG-Erzeugung.
+Im Modus *Value / Variable* geben Sie einen festen lokalen Pfad ein oder wählen ihn mit *Browse...* aus;
+der Ausgabepfad ist anfangs leer. Im Modus *Input field* enthält eine Textspalte pro Zeile den lokalen Zielpfad.
+*Browse...* ist in diesem Modus deaktiviert. `outputField` bleibt der gespeicherte HPL-Metadatenname
+für diese Moduswahl. *Overwrite existing files* erlaubt das Ersetzen vorhandener Ziele und ist standardmässig
+ausgeschaltet. Quellen dürfen auch über Dateisystemaliasse nicht überschrieben werden. Alle Eingabeattribute
+bleiben erhalten; Namenskollisionen mit den Ergebnisfeldern sind Fehler. Verwenden Sie bei mehreren Zeilen
+unterschiedliche Zielpfade, sofern dieselbe Datei nicht bewusst wiederholt überschrieben werden soll.
+*Result field prefix* benennt die beiden Ergebnisfelder: Bei `raster_` heissen sie `raster_output_file`
+und `raster_status`. Standardpräfix: `raster_`.
+*Compression* bietet `None` sowie alle Kompressionsarten des eingebundenen TIFF-Writers: `CCITT RLE`,
+`CCITT T.4`, `CCITT T.6`, `LZW`, `JPEG`, `ZLib`, `PackBits`, `Deflate`, `EXIF JPEG` und `ZSTD`.
+Standard ist `Deflate` (verlustfrei). Nicht jede Kompression passt zu jedem Rastertyp; insbesondere sind
+JPEG-Verfahren verlustbehaftet und CCITT-Verfahren für spezielle 1-Bit-Bilder gedacht. Der Writer filtert
+die Auswahl nicht nach Datentyp. Bei einer inkompatiblen Auswahl meldet der TIFF-Writer beim Ausführen einen Fehler.
+Im Hop-Loglevel *Basic* erscheinen Start, Schreibfortschritt in 10-Prozent-Schritten und Abschlussdauer.
+Die Ausgabe verwendet 512 × 512 Pixel grosse Tiles und ab geschätzten 2 GiB Rohdaten BigTIFF; eine COG-Erzeugung ist nicht zugesichert.
 Das Elternverzeichnis muss existieren. Fehler/Abbruch entfernen die temporäre Nachbardatei und erhalten ein bestehendes Ziel.
 
 === Auswertung und Fehler

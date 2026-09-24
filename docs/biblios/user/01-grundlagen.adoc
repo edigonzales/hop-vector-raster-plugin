@@ -48,7 +48,9 @@ Die Variable wird beim Ausführen aufgelöst.
 Der Raster Reader kann eine feste Quelle oder den Modus *Input field* verwenden. Im Feldmodus enthält eine Eingabespalte,
 etwa `raster_url`, pro Zeile einen Pfad oder eine URL; im Modus *Value / Variable* ist es ein fester Wert mit optionalen Hop-Variablen.
 Die Dateiauswahl unterstützt lokale TIFF-Dateien, öffentliche COG-URLs können eingetippt werden.
-Raster Writer bindet den Ausgabepfad über *output Field*.
+Raster Writer bietet dieselbe Moduswahl für den lokalen Ausgabepfad; *Browse...* öffnet dort die Dateiauswahl.
+Im Modus *Input field* enthält eine Textspalte pro Zeile den GeoTIFF-Zielpfad.
+Beim Raster Writer lassen sich ausserdem TIFF-Kompressionsarten wählen; `Deflate` ist der Standard.
 Clip und Reproject lesen mit *bbox Fields* alle vier Bounding-Box-Werte aus Spalten.
 Reproject bietet zusätzlich *target Crs Field* und *resolution Fields* für Ziel-CRS und beide Pixelgrössen.
 Raster- und Geometriefelder bezeichnen immer Spalten und benötigen keine zusätzliche Checkbox.
