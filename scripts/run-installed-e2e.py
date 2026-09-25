@@ -9,6 +9,7 @@ import json
 import hashlib
 import platform
 import re
+import sys
 from contextlib import nullcontext
 import os
 from pathlib import Path
@@ -258,6 +259,26 @@ def main() -> int:
                 raise SystemExit("Raster branches produced different outputs")
             if list(data.glob("raster-spill*.tmp")):
                 raise SystemExit("Sort spill files were not cleaned up")
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/raster-writer/cog.hpl"),
+            "-p", f"INPUT_RASTER={data / 'input-large.tif'}",
+            "-p", f"OUTPUT_FILE={data / 'cog.tif'}",
+            "-p", "COMPRESSION=Deflate", "-p", "OVERVIEWS=AUTO",
+            "-p", "OVERVIEW_RESAMPLING=AVERAGE",
+        ], env)
+        run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif")], env)
+        if gdal_python:
+            run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif"), "--gdal"], gdal_env)
+        # The bundled reader must accept the generated COG as a local source.
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/raster-clip/clip-cog.hpl"),
+            "-p", f"INPUT_RASTER={data / 'cog.tif'}",
+            "-p", f"OUTPUT_FILE={data / 'clip-from-cog.tif'}",
+            "-p", "BBOX_CRS=EPSG:2056", "-p", "MIN_X=2600001", "-p", "MIN_Y=1200001",
+            "-p", "MAX_X=2600003", "-p", "MAX_Y=1200003", "-p", "NODATA=-9999",
+        ], env)
         run_command(java_smoke + ["check"], env)
         if os.environ.get("GDAL_PREFIX"):
             run_command([

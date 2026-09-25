@@ -32,6 +32,25 @@ public class DocumentationExamplesSmoke {
     }
   }
 
+  static void checkCloudOptimizedGeoTiff(Path temp) throws Exception {
+    Path cog = temp.resolve("cog.tif");
+    if (!Files.exists(cog)) return;
+    try (var source =
+        new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(cog.toString()))) {
+      if (source.bounds().width != 1200 || source.bounds().height != 1000)
+        throw new AssertionError("COG bounds are wrong: " + source.bounds());
+      if (source.noData(0) == null || source.noData(0) != -9999d)
+        throw new AssertionError("COG lost its NoData sentinel");
+      var window = new java.awt.Rectangle(100, 200, 2, 2);
+      var raster =
+          source.read(new ch.so.agi.hop.raster.geotools.RasterReadRequest(window, 0));
+      if (raster.getSampleDouble(100, 200, 0) != 2.0)
+        throw new AssertionError(
+            "COG pixel value changed: " + raster.getSampleDouble(100, 200, 0));
+    }
+  }
+
   static void checkGeoPackageAppend(Path temp) throws Exception {
     var provider =
         new GeoPackageProvider(new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
@@ -121,6 +140,49 @@ public class DocumentationExamplesSmoke {
       coverage.dispose(true);
     }
 
+    Path large = temp.resolve("input-large.tif");
+    int width = 1200, height = 1000;
+    var floatRaster =
+        java.awt.image.Raster.createWritableRaster(
+            new java.awt.image.BandedSampleModel(
+                java.awt.image.DataBuffer.TYPE_FLOAT, width, height, 1),
+            new java.awt.image.DataBufferFloat(width * height),
+            new java.awt.Point());
+    for (int y = 0; y < height; y++)
+      for (int x = 0; x < width; x++) floatRaster.setSample(x, y, 0, (x % 100) + y / 100.0);
+    floatRaster.setSample(4, 0, 0, -9999);
+    var factory = new GridCoverageFactory();
+    var largeCoverage =
+        factory.create(
+            "large",
+            floatRaster,
+            new ReferencedEnvelope(2600000, 2600000 + width, 1201000 - height, 1201000,
+                CRS.decode("EPSG:2056", true)));
+    largeCoverage =
+        factory.create(
+            "large",
+            largeCoverage.getRenderedImage(),
+            largeCoverage.getEnvelope(),
+            null,
+            null,
+            java.util.Map.of(
+                org.eclipse.imagen.media.range.NoDataContainer.GC_NODATA,
+                new org.eclipse.imagen.media.range.NoDataContainer(-9999)));
+    var largeParams = new org.geotools.gce.geotiff.GeoTiffWriteParams();
+    largeParams.setTilingMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+    largeParams.setTiling(512, 512);
+    largeParams.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+    largeParams.setCompressionType("Deflate");
+    var largeOptions = org.geotools.coverage.grid.io.AbstractGridFormat.GEOTOOLS_WRITE_PARAMS.createValue();
+    largeOptions.setValue(largeParams);
+    var largeWriter = new GeoTiffWriter(large.toFile());
+    try {
+      largeWriter.write(largeCoverage, largeOptions);
+    } finally {
+      largeWriter.dispose();
+      largeCoverage.dispose(true);
+    }
+
     try (var raw = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
         new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
       var scaled = new ch.so.agi.hop.raster.geotools.RasterSource() {
@@ -198,6 +260,7 @@ public class DocumentationExamplesSmoke {
   }
 
   static void check(Path temp) throws Exception {
+    checkCloudOptimizedGeoTiff(temp);
     var fgdb =
         new ch.so.agi.hop.vector.formats.filegeodatabase.FileGeodatabaseProvider(
             new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());

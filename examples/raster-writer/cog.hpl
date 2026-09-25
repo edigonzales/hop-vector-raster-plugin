@@ -1,0 +1,125 @@
+<pipeline>
+  <info>
+    <name>Raster writer as Cloud Optimized GeoTIFF</name>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+      <parameter>
+        <name>INPUT_RASTER</name>
+        <default_value>https://files.geo.so.ch/ch.swisstopo.swissalti3d_2025.dtm/aktuell/ch.swisstopo.swissalti3d_2025.dtm.tif</default_value>
+        <description>Local GeoTIFF or public HTTP COG URL</description>
+      </parameter>
+      <parameter>
+        <name>OUTPUT_FILE</name>
+        <default_value />
+        <description>Local COG target; directory must exist</description>
+      </parameter>
+      <parameter>
+        <name>COMPRESSION</name>
+        <default_value>Deflate</default_value>
+        <description>None, Deflate, ZLib, LZW, ZSTD or PackBits</description>
+      </parameter>
+      <parameter>
+        <name>OVERVIEW_RESAMPLING</name>
+        <default_value>AVERAGE</default_value>
+        <description>AVERAGE or NEAREST for internal overviews</description>
+      </parameter>
+      <parameter>
+        <name>OVERVIEWS</name>
+        <default_value>AUTO</default_value>
+        <description>AUTO builds internal overviews, NONE keeps the full resolution only</description>
+      </parameter>
+    </parameters>
+  </info>
+  <order>
+    <hop>
+      <from>One operation</from>
+      <to>Read raster</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Read raster</from>
+      <to>Write COG</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Write COG</from>
+      <to>Remove raster value</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>One operation</name>
+    <type>RowGenerator</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <limit>1</limit>
+    <never_ending>N</never_ending>
+    <fields>
+      <field>
+        <name>operation_id</name>
+        <type>Integer</type>
+        <nullif>1</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+      </field>
+    </fields>
+    <GUI>
+      <xloc>120</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Read raster</name>
+    <type>SOGIS_RASTER_READER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <version>1</version>
+    <rasterField>raster</rasterField>
+    <source>${INPUT_RASTER}</source>
+    <GUI>
+      <xloc>340</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Write COG</name>
+    <type>SOGIS_RASTER_WRITER</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <version>1</version>
+    <rasterField>raster</rasterField>
+    <GUI>
+      <xloc>560</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+    <output>${OUTPUT_FILE}</output>
+    <format>COG</format>
+    <compression>${COMPRESSION}</compression>
+    <overviews>${OVERVIEWS}</overviews>
+    <overviewResampling>${OVERVIEW_RESAMPLING}</overviewResampling>
+    <overwrite>Y</overwrite>
+    <prefix>raster_</prefix>
+  </transform>
+  <transform>
+    <name>Remove raster value</name>
+    <type>SelectValues</type>
+    <copies>1</copies>
+    <distribute>Y</distribute>
+    <version>1</version>
+    <rasterField>raster</rasterField>
+    <GUI>
+      <xloc>780</xloc>
+      <yloc>120</yloc>
+      <draw>Y</draw>
+    </GUI>
+    <fields>
+      <select_unspecified>Y</select_unspecified>
+      <remove>
+        <name>raster</name>
+      </remove>
+    </fields>
+  </transform>
+</pipeline>

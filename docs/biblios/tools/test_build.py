@@ -77,7 +77,7 @@ class DocumentationBuildTest(unittest.TestCase):
                 local = base / 'local'; local.mkdir()
                 helper.snapshot(local)
                 self.assertIn('UNCOMMITTED_MARKER', (local / 'docs/biblios/user/01-grundlagen.adoc').read_text())
-                self.assertEqual(len(list((local / 'docs/biblios/user/downloads').rglob('*.hpl'))), 8)
+                self.assertEqual(len(list((local / 'docs/biblios/user/downloads').rglob('*.hpl'))), 9)
                 self.assertEqual(git(repo, 'rev-parse', 'HEAD'), sha)
                 self.assertEqual(git(repo, 'diff', '--cached'), '')
                 if os.environ.get('BIBLIOS_TEST_JAR'):
