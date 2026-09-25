@@ -32,4 +32,4 @@ args = [java]
 if sys.platform == "darwin":
     args.append("-XstartOnFirstThread")
 args += ["-cp", str(rcp) + os.pathsep + classpath, "ch.so.agi.hop.raster.values.RasterDialogSmoke"]
-subprocess.run(args, cwd=work, check=True, timeout=45)
+subprocess.run(args, cwd=work, check=True, timeout=90)

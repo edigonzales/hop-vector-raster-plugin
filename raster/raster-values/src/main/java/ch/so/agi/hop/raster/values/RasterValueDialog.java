@@ -244,7 +244,6 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 update.run();
               }
             });
-        compression.addModifyListener(event -> update.run());
         update.run();
       }
     } catch (Exception e) {
@@ -350,12 +349,17 @@ public final class RasterValueDialog extends BaseTransformDialog {
     boolean cog = "COG".equalsIgnoreCase(format);
     setFieldEnabled("overviews", cog, controls, labels);
     setFieldEnabled("overviewResampling", cog, controls, labels);
-    String current = compression.getText();
-    compression.removeAll();
-    compression.setItems(cog ? cogCompressionChoices() : compressionChoices());
-    int selection = compression.indexOf(current);
-    if (selection < 0) selection = compression.indexOf("Deflate");
-    if (selection >= 0) compression.select(selection);
+    // Only touch the combo when the codec list really changes. Programmatic changes can emit
+    // events on some platforms; reacting to them again would spin the dialog's event loop.
+    String[] choices = cog ? cogCompressionChoices() : compressionChoices();
+    if (!Arrays.equals(compression.getItems(), choices)) {
+      String current = compression.getText();
+      compression.removeAll();
+      compression.setItems(choices);
+      int selection = compression.indexOf(current);
+      if (selection < 0) selection = compression.indexOf("Deflate");
+      if (selection >= 0) compression.select(selection);
+    }
     boolean jpeg = cog && "JPEG".equalsIgnoreCase(compression.getText());
     setFieldEnabled("jpegQuality", jpeg, controls, labels);
   }
