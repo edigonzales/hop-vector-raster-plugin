@@ -93,8 +93,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
               "rasterField outputRasterField clipMethod geometryField explicitCrs bands noData"
                   + " bboxFields minX minY maxX maxY";
           case "REPROJECT" ->
-              "rasterField outputRasterField targetCrs targetCrsField resolutionX resolutionY"
-                  + " resolutionFields extentMode minX minY maxX maxY bboxFields interpolation"
+              "rasterField outputRasterField targetCrs resolutionFields resolutionX resolutionY"
+                  + " extentMode bboxFields minX minY maxX maxY interpolation"
                   + " outputType sourceNoData outputNoData";
           case "WRITER" ->
               "rasterField output format compression jpegQuality addOverviews overviews"
@@ -129,6 +129,20 @@ public final class RasterValueDialog extends BaseTransformDialog {
         fieldLabel.setText(label(name, input.operation()));
         fieldLabels.put(name, fieldLabel);
         Control control;
+        if (name.equals("targetCrs") && input.operation().equals("REPROJECT")) {
+          var targetCrsControl =
+              ValueOrFieldControl.builder(body, variables)
+                  .editor(EditorKind.TEXT)
+                  .fieldProvider(this::inputStringFieldNames)
+                  .build();
+          targetCrsControl.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+          targetCrsControl.setValue(
+              input.isTargetCrsField()
+                  ? new ValueOrField(SourceMode.FIELD, "", input.getTargetCrs())
+                  : new ValueOrField(SourceMode.CONFIGURED, input.getTargetCrs(), ""));
+          controls.put(name, targetCrsControl);
+          continue;
+        }
         if (name.equals("output") && input.operation().equals("WRITER")) {
           var outputControl =
               ValueOrFieldControl.builder(body, variables)
@@ -199,6 +213,14 @@ public final class RasterValueDialog extends BaseTransformDialog {
           var text = new TextVar(variables, body, SWT.BORDER);
           text.setText(String.valueOf(field.get(input)));
           text.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+          if (name.equals("resolutionX") || name.equals("resolutionY")) {
+            String tooltip =
+                "Pixel size in target CRS units, for example metres or degrees. "
+                    + "An empty configured Target CRS uses the source CRS units. "
+                    + "With input fields enabled, enter the field name containing the pixel size.";
+            fieldLabel.setToolTipText(tooltip);
+            text.setToolTipText(tooltip);
+          }
           control = text;
         }
         controls.put(name, control);
@@ -286,6 +308,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
                   edited.setSourceField(selection.mode() == SourceMode.FIELD);
                 else if (entry.getKey().equals("output"))
                   edited.setOutputField(selection.mode() == SourceMode.FIELD);
+                else if (entry.getKey().equals("targetCrs"))
+                  edited.setTargetCrsField(selection.mode() == SourceMode.FIELD);
               } else if (entry.getValue() instanceof Button b) {
                 value = b.getSelection();
               } else if (entry.getValue() instanceof Combo combo) {
@@ -308,6 +332,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
             }
             if (controls.containsKey("source")) input.setSourceField(edited.isSourceField());
             if (controls.containsKey("output")) input.setOutputField(edited.isOutputField());
+            if (controls.containsKey("targetCrs"))
+              input.setTargetCrsField(edited.isTargetCrsField());
             transformName = wTransformName.getText();
             input.setChanged();
             shell.dispose();
@@ -441,6 +467,10 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "outputRasterField" -> "Output raster field (empty: replace input)";
       case "bands" -> "Bands (ALL or 1-based list)";
       case "clipMethod" -> "Clip method (POLYGON / BOUNDING_BOX)";
+      case "targetCrs" -> "Target CRS";
+      case "resolutionFields" -> "Use input fields for resolution";
+      case "resolutionX" -> "Resolution X (target units)";
+      case "resolutionY" -> "Resolution Y (target units)";
       case "bboxFields" -> "Use input fields for bounding box coordinates";
       case "interpolation" -> "Interpolation (NEAREST / BILINEAR)";
       case "outputType" -> "Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)";

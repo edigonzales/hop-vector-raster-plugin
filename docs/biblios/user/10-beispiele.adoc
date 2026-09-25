@@ -51,7 +51,9 @@ Der eingebundene Raster Writer ergänzt `raster_output_file` und `raster_status 
 
 Die Parameter stehen jeweils in der HPL-Datei: `INPUT_RASTER`, `OUTPUT_FILE`, `TARGET_CRS`,
 `PIXEL_SIZE_X`, `PIXEL_SIZE_Y` und gegebenenfalls `OUTPUT_NODATA`.
-Für reine Auflösungsänderung `TARGET_CRS` leer lassen. Numerisches Beispiel: lokales Höhenmodell EPSG:2056,
+Im Dialog steht *Target CRS* dafür auf *Value / Variable* mit `${TARGET_CRS}`;
+*Use input fields for resolution* bleibt ausgeschaltet, X/Y enthalten die Pixelgrössen-Variablen.
+Die Auflösungen sind in Ziel-CRS-Einheiten angegeben. Für reine Auflösungsänderung `TARGET_CRS` leer lassen. Numerisches Beispiel: lokales Höhenmodell EPSG:2056,
 Pixelgrössen `2`/`2`, neue Zieldatei. Für EPSG:4326 werden die Pixelgrössen in Grad angegeben, beispielsweise `0.00001`/`0.00001`.
 Die automatische Ausdehnung folgt der Quelle; das Höhenmodell-Beispiel besitzt eine feste Box und verlangt dazu passende CRS-Einstellungen.
 

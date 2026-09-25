@@ -52,10 +52,15 @@ Raster Writer bietet dieselbe Moduswahl für den lokalen Ausgabepfad; *Browse...
 Im Modus *Input field* enthält eine Textspalte pro Zeile den GeoTIFF-Zielpfad.
 Beim Raster Writer lassen sich ausserdem TIFF-Kompressionsarten wählen; `Deflate` ist der Standard.
 Das Ausgabeformat `COG` ergänzt interne Overviews, den COG-Dateiaufbau und einen Ghost-Bereich;
-die Overview-Einstellungen sind nur in diesem Format aktiv. Für Luftbilder steht zusätzlich
+bei `GEOTIFF` aktiviert *Add overviews* die Overview-Einstellungen. Für Luftbilder steht zusätzlich
 `JPEG` (YCbCr) mit einstellbarer Qualität zur Verfügung.
-Clip und Reproject lesen mit *bbox Fields* alle vier Bounding-Box-Werte aus Spalten.
-Reproject bietet zusätzlich *target Crs Field* und *resolution Fields* für Ziel-CRS und beide Pixelgrössen.
+Clip und Reproject lesen mit *Use input fields for bounding box coordinates* alle vier Grenzen aus Spalten.
+Reproject bietet für *Target CRS* die Modi *Value / Variable* und *Input field*.
+Im Feldmodus zeigt eine editierbare Combobox vorgeschaltete String-Felder; *Refresh* aktualisiert
+die Vorschläge, manuelle Feldnamen sind ebenfalls möglich.
+*Use input fields for resolution* bindet beide Pixelgrössen an Eingabespalten.
+Die Auflösungen werden in Einheiten des Ziel-CRS angegeben, beispielsweise Meter oder Grad.
+Beide Checkboxen stehen jeweils vor ihrer Feldgruppe.
 Raster- und Geometriefelder bezeichnen immer Spalten und benötigen keine zusätzliche Checkbox.
 Die Beschriftungen entsprechen der GUI; in HPL-Dateien heissen die Eigenschaften beispielsweise
 `sourceField`, `outputField`, `bboxFields`, `targetCrsField` und `resolutionFields`.

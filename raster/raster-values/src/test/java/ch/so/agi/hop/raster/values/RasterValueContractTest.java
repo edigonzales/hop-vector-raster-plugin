@@ -94,6 +94,39 @@ class RasterValueContractTest {
   }
 
   @Test
+  void existingReprojectMetadataPreservesModesVariablesAndEmptyCrs() throws Exception {
+    for (String flag :
+        new String[] {
+          "", "<targetCrsField>N</targetCrsField>", "<targetCrsField>Y</targetCrsField>"
+        }) {
+      for (String crs : new String[] {"", "EPSG:2056", "${TARGET_CRS}", "target_crs"}) {
+        String xml =
+            "<transform><targetCrs>"
+                + crs
+                + "</targetCrs>"
+                + flag
+                + "<resolutionFields>Y</resolutionFields><resolutionX>${RES_X}</resolutionX>"
+                + "<resolutionY>pixel_height</resolutionY></transform>";
+        var restored = new RasterReprojectMeta();
+        restored.loadXml(XmlHandler.loadXmlString(xml).getDocumentElement(), null);
+        for (int pass = 0; pass < 2; pass++) {
+          assertThat(restored.getTargetCrs()).isEqualTo(crs);
+          assertThat(restored.isTargetCrsField()).isEqualTo(flag.contains(">Y<"));
+          assertThat(restored.isResolutionFields()).isTrue();
+          assertThat(restored.getResolutionX()).isEqualTo("${RES_X}");
+          assertThat(restored.getResolutionY()).isEqualTo("pixel_height");
+          var next = new RasterReprojectMeta();
+          next.loadXml(
+              XmlHandler.loadXmlString("<transform>" + restored.getXml() + "</transform>")
+                  .getDocumentElement(),
+              null);
+          restored = next;
+        }
+      }
+    }
+  }
+
+  @Test
   void existingReaderSourceAndSourceFieldXmlRemainCompatible() throws Exception {
     var restored = new RasterReaderMeta();
     restored.loadXml(

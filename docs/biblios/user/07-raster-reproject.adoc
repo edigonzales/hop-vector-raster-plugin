@@ -19,30 +19,55 @@ Der Dialogtitel lautet `Raster REPROJECT (GeoTools)`.
 | Transform name                                      [ Beispiel REPROJECT ]   |
 | Input raster field                                  [ raster v ]             |
 | Output raster field (empty: replace input)          [ <leer> ]               |
-| target Crs                                          [ <leer> ]               |
-| target Crs Field                                    [ ]                      |
-| resolution X                                        [ 2 ]                    |
-| resolution Y                                        [ 2 ]                    |
-| resolution Fields                                   [ ]                      |
+| Target CRS                  [ Value / Variable v ]  [ <leer> ]               |
+| Use input fields for resolution                     [ ]                      |
+| Resolution X (target units)                         [ 2 ]                    |
+| Resolution Y (target units)                         [ 2 ]                    |
 | Extent (AUTO / BOUNDING_BOX)                        [ AUTO v ]               |
+| Use input fields for bounding box coordinates       [ ]                      |
 | min X                                               [ <leer> ]               |
 | min Y                                               [ <leer> ]               |
 | max X                                               [ <leer> ]               |
 | max Y                                               [ <leer> ]               |
-| bbox Fields                                         [ ]                      |
 | Interpolation (NEAREST / BILINEAR)                  [ NEAREST v ]            |
 | Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)    [ AUTO v ]               |
 | source No Data                                      [ <leer> ]               |
 | output No Data                                      [ <leer> ]               |
 |                                                                              |
-|                                                            [ OK ] [ Cancel ] |
+|                                                           [ OK ] [ Cancel ]  |
 +------------------------------------------------------------------------------+
 ----
 
-*target Crs Field*, *resolution Fields* und *bbox Fields* sind standardmässig ausgeschaltet.
-Sie binden Ziel-CRS, beide Auflösungen beziehungsweise alle vier Grenzen an Eingabespalten.
+*Target CRS* verwendet standardmässig *Value / Variable*: ein Textfeld für einen
+festen CRS-Wert wie `EPSG:2056` oder eine Hop-Variable wie `${TARGET_CRS}`.
+Ein leeres konfiguriertes Ziel-CRS übernimmt weiterhin das Quell-CRS.
+
+Im Modus *Input field* erscheint eine editierbare Combobox mit den String-Feldern
+der vorgeschalteten Transforms. *Refresh* lädt diese Vorschläge erneut.
+Ein Feldname kann auch manuell eingegeben werden; die gewählte Spalte enthält pro Zeile
+das Ziel-CRS. Die Werte beider Modi bleiben beim Umschalten im geöffneten Dialog erhalten.
+*OK* speichert den aktiven Modus; *Cancel* verwirft sämtliche Dialogänderungen.
+
+[.gui-mockup]
+----
++------------------------------------------------------------------------------+
+| Target CRS          [ Input field v ]  [ target_crs v ]  [ Refresh ]         |
++------------------------------------------------------------------------------+
+----
+
+*Use input fields for resolution* und *Use input fields for bounding box coordinates*
+sind standardmässig ausgeschaltet und stehen jeweils vor ihrer Feldgruppe.
+Sie binden beide Auflösungen beziehungsweise alle vier Grenzen an Eingabespalten.
+*Resolution X (target units)* und *Resolution Y (target units)* bezeichnen die
+Pixelbreite und Pixelhöhe in Einheiten des Ziel-CRS, beispielsweise Meter bei
+`EPSG:2056` oder Grad bei `EPSG:4326`. Bei leerem konfiguriertem Ziel-CRS gelten
+die Einheiten des Quell-CRS. Die Tooltips erläutern diese Einheiten ebenfalls.
+Im Feldmodus werden hier die Namen der Spalten mit den Pixelgrössen eingetragen.
+
 Boxfelder bleiben auch bei `AUTO` sichtbar; ausgewertet werden sie nur bei `BOUNDING_BOX`.
 Explizite Grenzen liegen im Ziel-CRS. Ausgabefeld, Ziel-CRS, Grenzen und NoData-Overrides sind anfangs leer.
+Die HPL-Eigenschaften `targetCrs`, `targetCrsField` und `resolutionFields`
+bleiben unverändert; bestehende Pipelines benötigen keine Migration.
 
 
 * Rasterfeld: `raster` als Standard.

@@ -69,6 +69,10 @@ public final class RasterDialogSmoke {
               Button ok = findButtonByText(dialogShell, "OK");
               if (ok == null) throw new AssertionError("Raster dialog is missing its OK button");
               ok.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+            } else if (dialogCase.meta().operation().equals("REPROJECT")) {
+              verifyReprojectDialog(dialogShell, dialogCase.meta());
+              findButtonByText(dialogShell, "OK")
+                  .notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
             } else if (dialogCase.meta().operation().equals("WRITER")) {
               verifyWriterDialog(
                   dialogShell, ((RasterWriterMeta) dialogCase.meta()).isOutputField());
@@ -265,6 +269,62 @@ public final class RasterDialogSmoke {
     source.setValue(new ValueOrField(SourceMode.FIELD, "", "source_path"));
     if (!"source_path".equals(source.getValue().fieldName()))
       throw new AssertionError("Reader source field value was not retained by the widget");
+  }
+
+  private static void verifyReprojectDialog(Shell shell, RasterValueMeta meta) {
+    var crs = (ValueOrFieldControl) editorAfterLabel(shell, "Target CRS");
+    if (crs == null || containsLabel(shell, "target Crs Field"))
+      throw new AssertionError("Target CRS must use one value/field control");
+    var initial = crs.getValue();
+    if (initial.mode() != (meta.isTargetCrsField() ? SourceMode.FIELD : SourceMode.CONFIGURED)
+        || !meta.getTargetCrs()
+            .equals(meta.isTargetCrsField() ? initial.fieldName() : initial.configuredValue()))
+      throw new AssertionError("Existing CRS metadata was not loaded");
+    Combo mode = (Combo) crs.getChildren()[0];
+    Combo fields = findOtherCombo(crs, mode);
+    TextVar configured = findControl(crs, TextVar.class);
+    selectValueMode(mode, 1);
+    if (fields == null || (fields.getStyle() & org.eclipse.swt.SWT.READ_ONLY) != 0)
+      throw new AssertionError("CRS field selector must allow manual names");
+    Button refresh = findButtonByText(crs, "Refresh");
+    if (refresh == null) refresh = findButtonByText(crs, "Aktualisieren");
+    if (refresh == null || !refresh.isEnabled()) throw new AssertionError("Missing CRS Refresh");
+    refresh.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!Arrays.equals(fields.getItems(), new String[] {"target_crs", "alternate_crs"}))
+      throw new AssertionError("CRS suggestions must contain only upstream String fields");
+    fields.setText("manual_crs");
+    selectValueMode(mode, 0);
+    configured.setText("${TARGET_CRS}");
+    selectValueMode(mode, 1);
+    if (!"manual_crs".equals(fields.getText())) throw new AssertionError("Field name lost");
+    selectValueMode(mode, 0);
+    if (!"${TARGET_CRS}".equals(configured.getText()))
+      throw new AssertionError("Configured CRS lost");
+    // Save the opposite mode to exercise both legacy flags, not just preserve them.
+    selectValueMode(mode, meta.isTargetCrsField() ? 0 : 1);
+    int previousY = -1;
+    for (String label :
+        List.of(
+            "Target CRS",
+            "Use input fields for resolution",
+            "Resolution X (target units)",
+            "Resolution Y (target units)",
+            "Extent (AUTO / BOUNDING_BOX)",
+            "Use input fields for bounding box coordinates",
+            "min X",
+            "min Y",
+            "max X",
+            "max Y")) {
+      Label control = findLabel(shell, label);
+      if (control == null || control.getBounds().y <= previousY)
+        throw new AssertionError("Incorrect Reproject row order: " + label);
+      previousY = control.getBounds().y;
+    }
+    for (String label : List.of("Resolution X (target units)", "Resolution Y (target units)")) {
+      if (!findLabel(shell, label).getToolTipText().contains("metres or degrees"))
+        throw new AssertionError("Resolution units need a tooltip");
+      setTextValue(shell, label, "2");
+    }
   }
 
   private static void verifyWriterDialog(Shell dialog, boolean saveByField) {
@@ -485,7 +545,18 @@ public final class RasterDialogSmoke {
   private static ITransformDialog dialog(Shell parent, IVariables variables, DialogCase dialogCase)
       throws Exception {
     var meta = dialogCase.meta();
-    var pipeline = new PipelineMeta();
+    var pipeline =
+        new PipelineMeta() {
+          @Override
+          public org.apache.hop.core.row.IRowMeta getPrevTransformFields(
+              IVariables variables, String name) {
+            var fields = new org.apache.hop.core.row.RowMeta();
+            fields.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("target_crs"));
+            fields.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("alternate_crs"));
+            fields.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("id"));
+            return fields;
+          }
+        };
     pipeline.addTransform(new TransformMeta("Raster " + meta.operation(), meta));
     var dialogClass = Class.forName(meta.getDialogClassName());
     var constructor =
@@ -507,8 +578,16 @@ public final class RasterDialogSmoke {
             cancelWriterWhenOpened(display, parent);
             return;
           }
-          ((Button) editorAfterLabel(shell, "Add overviews")).setSelection(true);
-          setTextValue(shell, "JPEG quality (1-100)", "33");
+          if (containsLabel(shell, "Target CRS")) {
+            ((ValueOrFieldControl) editorAfterLabel(shell, "Target CRS"))
+                .setValue(new ValueOrField(SourceMode.FIELD, "EPSG:4326", "changed_crs"));
+            ((Button) editorAfterLabel(shell, "Use input fields for resolution"))
+                .setSelection(true);
+            setTextValue(shell, "Resolution X (target units)", "99");
+          } else {
+            ((Button) editorAfterLabel(shell, "Add overviews")).setSelection(true);
+            setTextValue(shell, "JPEG quality (1-100)", "33");
+          }
           findButtonByText(shell, "Cancel")
               .notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
         });
@@ -524,7 +603,9 @@ public final class RasterDialogSmoke {
           List.of(
               new DialogCase(new RasterReaderMeta(), "Reader output field", true),
               new DialogCase(new RasterClipMeta(), "Input raster field", false),
-              new DialogCase(new RasterReprojectMeta(), "Input raster field", false),
+              reprojectCase(false, ""),
+              reprojectCase(false, "${TARGET_CRS}"),
+              reprojectCase(true, "target_crs"),
               new DialogCase(new RasterZonalStatsMeta(), "Input raster field", false),
               new DialogCase(new RasterInfoMeta(), "Input raster field", false),
               new DialogCase(new RasterWriterMeta(), "Input raster field", false),
@@ -551,6 +632,10 @@ public final class RasterDialogSmoke {
               || !"4".equals(clip.getMaxY())
               || !clip.isBboxFields())
             throw new AssertionError("Clip method or field values were not saved correctly");
+        } else if (dialogCase.meta().operation().equals("REPROJECT")) {
+          var meta = dialogCase.meta();
+          if (!(meta.isTargetCrsField() ? "manual_crs" : "${TARGET_CRS}")
+              .equals(meta.getTargetCrs())) throw new AssertionError("CRS selection was not saved");
         } else if (dialogCase.meta().operation().equals("WRITER")) {
           var writer = (RasterWriterMeta) dialogCase.meta();
           String expectedOutput =
@@ -571,10 +656,25 @@ public final class RasterDialogSmoke {
       dialog(parent, variables, new DialogCase(unchanged, "Input raster field", false)).open();
       if (!originalXml.equals(unchanged.getXml()))
         throw new AssertionError("Cancel changed writer metadata");
+      for (boolean field : new boolean[] {false, true}) {
+        var reproject = reprojectCase(field, field ? "target_crs" : "${TARGET_CRS}");
+        String before = reproject.meta().getXml();
+        cancelWriterWhenOpened(display, parent);
+        dialog(parent, variables, reproject).open();
+        if (!before.equals(reproject.meta().getXml()))
+          throw new AssertionError("Cancel changed Reproject metadata");
+      }
     } finally {
       parent.dispose();
       display.dispose();
     }
+  }
+
+  private static DialogCase reprojectCase(boolean field, String crs) {
+    var meta = new RasterReprojectMeta();
+    meta.setTargetCrsField(field);
+    meta.setTargetCrs(crs);
+    return new DialogCase(meta, "Input raster field", false);
   }
 
   private static DialogCase writerFieldCase() {
