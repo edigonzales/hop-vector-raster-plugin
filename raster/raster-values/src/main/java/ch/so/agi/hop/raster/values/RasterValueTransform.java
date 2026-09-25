@@ -71,7 +71,7 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
                 new RasterOperation.Clip(
                     getTransformName(),
                     region.toText(),
-                    meta.getClipMethod().equals("POLYGON"),
+                    setting(meta.getClipMethod()).equals("POLYGON"),
                     selected,
                     noData(meta.getNoData()));
             result[data.outputMeta.indexOfValue(meta.resultField(this))] =
@@ -80,7 +80,7 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
         }
         case "REPROJECT" -> {
           List<Double> extent =
-              meta.getExtentMode().equals("BOUNDING_BOX")
+              setting(meta.getExtentMode()).equals("BOUNDING_BOX")
                   ? List.of(
                       number(meta.getMinX(), meta.isBboxFields(), row),
                       number(meta.getMinY(), meta.isBboxFields(), row),
@@ -94,8 +94,8 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
                   number(meta.getResolutionX(), meta.isResolutionFields(), row),
                   number(meta.getResolutionY(), meta.isResolutionFields(), row),
                   extent,
-                  meta.getInterpolation(),
-                  meta.getOutputType(),
+                  setting(meta.getInterpolation()),
+                  setting(meta.getOutputType()),
                   noData(meta.getSourceNoData()),
                   noData(meta.getOutputNoData()));
           result[data.outputMeta.indexOfValue(meta.resultField(this))] =
@@ -106,15 +106,17 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
               Path.of(value(meta.getOutput(), meta.isOutputField(), row))
                   .toAbsolutePath()
                   .normalize();
+          String format = setting(meta.getFormat());
+          String compression = setting(meta.getCompression());
           var progress = new RasterWriteProgress(message -> logBasic(message));
-          progress.started(output, meta.getCompression(), meta.getFormat());
+          progress.started(output, compression, format);
           var writeOptions =
               new RasterWriteOptions(
-                  RasterWriteOptions.Format.valueOf(meta.getFormat()),
-                  RasterWriteOptions.Overviews.valueOf(meta.getOverviews()),
-                  RasterWriteOptions.Resampling.valueOf(meta.getOverviewResampling()),
+                  RasterWriteOptions.Format.valueOf(format),
+                  RasterWriteOptions.Overviews.valueOf(setting(meta.getOverviews())),
+                  RasterWriteOptions.Resampling.valueOf(setting(meta.getOverviewResampling())),
                   512,
-                  meta.getCompression());
+                  compression);
           data.backend.write(
               raster,
               output,
@@ -189,7 +191,7 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
 
   private Geometry geometry(Object[] row, RasterSource source, boolean clip) throws Exception {
     Geometry geom;
-    if (clip && meta.getClipMethod().equals("BOUNDING_BOX")) {
+    if (clip && setting(meta.getClipMethod()).equals("BOUNDING_BOX")) {
       double minX = number(meta.getMinX(), meta.isBboxFields(), row),
           minY = number(meta.getMinY(), meta.isBboxFields(), row),
           maxX = number(meta.getMaxX(), meta.isBboxFields(), row),
@@ -211,6 +213,12 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
       if (geom.isEmpty()) return geom.copy();
     }
     return CrsSupport.inRasterCrs(geom, resolve(meta.getExplicitCrs()), source.crs());
+  }
+
+  /** Resolves Hop variables in a setting and trims the result. */
+  private String setting(String text) {
+    String resolved = resolve(text == null ? "" : text);
+    return resolved == null ? "" : resolved.trim();
   }
 
   private String value(String text, boolean field, Object[] row) throws Exception {

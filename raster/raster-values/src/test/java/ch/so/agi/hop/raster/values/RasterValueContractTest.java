@@ -15,6 +15,28 @@ import org.junit.jupiter.api.Test;
 
 class RasterValueContractTest {
   @Test
+  void writerSettingsResolvePipelineParametersBeforeValidation() throws Exception {
+    var writer = new RasterWriterMeta();
+    writer.setOutput("${OUTPUT_FILE}");
+    writer.setFormat("${FORMAT}");
+    writer.setCompression("${COMPRESSION}");
+    writer.setOverviews("${OVERVIEWS}");
+    writer.setOverviewResampling("${OVERVIEW_RESAMPLING}");
+    var vars = new Variables();
+    vars.setVariable("OUTPUT_FILE", "destination.tif");
+    vars.setVariable("FORMAT", "COG");
+    vars.setVariable("COMPRESSION", "Deflate");
+    vars.setVariable("OVERVIEWS", "AUTO");
+    vars.setVariable("OVERVIEW_RESAMPLING", "AVERAGE");
+    writer.validateSettings(vars);
+    var row = new RowMeta();
+    row.addValueMeta(new ValueMetaRaster("raster"));
+    writer.getFields(row, "Write COG", null, null, vars, null);
+    assertThat(row.indexOfValue("raster_output_file")).isGreaterThanOrEqualTo(0);
+    assertThat(row.indexOfValue("raster_status")).isGreaterThanOrEqualTo(0);
+  }
+
+  @Test
   void readerAndInPlaceOperationsExposeRasterType() throws Exception {
     var vars = new Variables();
     var row = new RowMeta();

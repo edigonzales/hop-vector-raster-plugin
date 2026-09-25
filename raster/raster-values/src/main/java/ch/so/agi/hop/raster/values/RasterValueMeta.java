@@ -398,6 +398,21 @@ public abstract class RasterValueMeta
   }
 
   public void validateSettings() {
+    validateSettings(null);
+  }
+
+  /**
+   * Validates the settings with Hop variables resolved, because pipeline parameters may supply
+   * the format, overview or compression values (for example {@code ${OVERVIEWS}}).
+   */
+  public void validateSettings(IVariables vars) {
+    String formatValue = resolve(vars, format);
+    String overviewsValue = resolve(vars, overviews);
+    String overviewResamplingValue = resolve(vars, overviewResampling);
+    String clipMethodValue = resolve(vars, clipMethod);
+    String extentModeValue = resolve(vars, extentMode);
+    String resolutionXValue = resolve(vars, resolutionX);
+    String resolutionYValue = resolve(vars, resolutionY);
     if (version != 1)
       throw new IllegalArgumentException("Unsupported raster value version: " + version);
     if (rasterField == null || rasterField.isBlank())
@@ -406,22 +421,26 @@ public abstract class RasterValueMeta
       throw new IllegalArgumentException("Raster source is required");
     if (operation().equals("WRITER") && (output == null || output.isBlank()))
       throw new IllegalArgumentException("Output GeoTIFF is required");
-    if (operation().equals("WRITER")
-        && !List.of("GEOTIFF", "COG").contains(format))
+    if (operation().equals("WRITER") && !List.of("GEOTIFF", "COG").contains(formatValue))
       throw new IllegalArgumentException("Output format must be GEOTIFF or COG");
-    if (operation().equals("WRITER") && !List.of("AUTO", "NONE").contains(overviews))
+    if (operation().equals("WRITER") && !List.of("AUTO", "NONE").contains(overviewsValue))
       throw new IllegalArgumentException("Overview mode must be AUTO or NONE");
     if (operation().equals("WRITER")
-        && !List.of("AVERAGE", "NEAREST").contains(overviewResampling))
+        && !List.of("AVERAGE", "NEAREST").contains(overviewResamplingValue))
       throw new IllegalArgumentException("Overview resampling must be AVERAGE or NEAREST");
-    if (operation().equals("CLIP") && !List.of("POLYGON", "BOUNDING_BOX").contains(clipMethod))
+    if (operation().equals("CLIP") && !List.of("POLYGON", "BOUNDING_BOX").contains(clipMethodValue))
       throw new IllegalArgumentException("Invalid clip method");
     if (operation().equals("REPROJECT")
-        && (resolutionX.isBlank()
-            || resolutionY.isBlank()
-            || !List.of("AUTO", "BOUNDING_BOX").contains(extentMode)))
+        && (resolutionXValue.isBlank()
+            || resolutionYValue.isBlank()
+            || !List.of("AUTO", "BOUNDING_BOX").contains(extentModeValue)))
       throw new IllegalArgumentException("Target pixel sizes and extent mode are required");
     if (band < 1) throw new IllegalArgumentException("Band numbers start at 1");
+  }
+
+  private static String resolve(IVariables vars, String value) {
+    String resolved = vars == null || value == null ? value : vars.resolve(value);
+    return resolved == null ? "" : resolved.trim();
   }
 
   public String resultField(IVariables vars) {
@@ -450,7 +469,7 @@ public abstract class RasterValueMeta
       TransformMeta next,
       IVariables vars,
       IHopMetadataProvider provider) {
-    validateSettings();
+    validateSettings(vars);
     String op = operation(), input = vars.resolve(rasterField), p = vars.resolve(prefix);
     if (!op.equals("READER")) {
       int i = row.indexOfValue(input);
