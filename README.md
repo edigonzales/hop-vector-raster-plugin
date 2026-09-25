@@ -109,7 +109,7 @@ into the Vector/Raster ZIP.
 - Raster input supports local GeoTIFFs and public HTTP/HTTPS COGs. Remote servers
   must support byte ranges; authentication and custom headers are not exposed.
 - Raster output is tiled GeoTIFF; the Raster Writer's COG format additionally writes internal
-  overviews, the cloud-optimized layout and a GDAL ghost area.
+  overviews, the cloud-optimized layout and a GDAL ghost area, with JPEG/YCbCr for byte rasters.
 - Dimension, curve, NULL and overwrite behavior depend on the chosen format;
   consult the manual before converting a dataset.
 

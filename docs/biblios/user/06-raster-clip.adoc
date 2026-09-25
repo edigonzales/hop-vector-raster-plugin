@@ -129,6 +129,7 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 | Output GeoTIFF path [ Value / Variable v ]         [ ${PROJECT_HOME}/result.tif ] [ Browse... ] |
 | Output format (GEOTIFF / COG)                       [ GEOTIFF v ]                  |
 | Compression                                         [ Deflate v ]                  |
+| JPEG quality (1-100)                                [ 75 ]                         |
 | Internal overviews (AUTO / NONE)                    [ AUTO v ]                     |
 | Overview resampling (AVERAGE / NEAREST)             [ AVERAGE v ]                  |
 | Overwrite existing files                           [ ]                                      |
@@ -162,8 +163,15 @@ sowie Block-Leader und -Trailer. Die Georeferenz steht nur auf dem Hauptbild.
 Breite höchstens 512 Pixel betragen; die letzte Stufe umfasst höchstens eine Tile-Zeile oder -Spalte.
 *Overview resampling* mittelt mit `AVERAGE` (NoData-Werte werden ausgelassen) oder wählt mit `NEAREST`
 Stichproben; Palettendaten verwenden immer `NEAREST`. Beide Overview-Felder sind nur bei `COG` aktiv.
-COG unterstützt die verlustfreien Verfahren `None`, `Deflate`, `ZLib`, `LZW`, `ZSTD` und `PackBits`;
-`JPEG`, `EXIF JPEG` und die CCITT-Verfahren bleiben der normalen GeoTIFF-Ausgabe vorbehalten.
+COG unterstützt `None`, `Deflate`, `ZLib`, `LZW`, `ZSTD`, `PackBits` und `JPEG`.
+JPEG ist auf 8-Bit-Raster mit einem numerischen Band oder drei RGB-Bändern beschränkt;
+Alpha, Palette und 16-Bit-Daten werden mit einer Meldung abgelehnt. Dreikanalige Bilder verwenden
+den YCbCr-Farbraum mit gemeinsamen Tabellen im `JPEGTables`-Feld und abgekürzten Tile-Streams —
+dasselbe Layout, das GDAL und damit QGIS erzeugen und lesen.
+*JPEG quality* (1–100, Standard 75) ist nur bei `COG` mit `JPEG` aktiv.
+`EXIF JPEG` und die CCITT-Verfahren bleiben der normalen GeoTIFF-Ausgabe vorbehalten.
+Bei verlustbehafteter Ausgabe bleibt die Overview-Kaskade verlustfrei, damit sich die
+JPEG-Verluste nicht über die Stufen aufsummieren.
 Overviews werden komprimiert in temporäre Nachbardateien geschrieben, während des Schreibens in das COG
 übernommen und danach entfernt; der zusätzliche Platzbedarf entspricht ungefähr den Overview-Daten.
 Im Hop-Loglevel *Basic* erscheinen Start, Schreibfortschritt in 10-Prozent-Schritten und Abschlussdauer.

@@ -86,9 +86,10 @@ Setzen Sie die in der HPL-Datei definierten Parameter auf Ihre Daten; es entsteh
 
 link:downloads/raster-writer/cog.hpl[Raster Reader → Raster Writer (COG) herunterladen]
 
-Parameter: `INPUT_RASTER`, `OUTPUT_FILE`, `COMPRESSION` (`Deflate` als Standard), `OVERVIEWS` (`AUTO`)
-und `OVERVIEW_RESAMPLING` (`AVERAGE`). Die Vorlage liest eine lokale GeoTIFF-Datei oder ein öffentliches
-HTTP-COG und schreibt über *Output format* `COG` ein Cloud Optimized GeoTIFF mit internen Overviews.
+Parameter: `INPUT_RASTER`, `OUTPUT_FILE`, `COMPRESSION` (`Deflate` als Standard, `JPEG` für
+RGB-Byte-Bilder), `OVERVIEWS` (`AUTO`) und `OVERVIEW_RESAMPLING` (`AVERAGE`). Die Vorlage liest eine
+lokale GeoTIFF-Datei oder ein öffentliches HTTP-COG und schreibt über *Output format* `COG` ein Cloud
+Optimized GeoTIFF mit internen Overviews. Die JPEG-Qualität steht fest auf 75 und lässt sich im Dialog ändern.
 Der Writer ergänzt `raster_output_file` und `raster_status`; ein abschliessendes Select Values entfernt
 das Hilfsfeld. Verwenden Sie für eigene Testdaten mindestens 1024 Pixel Kantenlänge, damit Overviews entstehen.
 Die installierte Prüfung kontrolliert die Struktur mit `scripts/check-cog-output.py`; mit GDAL-Unterstützung

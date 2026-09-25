@@ -52,7 +52,8 @@ Raster Writer bietet dieselbe Moduswahl für den lokalen Ausgabepfad; *Browse...
 Im Modus *Input field* enthält eine Textspalte pro Zeile den GeoTIFF-Zielpfad.
 Beim Raster Writer lassen sich ausserdem TIFF-Kompressionsarten wählen; `Deflate` ist der Standard.
 Das Ausgabeformat `COG` ergänzt interne Overviews, den COG-Dateiaufbau und einen Ghost-Bereich;
-die Overview-Einstellungen sind nur in diesem Format aktiv.
+die Overview-Einstellungen sind nur in diesem Format aktiv. Für Luftbilder steht zusätzlich
+`JPEG` (YCbCr) mit einstellbarer Qualität zur Verfügung.
 Clip und Reproject lesen mit *bbox Fields* alle vier Bounding-Box-Werte aus Spalten.
 Reproject bietet zusätzlich *target Crs Field* und *resolution Fields* für Ziel-CRS und beide Pixelgrössen.
 Raster- und Geometriefelder bezeichnen immer Spalten und benötigen keine zusätzliche Checkbox.
