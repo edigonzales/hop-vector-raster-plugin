@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-labelledby="title desc">
+  <title id="title">Raster Writer (GeoTools)</title>
+  <desc id="desc">Rastergitter mit neun unterschiedlich hellen Zellen in einem transparenten Arbeitsbereich. Grüner Pfeil nach rechts nach aussen. Rahmen und Pfeil entsprechen exakt dem freigegebenen Vektor-Icon. Rahmen #3D4B58, Strichstärke 2.</desc>
+<!-- Frame and arrow copied unchanged from the approved vector icon. -->
+<path id="workspace" d="M24 12.5V6.5A1.5 1.5 0 0 0 22.5 5H3.5A1.5 1.5 0 0 0 2 6.5V25.5A1.5 1.5 0 0 0 3.5 27H22.5A1.5 1.5 0 0 0 24 25.5V19.5" fill="none" stroke="#3D4B58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+<g id="raster-grid">
+<rect x="4.5" y="10.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.18"/>
+<rect x="8" y="10.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.48"/>
+<rect x="11.5" y="10.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.28"/>
+<rect x="4.5" y="14.25" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.65"/>
+<rect x="8" y="14.25" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.25"/>
+<rect x="11.5" y="14.25" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.56"/>
+<rect x="4.5" y="17.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.36"/>
+<rect x="8" y="17.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.58"/>
+<rect x="11.5" y="17.75" width="3.5" height="3.5" fill="#A8CE94" fill-opacity="0.2"/>
+<path d="M8 10.75V21.25 M4.5 14.25H15 M11.5 10.75V21.25 M4.5 17.75H15" fill="none" stroke="#0D602F" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="1"/>
+<rect x="4.5" y="10.75" width="10.5" height="10.5" rx=".35" fill="none" stroke="#0D602F" stroke-width="2" stroke-linejoin="round"/>
+</g>
+<path id="export-arrow" d="M17.75 14.25H26.5V12.2Q26.5 11.75 26.85 12.08L30.75 15.65Q31.1 16 30.75 16.35L26.85 19.92Q26.5 20.25 26.5 19.8V17.75H17.75Q17 17.75 17 17V15Q17 14.25 17.75 14.25Z" fill="#25833F" />
+
+</svg>

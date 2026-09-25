@@ -4,7 +4,7 @@ package ch.so.agi.hop.raster.values;
     id = "SOGIS_RASTER_VALUE_ZONAL_STATS",
     name = "Raster ZonalStats (GeoTools)",
     description = "Raster ZonalStats",
-    image = "ch/so/agi/hop/raster/values/icon.svg",
+    image = "ch/so/agi/hop/raster/values/icons/raster-zonal-stats.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry")
 public final class RasterZonalStatsMeta extends RasterValueMeta {

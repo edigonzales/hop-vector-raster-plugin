@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-labelledby="title desc">
+  <title id="title">Raster Info (GeoTools)</title>
+  <desc id="desc">Rastergitter mit Informationszeichen. Steht für Rastermetadaten wie Breite, Höhe, CRS und Bandbeschreibung, nicht für die Berechnung von Pixelstatistiken.</desc>
+<g id="raster-grid">
+<rect x="3" y="4" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.18"/>
+<rect x="9.5" y="4" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.48"/>
+<rect x="16" y="4" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.28"/>
+<rect x="3" y="10.5" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.65"/>
+<rect x="9.5" y="10.5" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.25"/>
+<rect x="16" y="10.5" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.56"/>
+<rect x="3" y="17" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.36"/>
+<rect x="9.5" y="17" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.58"/>
+<rect x="16" y="17" width="6.5" height="6.5" fill="#A8CE94" fill-opacity="0.2"/>
+<path d="M9.5 4V23.5 M3 10.5H22.5 M16 4V23.5 M3 17H22.5" fill="none" stroke="#0D602F" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="1"/>
+<rect x="3" y="4" width="19.5" height="19.5" rx=".35" fill="none" stroke="#3D4B58" stroke-width="2" stroke-linejoin="round"/>
+</g>
+<g id="information">
+  <circle cx="24" cy="24" r="6.2" fill="#F8FAFB" stroke="#3D4B58" stroke-width="2"/>
+  <circle cx="24" cy="20.7" r="1.05" fill="#3D4B58"/>
+  <path d="M23.2 23.4H24V27.1M22.8 27.1H25.2" fill="none" stroke="#3D4B58" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

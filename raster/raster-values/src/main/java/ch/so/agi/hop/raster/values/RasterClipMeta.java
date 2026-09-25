@@ -4,7 +4,7 @@ package ch.so.agi.hop.raster.values;
     id = "SOGIS_RASTER_VALUE_CLIP",
     name = "Raster Clip (GeoTools)",
     description = "Raster Clip",
-    image = "ch/so/agi/hop/raster/values/icon.svg",
+    image = "ch/so/agi/hop/raster/values/icons/raster-clip.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry")
 public final class RasterClipMeta extends RasterValueMeta {

@@ -4,7 +4,7 @@ package ch.so.agi.hop.raster.values;
     id = "SOGIS_RASTER_INFO",
     name = "Raster Info (GeoTools)",
     description = "Raster Info",
-    image = "ch/so/agi/hop/raster/values/icon.svg",
+    image = "ch/so/agi/hop/raster/values/icons/raster-info.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry")
 public final class RasterInfoMeta extends RasterValueMeta {
