@@ -351,23 +351,49 @@ public final class RasterDialogSmoke {
         ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.cogCompressionTypes());
     if (!Arrays.equals(compression.getItems(), expectedCogCodecs.toArray(String[]::new)))
       throw new AssertionError("COG compression choices do not match the COG writer");
-    Control overviews = editorAfterLabel(dialog, "Internal overviews (AUTO / NONE)");
-    if (overviews == null || !isEnabled(overviews))
+    String overviewsLabel = "Internal overviews (AUTO / NONE)";
+    String resamplingLabel = "Overview resampling (AVERAGE / NEAREST)";
+    String qualityLabel = "JPEG quality (1-100)";
+    Control overviews = editorAfterLabel(dialog, overviewsLabel);
+    if (overviews == null || !fieldEnabled(dialog, overviewsLabel, overviews))
       throw new AssertionError("COG must enable internal overviews");
-    Control resampling = editorAfterLabel(dialog, "Overview resampling (AVERAGE / NEAREST)");
-    if (resampling == null || !isEnabled(resampling))
+    Control resampling = editorAfterLabel(dialog, resamplingLabel);
+    if (resampling == null || !fieldEnabled(dialog, resamplingLabel, resampling))
       throw new AssertionError("COG must enable overview resampling");
+    Control quality = editorAfterLabel(dialog, qualityLabel);
+    if (quality == null) throw new AssertionError("Writer quality control is missing");
+    if (fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("JPEG quality must be disabled for lossless COG codecs");
+    int jpeg = compression.indexOf("JPEG");
+    if (jpeg < 0) throw new AssertionError("COG compression choices are missing JPEG");
+    compression.select(jpeg);
+    compression.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("JPEG must enable the quality control");
+    setTextValue(dialog, qualityLabel, "85");
+    compression.select(lzw);
+    compression.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("Quality must be disabled for non-JPEG codecs");
     cogFormat.setText("GEOTIFF");
     cogFormat.getCComboWidget().notifyListeners(org.eclipse.swt.SWT.Modify, new Event());
     if (!Arrays.equals(compression.getItems(), expectedCodecs.toArray(String[]::new)))
       throw new AssertionError("GeoTIFF compression choices were not restored");
-    if (isEnabled(overviews) || isEnabled(resampling))
-      throw new AssertionError("GeoTIFF output must disable overview controls");
+    if (fieldEnabled(dialog, overviewsLabel, overviews)
+        || fieldEnabled(dialog, resamplingLabel, resampling)
+        || fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("GeoTIFF output must disable overview and quality controls");
 
     compression.select(lzw);
   }
 
-  private static boolean isEnabled(Control control) {
+  /**
+   * Hop's ComboVar and TextVar only forward setEnabled to their inner widgets, so the label state
+   * mirrors the field's enabled flag.
+   */
+  private static boolean fieldEnabled(Shell dialog, String labelText, Control control) {
+    Label label = findLabel(dialog, labelText);
+    if (label != null) return label.isEnabled();
     if (control instanceof ComboVar combo) return combo.getCComboWidget().isEnabled();
     return control.isEnabled();
   }
@@ -479,7 +505,8 @@ public final class RasterDialogSmoke {
           if (!expectedOutput.equals(writer.getOutput())
               || !writer.isOverwrite()
               || !"written_".equals(writer.getPrefix())
-              || !"LZW".equals(writer.getCompression()))
+              || !"LZW".equals(writer.getCompression())
+              || writer.getJpegQuality() != 85)
             throw new AssertionError("Writer output mode or settings were not saved correctly");
         }
       }

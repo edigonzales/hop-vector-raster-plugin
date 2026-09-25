@@ -111,6 +111,7 @@ class RasterValueContractTest {
     assertThat(restored.getFormat()).isEqualTo("GEOTIFF");
     assertThat(restored.getOverviews()).isEqualTo("AUTO");
     assertThat(restored.getOverviewResampling()).isEqualTo("AVERAGE");
+    assertThat(restored.getJpegQuality()).isEqualTo(75);
     assertThat(restored.isOverwrite()).isTrue();
     assertThat(restored.getPrefix()).isEqualTo("result_");
 
@@ -134,6 +135,7 @@ class RasterValueContractTest {
     writer.setCompression("LZW");
     writer.setOverviews("NONE");
     writer.setOverviewResampling("NEAREST");
+    writer.setJpegQuality(90);
     var restored = new RasterWriterMeta();
     restored.loadXml(
         XmlHandler.loadXmlString("<transform>" + writer.getXml() + "</transform>")
@@ -144,6 +146,7 @@ class RasterValueContractTest {
     assertThat(restored.getCompression()).isEqualTo("LZW");
     assertThat(restored.getOverviews()).isEqualTo("NONE");
     assertThat(restored.getOverviewResampling()).isEqualTo("NEAREST");
+    assertThat(restored.getJpegQuality()).isEqualTo(90);
   }
 
   @Test
@@ -168,6 +171,13 @@ class RasterValueContractTest {
     assertThatThrownBy(resampling::validateSettings)
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("resampling");
+
+    var quality = new RasterWriterMeta();
+    quality.setOutput("destination.tif");
+    quality.setJpegQuality(0);
+    assertThatThrownBy(quality::validateSettings)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("JPEG quality");
   }
 
   @Test

@@ -116,7 +116,8 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
                   RasterWriteOptions.Overviews.valueOf(setting(meta.getOverviews())),
                   RasterWriteOptions.Resampling.valueOf(setting(meta.getOverviewResampling())),
                   512,
-                  compression);
+                  compression,
+                  meta.getJpegQuality());
           data.backend.write(
               raster,
               output,

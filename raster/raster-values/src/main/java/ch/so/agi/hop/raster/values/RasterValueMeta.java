@@ -323,6 +323,16 @@ public abstract class RasterValueMeta
     overviewResampling = value;
   }
 
+  @HopMetadataProperty private int jpegQuality = 75;
+
+  public int getJpegQuality() {
+    return jpegQuality;
+  }
+
+  public void setJpegQuality(int value) {
+    jpegQuality = value;
+  }
+
   @HopMetadataProperty private boolean overwrite = false;
 
   public boolean isOverwrite() {
@@ -428,6 +438,8 @@ public abstract class RasterValueMeta
     if (operation().equals("WRITER")
         && !List.of("AVERAGE", "NEAREST").contains(overviewResamplingValue))
       throw new IllegalArgumentException("Overview resampling must be AVERAGE or NEAREST");
+    if (operation().equals("WRITER") && (jpegQuality < 1 || jpegQuality > 100))
+      throw new IllegalArgumentException("JPEG quality must be between 1 and 100");
     if (operation().equals("CLIP") && !List.of("POLYGON", "BOUNDING_BOX").contains(clipMethodValue))
       throw new IllegalArgumentException("Invalid clip method");
     if (operation().equals("REPROJECT")

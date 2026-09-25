@@ -97,7 +97,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
                   + " resolutionFields extentMode minX minY maxX maxY bboxFields interpolation"
                   + " outputType sourceNoData outputNoData";
           case "WRITER" ->
-              "rasterField output format compression overviews overviewResampling overwrite prefix";
+              "rasterField output format compression jpegQuality overviews overviewResampling overwrite prefix";
           case "STATS" -> "rasterField geometryField explicitCrs band noData statistics prefix";
           case "INFO" -> "rasterField infoFields prefix";
           default -> "";
@@ -218,8 +218,17 @@ public final class RasterValueDialog extends BaseTransformDialog {
       if (input.operation().equals("WRITER")) {
         var format = (ComboVar) controls.get("format");
         var compression = (Combo) controls.get("compression");
+        boolean[] updating = {false};
         Runnable update =
-            () -> updateWriterControls(format.getText(), compression, controls, fieldLabels);
+            () -> {
+              if (updating[0]) return;
+              updating[0] = true;
+              try {
+                updateWriterControls(format.getText(), compression, controls, fieldLabels);
+              } finally {
+                updating[0] = false;
+              }
+            };
         format.addSelectionListener(
             new SelectionAdapter() {
               @Override
@@ -228,6 +237,14 @@ public final class RasterValueDialog extends BaseTransformDialog {
               }
             });
         format.addModifyListener(event -> update.run());
+        compression.addSelectionListener(
+            new SelectionAdapter() {
+              @Override
+              public void widgetSelected(SelectionEvent event) {
+                update.run();
+              }
+            });
+        compression.addModifyListener(event -> update.run());
         update.run();
       }
     } catch (Exception e) {
@@ -339,6 +356,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
     int selection = compression.indexOf(current);
     if (selection < 0) selection = compression.indexOf("Deflate");
     if (selection >= 0) compression.select(selection);
+    boolean jpeg = cog && "JPEG".equalsIgnoreCase(compression.getText());
+    setFieldEnabled("jpegQuality", jpeg, controls, labels);
   }
 
   private static void setFieldEnabled(
@@ -421,6 +440,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "compression" -> "Compression";
       case "overviews" -> "Internal overviews (AUTO / NONE)";
       case "overviewResampling" -> "Overview resampling (AVERAGE / NEAREST)";
+      case "jpegQuality" -> "JPEG quality (1-100)";
       case "overwrite" -> "Overwrite existing files";
       case "prefix" -> "Result field prefix";
       default -> field.replaceAll("([A-Z])", " $1");
