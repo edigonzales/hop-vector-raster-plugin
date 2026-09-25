@@ -16,7 +16,7 @@
       <parameter>
         <name>COMPRESSION</name>
         <default_value>Deflate</default_value>
-        <description>None, Deflate, ZLib, LZW, ZSTD or PackBits</description>
+        <description>None, Deflate, ZLib, LZW, ZSTD, PackBits or JPEG (1/3-band byte)</description>
       </parameter>
       <parameter>
         <name>OVERVIEW_RESAMPLING</name>
@@ -98,6 +98,7 @@
     <output>${OUTPUT_FILE}</output>
     <format>COG</format>
     <compression>${COMPRESSION}</compression>
+    <jpegQuality>75</jpegQuality>
     <overviews>${OVERVIEWS}</overviews>
     <overviewResampling>${OVERVIEW_RESAMPLING}</overviewResampling>
     <overwrite>Y</overwrite>

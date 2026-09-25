@@ -118,6 +118,8 @@ def validate(path: Path) -> None:
                 raise AssertionError(f"Overview {index} must not carry georeferencing (tag {tag})")
     if 34735 not in ifds[0]:
         raise AssertionError("Main image must carry the GeoKey directory")
+    if ifds[0][259][0] == 7:
+        check_jpeg(ifds, data)
     tile_offsets = [values[324] for values in ifds]
     tile_counts = [values[325] for values in ifds]
     smallest = ifds[-1]
@@ -155,6 +157,30 @@ def validate(path: Path) -> None:
                     raise AssertionError("Block trailer does not repeat the last bytes")
 
 
+def check_jpeg(ifds, data: bytes) -> None:
+    """JPEG tiles must use shared tables and a matching color interpretation."""
+    compression, samples, photometric = ifds[0][259][0], ifds[0][277][0], ifds[0][262][0]
+    assert compression == 7
+    if samples == 3:
+        if photometric != 6:
+            raise AssertionError(f"Three-band JPEG must be YCbCr, not photometric {photometric}")
+        if 530 not in ifds[0]:
+            raise AssertionError("YCbCr JPEG requires the subsampling tag")
+    elif samples == 1:
+        if photometric not in (0, 1):
+            raise AssertionError(f"Single-band JPEG must be grayscale, not {photometric}")
+        if 530 in ifds[0]:
+            raise AssertionError("Grayscale JPEG must not carry subsampling")
+    else:
+        raise AssertionError(f"JPEG is limited to 1 or 3 bands, not {samples}")
+    for index, values in enumerate(ifds):
+        if 347 not in values or len(values[347][0]) == 0:
+            raise AssertionError(f"IFD {index} is missing the shared JPEG tables")
+        tile = values[324][0]
+        if data[tile : tile + 2] != b"\xff\xd8":
+            raise AssertionError(f"IFD {index} tile is not a JPEG stream")
+
+
 def validate_with_gdal(path: Path) -> None:
     from osgeo import gdal  # type: ignore
     try:
@@ -165,11 +191,24 @@ def validate_with_gdal(path: Path) -> None:
     dataset = gdal.Open(str(path))
     if dataset is None:
         raise SystemExit(f"GDAL cannot open {path}")
-    errors, details = gdal_validate(dataset, check_tiled=True, full_check=True)
+    result = gdal_validate(dataset, check_tiled=True, full_check=True)
+    # GDAL 3.12 returns (errors, warnings, details); older versions return (errors, details).
+    errors = result[0] if result else []
+    details = next((item for item in result if isinstance(item, dict)), {})
     if errors:
         raise SystemExit("GDAL COG validation errors:\n" + "\n".join(errors))
-    overviews = dataset.GetRasterBand(1).GetOverviewCount()
-    print(f"GDAL validation OK; overviews={overviews}; ifd_offsets={details['ifd_offsets']}")
+    band = dataset.GetRasterBand(1)
+    compression = dataset.GetMetadataItem("COMPRESSION", "IMAGE_STRUCTURE")
+    if compression and "JPEG" in compression and dataset.RasterCount == 3:
+        source_space = dataset.GetMetadataItem("SOURCE_COLOR_SPACE", "IMAGE_STRUCTURE")
+        if source_space != "YCbCr":
+            raise SystemExit(f"GDAL did not see YCbCr JPEG data: {source_space!r}")
+    if band.Checksum() == 0:
+        raise SystemExit("GDAL checksum is zero")
+    overviews = band.GetOverviewCount()
+    print(
+        f"GDAL validation OK; overviews={overviews}; compression={compression}; "
+        f"ifd_offsets={details['ifd_offsets']}")
 
 
 def main() -> int:

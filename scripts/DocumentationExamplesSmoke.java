@@ -51,6 +51,43 @@ public class DocumentationExamplesSmoke {
     }
   }
 
+  static void checkJpegCloudOptimizedGeoTiff(Path temp) throws Exception {
+    Path rgb = temp.resolve("input-rgb.tif");
+    Path jpegCog = temp.resolve("cog-jpeg.tif");
+    if (!Files.exists(jpegCog)) return;
+    try (var source =
+            new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+                new ch.so.agi.hop.raster.geotools.RasterDatasetRef(rgb.toString()));
+        var written =
+            new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+                new ch.so.agi.hop.raster.geotools.RasterDatasetRef(jpegCog.toString()))) {
+      if (written.bounds().width != 1200 || written.bounds().height != 1000)
+        throw new AssertionError("JPEG COG bounds are wrong: " + written.bounds());
+      if (written.bands() != 3
+          || written.colorInfo().kind()
+              != ch.so.agi.hop.raster.geotools.RasterColorInfo.Kind.RGB)
+        throw new AssertionError("JPEG COG lost its RGB interpretation");
+      var window = new java.awt.Rectangle(300, 300, 64, 64);
+      for (int band = 0; band < 3; band++) {
+        var expected =
+            source.read(new ch.so.agi.hop.raster.geotools.RasterReadRequest(window, band));
+        var actual =
+            written.read(new ch.so.agi.hop.raster.geotools.RasterReadRequest(window, band));
+        double expectedMean = 0, actualMean = 0;
+        for (int y = 300; y < 364; y++)
+          for (int x = 300; x < 364; x++) {
+            expectedMean += expected.getSampleDouble(x, y, 0);
+            actualMean += actual.getSampleDouble(x, y, 0);
+          }
+        expectedMean /= 4096;
+        actualMean /= 4096;
+        if (Math.abs(actualMean - expectedMean) > 8)
+          throw new AssertionError(
+              "JPEG COG band " + band + " mean deviates: " + actualMean + " vs " + expectedMean);
+      }
+    }
+  }
+
   static void checkGeoPackageAppend(Path temp) throws Exception {
     var provider =
         new GeoPackageProvider(new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
@@ -183,6 +220,30 @@ public class DocumentationExamplesSmoke {
       largeCoverage.dispose(true);
     }
 
+    Path rgb = temp.resolve("input-rgb.tif");
+    var rgbImage = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+    for (int y = 0; y < height; y++)
+      for (int x = 0; x < width; x++)
+        rgbImage.setRGB(
+            x,
+            y,
+            (sample(128 + 100 * Math.sin(x / 70.0)) << 16)
+                | (sample(128 + 90 * Math.cos(y / 55.0)) << 8)
+                | sample(128 + 80 * Math.sin((x + y) / 95.0)));
+    var rgbCoverage =
+        factory.create(
+            "rgb",
+            rgbImage,
+            new ReferencedEnvelope(2600000, 2600000 + width, 1201000 - height, 1201000,
+                CRS.decode("EPSG:2056", true)));
+    var rgbWriter = new GeoTiffWriter(rgb.toFile());
+    try {
+      rgbWriter.write(rgbCoverage, largeOptions);
+    } finally {
+      rgbWriter.dispose();
+      rgbCoverage.dispose(true);
+    }
+
     try (var raw = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
         new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
       var scaled = new ch.so.agi.hop.raster.geotools.RasterSource() {
@@ -259,8 +320,13 @@ public class DocumentationExamplesSmoke {
     System.out.println("Prepared deterministic raster and vector fixtures");
   }
 
+  private static int sample(double value) {
+    return Math.max(0, Math.min(255, (int) Math.round(value)));
+  }
+
   static void check(Path temp) throws Exception {
     checkCloudOptimizedGeoTiff(temp);
+    checkJpegCloudOptimizedGeoTiff(temp);
     var fgdb =
         new ch.so.agi.hop.vector.formats.filegeodatabase.FileGeodatabaseProvider(
             new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());

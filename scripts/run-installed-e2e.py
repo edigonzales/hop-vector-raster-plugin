@@ -270,6 +270,18 @@ def main() -> int:
         run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif")], env)
         if gdal_python:
             run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif"), "--gdal"], gdal_env)
+        # JPEG/YCbCr output for byte RGB ortho-like imagery.
+        run_command([
+            hop_run, "-r", "local", "-f",
+            str(Path(__file__).parents[1] / "examples/raster-writer/cog.hpl"),
+            "-p", f"INPUT_RASTER={data / 'input-rgb.tif'}",
+            "-p", f"OUTPUT_FILE={data / 'cog-jpeg.tif'}",
+            "-p", "COMPRESSION=JPEG", "-p", "OVERVIEWS=AUTO",
+            "-p", "OVERVIEW_RESAMPLING=AVERAGE",
+        ], env)
+        run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog-jpeg.tif")], env)
+        if gdal_python:
+            run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog-jpeg.tif"), "--gdal"], gdal_env)
         # The bundled reader must accept the generated COG as a local source.
         run_command([
             hop_run, "-r", "local", "-f",
