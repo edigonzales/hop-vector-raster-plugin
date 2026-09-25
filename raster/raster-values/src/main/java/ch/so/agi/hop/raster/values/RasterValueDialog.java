@@ -97,7 +97,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
                   + " resolutionFields extentMode minX minY maxX maxY bboxFields interpolation"
                   + " outputType sourceNoData outputNoData";
           case "WRITER" ->
-              "rasterField output format compression jpegQuality overviews overviewResampling overwrite prefix";
+              "rasterField output format compression jpegQuality addOverviews overviews"
+                  + " overviewResampling overwrite prefix";
           case "STATS" -> "rasterField geometryField explicitCrs band noData statistics prefix";
           case "INFO" -> "rasterField infoFields prefix";
           default -> "";
@@ -224,7 +225,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
               if (updating[0]) return;
               updating[0] = true;
               try {
-                updateWriterControls(format.getText(), compression, controls, fieldLabels);
+                updateWriterControls(
+                    variables.resolve(format.getText()).trim(), compression, controls, fieldLabels);
               } finally {
                 updating[0] = false;
               }
@@ -244,13 +246,19 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 update.run();
               }
             });
+        controls.get("addOverviews").addListener(SWT.Selection, event -> update.run());
         update.run();
       }
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
     scroll.setContent(body);
-    scroll.setMinSize(body.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+    Runnable resizeBody =
+        () -> {
+          int width = Math.max(1, scroll.getClientArea().width);
+          scroll.setMinSize(0, body.computeSize(width, SWT.DEFAULT).y);
+        };
+    scroll.addListener(SWT.Resize, event -> resizeBody.run());
     var buttons = new Composite(shell, SWT.NONE);
     var buttonData = new FormData();
     buttonData.right = new FormAttachment(100, 0);
@@ -319,10 +327,10 @@ public final class RasterValueDialog extends BaseTransformDialog {
     shell.addListener(SWT.Close, event -> transformName = null);
     shell.setDefaultButton(ok);
     shell.setSize(760, 720);
+    resizeBody.run();
     shell.open();
     var display = shell.getDisplay();
-    while (!shell.isDisposed())
-      if (!display.readAndDispatch()) display.sleep();
+    while (!shell.isDisposed()) if (!display.readAndDispatch()) display.sleep();
     return transformName;
   }
 
@@ -342,13 +350,12 @@ public final class RasterValueDialog extends BaseTransformDialog {
   }
 
   private static void updateWriterControls(
-      String format,
-      Combo compression,
-      Map<String, Control> controls,
-      Map<String, Label> labels) {
+      String format, Combo compression, Map<String, Control> controls, Map<String, Label> labels) {
     boolean cog = "COG".equalsIgnoreCase(format);
-    setFieldEnabled("overviews", cog, controls, labels);
-    setFieldEnabled("overviewResampling", cog, controls, labels);
+    setFieldEnabled("addOverviews", !cog, controls, labels);
+    boolean overviews = cog || ((Button) controls.get("addOverviews")).getSelection();
+    setFieldEnabled("overviews", overviews, controls, labels);
+    setFieldEnabled("overviewResampling", overviews, controls, labels);
     // Only touch the combo when the codec list really changes. Programmatic changes can emit
     // events on some platforms; reacting to them again would spin the dialog's event loop.
     String[] choices = cog ? cogCompressionChoices() : compressionChoices();
@@ -360,7 +367,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
       if (selection < 0) selection = compression.indexOf("Deflate");
       if (selection >= 0) compression.select(selection);
     }
-    boolean jpeg = cog && "JPEG".equalsIgnoreCase(compression.getText());
+    boolean jpeg = "JPEG".equalsIgnoreCase(compression.getText());
     setFieldEnabled("jpegQuality", jpeg, controls, labels);
   }
 
@@ -442,6 +449,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "output" -> "Output GeoTIFF path";
       case "format" -> "Output format (GEOTIFF / COG)";
       case "compression" -> "Compression";
+      case "addOverviews" -> "Add overviews";
       case "overviews" -> "Internal overviews (AUTO / NONE)";
       case "overviewResampling" -> "Overview resampling (AVERAGE / NEAREST)";
       case "jpegQuality" -> "JPEG quality (1-100)";

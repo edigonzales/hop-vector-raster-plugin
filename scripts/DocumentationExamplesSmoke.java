@@ -25,10 +25,70 @@ public class DocumentationExamplesSmoke {
       }
       case "check" -> {
         check(temp);
+        checkClippedOverviews(temp);
         checkCatalog(temp);
         checkGeoPackageAppend(temp);
       }
       default -> throw new IllegalArgumentException("Unknown mode: " + args[2]);
+    }
+  }
+
+  static void checkClippedOverviews(Path temp) throws Exception {
+    String[] names = {
+      "clip-COG-AVERAGE-False-AUTO", "clip-COG-NEAREST-False-AUTO",
+      "clip-GEOTIFF-AVERAGE-True-AUTO", "clip-GEOTIFF-NEAREST-True-AUTO",
+      "clip-GEOTIFF-AVERAGE-False-AUTO", "clip-GEOTIFF-AVERAGE-True-NONE"
+    };
+    for (String name : names) {
+      Path file = temp.resolve(name + ".tif");
+      boolean overviewExpected = !name.contains("GEOTIFF-AVERAGE-False") && !name.endsWith("NONE");
+      try (var stream = javax.imageio.ImageIO.createImageInputStream(file.toFile())) {
+        var reader = javax.imageio.ImageIO.getImageReaders(stream).next();
+        try {
+          reader.setInput(stream);
+          if (reader.getNumImages(true) != (overviewExpected ? 2 : 1))
+            throw new AssertionError("Unexpected overview count: " + name);
+          if (reader.getWidth(0) != 777 || reader.getHeight(0) != 665)
+            throw new AssertionError("Clipped dimensions changed: " + name);
+          var main = reader.read(0).getRaster();
+          if (main.getSampleDouble(0, 0, 0) != (double) (float) 7.09)
+            throw new AssertionError("Clipped main pixels shifted: " + name);
+          if (overviewExpected) {
+            var reduced = reader.read(1).getRaster();
+            if (reduced.getWidth() != 389 || reduced.getHeight() != 333)
+              throw new AssertionError("Wrong overview dimensions: " + name);
+            double expected = main.getSampleDouble(0, 0, 0);
+            if (name.contains("AVERAGE"))
+              expected =
+                  (double)
+                      (float)
+                          ((expected
+                                  + main.getSampleDouble(1, 0, 0)
+                                  + main.getSampleDouble(0, 1, 0)
+                                  + main.getSampleDouble(1, 1, 0))
+                              / 4);
+            if (reduced.getSampleDouble(0, 0, 0) != expected
+                || reduced.getSampleDouble(388, 332, 0) != main.getSampleDouble(776, 664, 0))
+              throw new AssertionError("Wrong overview samples: " + name);
+          }
+        } finally {
+          reader.dispose();
+        }
+      }
+      var geoReader = new GeoTiffReader(file.toFile());
+      var coverage = geoReader.read();
+      try {
+        if (coverage.getEnvelope2D().getMinX() != 2600007
+            || coverage.getEnvelope2D().getMaxY() != 1200991)
+          throw new AssertionError("Clipped georeferencing changed: " + name);
+      } finally {
+        coverage.dispose(true);
+        geoReader.dispose();
+      }
+    }
+    try (var files = Files.list(temp)) {
+      if (files.anyMatch(p -> p.getFileName().toString().startsWith(".hop-raster-")))
+        throw new AssertionError("Raster temporary files were not removed");
     }
   }
 
@@ -43,11 +103,9 @@ public class DocumentationExamplesSmoke {
       if (source.noData(0) == null || source.noData(0) != -9999d)
         throw new AssertionError("COG lost its NoData sentinel");
       var window = new java.awt.Rectangle(100, 200, 2, 2);
-      var raster =
-          source.read(new ch.so.agi.hop.raster.geotools.RasterReadRequest(window, 0));
+      var raster = source.read(new ch.so.agi.hop.raster.geotools.RasterReadRequest(window, 0));
       if (raster.getSampleDouble(100, 200, 0) != 2.0)
-        throw new AssertionError(
-            "COG pixel value changed: " + raster.getSampleDouble(100, 200, 0));
+        throw new AssertionError("COG pixel value changed: " + raster.getSampleDouble(100, 200, 0));
     }
   }
 
@@ -64,8 +122,7 @@ public class DocumentationExamplesSmoke {
       if (written.bounds().width != 1200 || written.bounds().height != 1000)
         throw new AssertionError("JPEG COG bounds are wrong: " + written.bounds());
       if (written.bands() != 3
-          || written.colorInfo().kind()
-              != ch.so.agi.hop.raster.geotools.RasterColorInfo.Kind.RGB)
+          || written.colorInfo().kind() != ch.so.agi.hop.raster.geotools.RasterColorInfo.Kind.RGB)
         throw new AssertionError("JPEG COG lost its RGB interpretation");
       var window = new java.awt.Rectangle(300, 300, 64, 64);
       for (int band = 0; band < 3; band++) {
@@ -193,7 +250,11 @@ public class DocumentationExamplesSmoke {
         factory.create(
             "large",
             floatRaster,
-            new ReferencedEnvelope(2600000, 2600000 + width, 1201000 - height, 1201000,
+            new ReferencedEnvelope(
+                2600000,
+                2600000 + width,
+                1201000 - height,
+                1201000,
                 CRS.decode("EPSG:2056", true)));
     largeCoverage =
         factory.create(
@@ -210,7 +271,8 @@ public class DocumentationExamplesSmoke {
     largeParams.setTiling(512, 512);
     largeParams.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
     largeParams.setCompressionType("Deflate");
-    var largeOptions = org.geotools.coverage.grid.io.AbstractGridFormat.GEOTOOLS_WRITE_PARAMS.createValue();
+    var largeOptions =
+        org.geotools.coverage.grid.io.AbstractGridFormat.GEOTOOLS_WRITE_PARAMS.createValue();
     largeOptions.setValue(largeParams);
     var largeWriter = new GeoTiffWriter(large.toFile());
     try {
@@ -234,7 +296,11 @@ public class DocumentationExamplesSmoke {
         factory.create(
             "rgb",
             rgbImage,
-            new ReferencedEnvelope(2600000, 2600000 + width, 1201000 - height, 1201000,
+            new ReferencedEnvelope(
+                2600000,
+                2600000 + width,
+                1201000 - height,
+                1201000,
                 CRS.decode("EPSG:2056", true)));
     var rgbWriter = new GeoTiffWriter(rgb.toFile());
     try {
@@ -244,25 +310,61 @@ public class DocumentationExamplesSmoke {
       rgbCoverage.dispose(true);
     }
 
-    try (var raw = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-        new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
-      var scaled = new ch.so.agi.hop.raster.geotools.RasterSource() {
-        public java.awt.Rectangle bounds() { return raw.bounds(); }
-        public org.geotools.api.referencing.crs.CoordinateReferenceSystem crs() { return raw.crs(); }
-        public org.geotools.api.referencing.operation.MathTransform gridToWorld() { return raw.gridToWorld(); }
-        public int bands() { return 1; }
-        public int dataType() { return raw.dataType(); }
-        public Double noData(int band) { return 255d; }
-        public double scale(int band) { return .5; }
-        public double offset(int band) { return 100; }
-        public boolean valid(double v, int band) { return v != 255 && Double.isFinite(v); }
-        public double physical(double v, int band) { return v * .5 + 100; }
-        public java.awt.image.Raster read(ch.so.agi.hop.raster.geotools.RasterReadRequest r) throws Exception { return raw.read(r); }
-        public void close() {}
-      };
-      var full = new GeometryFactory().toGeometry(new Envelope(2600000,2600004,1200000,1200003));
-      ch.so.agi.hop.raster.geotools.RasterClip.write(scaled, full, false, 0, 255d,
-          temp.resolve("input-scaled.tif"), false, () -> false);
+    try (var raw =
+        new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
+      var scaled =
+          new ch.so.agi.hop.raster.geotools.RasterSource() {
+            public java.awt.Rectangle bounds() {
+              return raw.bounds();
+            }
+
+            public org.geotools.api.referencing.crs.CoordinateReferenceSystem crs() {
+              return raw.crs();
+            }
+
+            public org.geotools.api.referencing.operation.MathTransform gridToWorld() {
+              return raw.gridToWorld();
+            }
+
+            public int bands() {
+              return 1;
+            }
+
+            public int dataType() {
+              return raw.dataType();
+            }
+
+            public Double noData(int band) {
+              return 255d;
+            }
+
+            public double scale(int band) {
+              return .5;
+            }
+
+            public double offset(int band) {
+              return 100;
+            }
+
+            public boolean valid(double v, int band) {
+              return v != 255 && Double.isFinite(v);
+            }
+
+            public double physical(double v, int band) {
+              return v * .5 + 100;
+            }
+
+            public java.awt.image.Raster read(ch.so.agi.hop.raster.geotools.RasterReadRequest r)
+                throws Exception {
+              return raw.read(r);
+            }
+
+            public void close() {}
+          };
+      var full = new GeometryFactory().toGeometry(new Envelope(2600000, 2600004, 1200000, 1200003));
+      ch.so.agi.hop.raster.geotools.RasterClip.write(
+          scaled, full, false, 0, 255d, temp.resolve("input-scaled.tif"), false, () -> false);
     }
 
     var geometry =
@@ -370,8 +472,10 @@ public class DocumentationExamplesSmoke {
       result.dispose(true);
       reader.dispose();
     }
-    try (var scaled = new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-        new ch.so.agi.hop.raster.geotools.RasterDatasetRef(temp.resolve("branch-a.tif").toString()))) {
+    try (var scaled =
+        new ch.so.agi.hop.raster.geotools.GeoTiffSource(
+            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(
+                temp.resolve("branch-a.tif").toString()))) {
       if (scaled.scale(0) != .5 || scaled.offset(0) != 100)
         throw new AssertionError("Installed Raster value chain lost scale/offset");
     }

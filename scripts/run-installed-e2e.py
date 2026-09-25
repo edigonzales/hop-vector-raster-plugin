@@ -270,6 +270,20 @@ def main() -> int:
         run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif")], env)
         if gdal_python:
             run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif"), "--gdal"], gdal_env)
+        overview_scenario = runpy.run_path(str(Path(__file__).with_name("raster-value-scenarios.py")))["create_overview"]
+        for output_format, resampling, enabled, mode in (
+            ("COG", "AVERAGE", False, "AUTO"),
+            ("COG", "NEAREST", False, "AUTO"),
+            ("GEOTIFF", "AVERAGE", True, "AUTO"),
+            ("GEOTIFF", "NEAREST", True, "AUTO"),
+            ("GEOTIFF", "AVERAGE", False, "AUTO"),
+            ("GEOTIFF", "AVERAGE", True, "NONE"),
+        ):
+            scenario = overview_scenario(data, output_format, resampling, enabled, mode)
+            run_command([hop_run, "-r", "local", "-f", str(scenario)], env)
+            if output_format == "COG":
+                run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")),
+                             str(scenario.with_suffix(".tif"))], env)
         # JPEG/YCbCr output for byte RGB ortho-like imagery.
         run_command([
             hop_run, "-r", "local", "-f",

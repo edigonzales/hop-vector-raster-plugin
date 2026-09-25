@@ -15,6 +15,25 @@ import org.junit.jupiter.api.Test;
 
 class RasterValueContractTest {
   @Test
+  void geotiffOverviewOptInResolvesVariablesAndKeepsCogBehavior() {
+    var writer = new RasterWriterMeta();
+    writer.setFormat("${FORMAT}");
+    writer.setOverviews("${OVERVIEWS}");
+    var vars = new Variables();
+    vars.setVariable("FORMAT", " GEOTIFF ");
+    vars.setVariable("OVERVIEWS", " AUTO ");
+    assertThat(writer.writeOptions(vars).overviews().name()).isEqualTo("NONE");
+    writer.setAddOverviews(true);
+    assertThat(writer.writeOptions(vars).overviews().name()).isEqualTo("AUTO");
+    vars.setVariable("OVERVIEWS", "NONE");
+    assertThat(writer.writeOptions(vars).overviews().name()).isEqualTo("NONE");
+    writer.setAddOverviews(false);
+    vars.setVariable("FORMAT", "COG");
+    vars.setVariable("OVERVIEWS", "AUTO");
+    assertThat(writer.writeOptions(vars).overviews().name()).isEqualTo("AUTO");
+  }
+
+  @Test
   void writerSettingsResolvePipelineParametersBeforeValidation() throws Exception {
     var writer = new RasterWriterMeta();
     writer.setOutput("${OUTPUT_FILE}");
@@ -110,6 +129,7 @@ class RasterValueContractTest {
     assertThat(restored.getCompression()).isEqualTo("Deflate");
     assertThat(restored.getFormat()).isEqualTo("GEOTIFF");
     assertThat(restored.getOverviews()).isEqualTo("AUTO");
+    assertThat(restored.isAddOverviews()).isFalse();
     assertThat(restored.getOverviewResampling()).isEqualTo("AVERAGE");
     assertThat(restored.getJpegQuality()).isEqualTo(75);
     assertThat(restored.isOverwrite()).isTrue();
@@ -136,6 +156,7 @@ class RasterValueContractTest {
     writer.setOverviews("NONE");
     writer.setOverviewResampling("NEAREST");
     writer.setJpegQuality(90);
+    writer.setAddOverviews(true);
     var restored = new RasterWriterMeta();
     restored.loadXml(
         XmlHandler.loadXmlString("<transform>" + writer.getXml() + "</transform>")
@@ -147,6 +168,7 @@ class RasterValueContractTest {
     assertThat(restored.getOverviews()).isEqualTo("NONE");
     assertThat(restored.getOverviewResampling()).isEqualTo("NEAREST");
     assertThat(restored.getJpegQuality()).isEqualTo(90);
+    assertThat(restored.isAddOverviews()).isTrue();
   }
 
   @Test

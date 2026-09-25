@@ -23,3 +23,37 @@ def create(work: Path, source: Path):
     for suffix in ('a','b'):node('writer-'+suffix,'SOGIS_RASTER_WRITER',version=1,rasterField='raster',output=str(work/('branch-'+suffix+'.tif')),overwrite='Y',prefix=suffix+'_')
     for a,b in [('rows','reader'),('reader','clip'),('clip','spill'),('spill','writer-a'),('spill','info'),('info','writer-b')]:hop(a,b)
     E.SubElement(root,'transform_error_handling');E.SubElement(root,'attributes');E.indent(root,space='  ');path=work/'raster-values.hpl';path.write_text(E.tostring(root,encoding='unicode'));return path
+
+
+def create_overview(work: Path, output_format: str, resampling: str, add_overviews: bool, mode="AUTO"):
+    """A nonzero-origin, odd-sized clip that requires internal overviews."""
+    root = E.Element("pipeline")
+    info = E.SubElement(root, "info")
+    E.SubElement(info, "name").text = "Clipped internal overviews"
+    E.SubElement(info, "pipeline_type").text = "Normal"
+    order = E.SubElement(root, "order")
+    name = f"clip-{output_format}-{resampling}-{add_overviews}-{mode}"
+    values = [
+        ("reader", "SOGIS_RASTER_READER", dict(source=str(work / "input-large.tif"))),
+        ("clip", "SOGIS_RASTER_VALUE_CLIP", dict(clipMethod="BOUNDING_BOX",
+            explicitCrs="EPSG:2056", minX=2600007, minY=1200326,
+            maxX=2600784, maxY=1200991, bands=1, noData=-9999)),
+        ("writer", "SOGIS_RASTER_WRITER", dict(output=str(work / (name + ".tif")),
+            format=output_format, compression="Deflate", addOverviews="Y" if add_overviews else "N",
+            overviews=mode, overviewResampling=resampling, overwrite="Y")),
+    ]
+    for transform_name, kind, settings in values:
+        transform = E.SubElement(root, "transform")
+        for key, value in dict(name=transform_name, type=kind, copies=1, distribute="Y",
+                               version=1, rasterField="raster", **settings).items():
+            E.SubElement(transform, key).text = str(value)
+    for source, target in (("reader", "clip"), ("clip", "writer")):
+        hop = E.SubElement(order, "hop")
+        for key, value in {"from": source, "to": target, "enabled": "Y"}.items():
+            E.SubElement(hop, key).text = value
+    E.SubElement(root, "transform_error_handling")
+    E.SubElement(root, "attributes")
+    E.indent(root, space="  ")
+    path = work / (name + ".hpl")
+    path.write_text(E.tostring(root, encoding="unicode"), encoding="utf-8")
+    return path

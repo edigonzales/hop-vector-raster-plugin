@@ -1,5 +1,6 @@
 package ch.so.agi.hop.raster.values;
 
+import ch.so.agi.hop.raster.RasterWriteOptions;
 import ch.so.agi.hop.raster.type.ValueMetaRaster;
 import java.util.*;
 import org.apache.hop.core.row.*;
@@ -303,6 +304,16 @@ public abstract class RasterValueMeta
     format = value;
   }
 
+  @HopMetadataProperty private boolean addOverviews;
+
+  public boolean isAddOverviews() {
+    return addOverviews;
+  }
+
+  public void setAddOverviews(boolean value) {
+    addOverviews = value;
+  }
+
   @HopMetadataProperty private String overviews = "AUTO";
 
   public String getOverviews() {
@@ -412,8 +423,8 @@ public abstract class RasterValueMeta
   }
 
   /**
-   * Validates the settings with Hop variables resolved, because pipeline parameters may supply
-   * the format, overview or compression values (for example {@code ${OVERVIEWS}}).
+   * Validates the settings with Hop variables resolved, because pipeline parameters may supply the
+   * format, overview or compression values (for example {@code ${OVERVIEWS}}).
    */
   public void validateSettings(IVariables vars) {
     String formatValue = resolve(vars, format);
@@ -448,6 +459,21 @@ public abstract class RasterValueMeta
             || !List.of("AUTO", "BOUNDING_BOX").contains(extentModeValue)))
       throw new IllegalArgumentException("Target pixel sizes and extent mode are required");
     if (band < 1) throw new IllegalArgumentException("Band numbers start at 1");
+  }
+
+  RasterWriteOptions writeOptions(IVariables vars) {
+    var outputFormat = RasterWriteOptions.Format.valueOf(resolve(vars, format));
+    var mode =
+        outputFormat == RasterWriteOptions.Format.GEOTIFF && !addOverviews
+            ? RasterWriteOptions.Overviews.NONE
+            : RasterWriteOptions.Overviews.valueOf(resolve(vars, overviews));
+    return new RasterWriteOptions(
+        outputFormat,
+        mode,
+        RasterWriteOptions.Resampling.valueOf(resolve(vars, overviewResampling)),
+        512,
+        resolve(vars, compression),
+        jpegQuality);
   }
 
   private static String resolve(IVariables vars, String value) {

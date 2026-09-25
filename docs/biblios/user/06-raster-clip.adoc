@@ -121,22 +121,23 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 
 [.gui-mockup]
 ----
-+------------------------------------------------------------------------------------+
-| Raster WRITER (GeoTools)                                                           |
-+------------------------------------------------------------------------------------+
-| Transform name                                      [ Beispiel WRITER ]            |
-| Input raster field                                  [ raster v ]                   |
++-------------------------------------------------------------------------------------------------+
+| Raster WRITER (GeoTools)                                                                        |
++-------------------------------------------------------------------------------------------------+
+| Transform name                                      [ Beispiel WRITER ]                         |
+| Input raster field                                  [ raster v ]                                |
 | Output GeoTIFF path [ Value / Variable v ]         [ ${PROJECT_HOME}/result.tif ] [ Browse... ] |
-| Output format (GEOTIFF / COG)                       [ GEOTIFF v ]                  |
-| Compression                                         [ Deflate v ]                  |
-| JPEG quality (1-100)                                [ 75 ]                         |
-| Internal overviews (AUTO / NONE)                    [ AUTO v ]                     |
-| Overview resampling (AVERAGE / NEAREST)             [ AVERAGE v ]                  |
-| Overwrite existing files                           [ ]                                      |
-| Result field prefix                                [ raster_ ]                             |
-|                                                                                    |
-|                                                                  [ OK ] [ Cancel ] |
-+------------------------------------------------------------------------------------+
+| Output format (GEOTIFF / COG)                       [ GEOTIFF v ]                               |
+| Compression                                         [ Deflate v ]                               |
+| JPEG quality (1-100)                                [ 75 ]                                      |
+| Add overviews                                      [ ]                                          |
+| Internal overviews (AUTO / NONE)                    [ AUTO v ]                                  |
+| Overview resampling (AVERAGE / NEAREST)             [ AVERAGE v ]                               |
+| Overwrite existing files                           [ ]                                          |
+| Result field prefix                                [ raster_ ]                                  |
+|                                                                                                 |
+|                                                                  [ OK ] [ Cancel ]              |
++-------------------------------------------------------------------------------------------------+
 ----
 
 Raster Writer (`SOGIS_RASTER_WRITER`) schreibt einen Rasterwert als lokale GeoTIFF-Datei und ergänzt
@@ -162,17 +163,22 @@ sowie Block-Leader und -Trailer. Die Georeferenz steht nur auf dem Hauptbild.
 *Internal overviews* (`AUTO`/`NONE`) steuert die Overviews: `AUTO` halbiert die Auflösung, bis Höhe und
 Breite höchstens 512 Pixel betragen; die letzte Stufe umfasst höchstens eine Tile-Zeile oder -Spalte.
 *Overview resampling* mittelt mit `AVERAGE` (NoData-Werte werden ausgelassen) oder wählt mit `NEAREST`
-Stichproben; Palettendaten verwenden immer `NEAREST`. Beide Overview-Felder sind nur bei `COG` aktiv.
+Stichproben; Palettendaten verwenden immer `NEAREST`.
+Bei `GEOTIFF` aktiviert *Add overviews* beide Overview-Felder. Die Checkbox ist standardmässig aus;
+auch bestehende Pipelines ohne diese Einstellung schreiben weiterhin keine GeoTIFF-Overviews.
+Bei gesetzter Checkbox erzeugt `AUTO` interne Overviews, `NONE` weiterhin keine.
+Bei `COG` ist die Checkbox deaktiviert und ohne Einfluss; beide Overview-Felder bleiben aktiv.
+Beim Formatwechsel bleiben die Checkbox und die Overview-Einstellungen erhalten.
 COG unterstützt `None`, `Deflate`, `ZLib`, `LZW`, `ZSTD`, `PackBits` und `JPEG`.
 JPEG ist auf 8-Bit-Raster mit einem numerischen Band oder drei RGB-Bändern beschränkt;
 Alpha, Palette und 16-Bit-Daten werden mit einer Meldung abgelehnt. Dreikanalige Bilder verwenden
 den YCbCr-Farbraum mit gemeinsamen Tabellen im `JPEGTables`-Feld und abgekürzten Tile-Streams —
 dasselbe Layout, das GDAL und damit QGIS erzeugen und lesen.
-*JPEG quality* (1–100, Standard 75) ist nur bei `COG` mit `JPEG` aktiv.
+*JPEG quality* (1–100, Standard 75) ist bei `JPEG` für beide Ausgabeformate aktiv und wird beim Schreiben angewendet.
 `EXIF JPEG` und die CCITT-Verfahren bleiben der normalen GeoTIFF-Ausgabe vorbehalten.
 Bei verlustbehafteter Ausgabe bleibt die Overview-Kaskade verlustfrei, damit sich die
 JPEG-Verluste nicht über die Stufen aufsummieren.
-Overviews werden komprimiert in temporäre Nachbardateien geschrieben, während des Schreibens in das COG
+Overviews werden komprimiert in temporäre Nachbardateien geschrieben, während des Schreibens in die TIFF-Ausgabe
 übernommen und danach entfernt; der zusätzliche Platzbedarf entspricht ungefähr den Overview-Daten.
 Im Hop-Loglevel *Basic* erscheinen Start, Schreibfortschritt in 10-Prozent-Schritten und Abschlussdauer.
 Die Ausgabe verwendet 512 × 512 Pixel grosse Tiles und ab geschätzten 2 GiB Rohdaten BigTIFF;

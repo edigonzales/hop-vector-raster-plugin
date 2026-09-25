@@ -1,25 +1,25 @@
 package ch.so.agi.hop.raster.values;
 
-import java.util.Arrays;
-import java.util.List;
 import ch.so.agi.hop.commons.core.SourceMode;
 import ch.so.agi.hop.commons.core.ValueOrField;
 import ch.so.agi.hop.commons.ui.ValueOrFieldControl;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.core.variables.Variables;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.ITransformDialog;
 import org.apache.hop.pipeline.transform.TransformMeta;
-import org.eclipse.swt.widgets.Display;
+import org.apache.hop.ui.core.widget.ComboVar;
+import org.apache.hop.ui.core.widget.TextVar;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
-import org.apache.hop.ui.core.widget.ComboVar;
-import org.apache.hop.ui.core.widget.TextVar;
 
 /** Opens each raster dialog through the constructor contract used by Hop 2.19. */
 public final class RasterDialogSmoke {
@@ -27,7 +27,8 @@ public final class RasterDialogSmoke {
 
   private RasterDialogSmoke() {}
 
-  private static void whenOpened(Display display, Shell parent, String title, DialogCase dialogCase) {
+  private static void whenOpened(
+      Display display, Shell parent, String title, DialogCase dialogCase) {
     display.timerExec(
         100,
         () -> {
@@ -88,11 +89,9 @@ public final class RasterDialogSmoke {
   }
 
   private static boolean containsLabel(org.eclipse.swt.widgets.Control control, String expected) {
-    if (control instanceof Label label
-        && expected.equals(label.getText())) return true;
+    if (control instanceof Label label && expected.equals(label.getText())) return true;
     if (control instanceof org.eclipse.swt.widgets.Composite composite)
-      for (var child : composite.getChildren())
-        if (containsLabel(child, expected)) return true;
+      for (var child : composite.getChildren()) if (containsLabel(child, expected)) return true;
     return false;
   }
 
@@ -126,8 +125,14 @@ public final class RasterDialogSmoke {
       throw new AssertionError("Raster Clip dialog is missing field: " + labelText);
     if (!controlTreeEnabled(editor, expected) || label.getEnabled() != expected)
       throw new AssertionError(
-          "Expected " + labelText + " enabled=" + expected + " but editor="
-              + controlTreeEnabled(editor, true) + ", label=" + label.getEnabled());
+          "Expected "
+              + labelText
+              + " enabled="
+              + expected
+              + " but editor="
+              + controlTreeEnabled(editor, true)
+              + ", label="
+              + label.getEnabled());
   }
 
   private static boolean controlTreeEnabled(Control control, boolean expected) {
@@ -135,7 +140,8 @@ public final class RasterDialogSmoke {
       return false;
     if (control instanceof ComboVar combo && combo.getCComboWidget().getEnabled() != expected)
       return false;
-    if (!(control instanceof TextVar) && !(control instanceof ComboVar)
+    if (!(control instanceof TextVar)
+        && !(control instanceof ComboVar)
         && control.getEnabled() != expected) return false;
     if (control instanceof org.eclipse.swt.widgets.Composite composite)
       for (Control child : composite.getChildren())
@@ -173,11 +179,7 @@ public final class RasterDialogSmoke {
     verifyFieldEnabled(shell, "explicit Crs", true);
     for (String field :
         List.of(
-            "Use input fields for bounding box coordinates",
-            "min X",
-            "min Y",
-            "max X",
-            "max Y"))
+            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
       verifyFieldEnabled(shell, field, false);
 
     setTextValue(shell, "geometry Field", "mask_geom");
@@ -203,11 +205,7 @@ public final class RasterDialogSmoke {
     verifyFieldEnabled(shell, "explicit Crs", true);
     for (String field :
         List.of(
-            "Use input fields for bounding box coordinates",
-            "min X",
-            "min Y",
-            "max X",
-            "max Y"))
+            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
       verifyFieldEnabled(shell, field, true);
 
     selectCombo(method, 0);
@@ -217,11 +215,7 @@ public final class RasterDialogSmoke {
     verifyClipCommonFieldsEnabled(shell);
     for (String field :
         List.of(
-            "Use input fields for bounding box coordinates",
-            "min X",
-            "min Y",
-            "max X",
-            "max Y"))
+            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
       verifyFieldEnabled(shell, field, false);
     if (!"mask_geom".equals(textValue(shell, "geometry Field"))
         || !"EPSG:2056".equals(textValue(shell, "explicit Crs"))
@@ -289,6 +283,25 @@ public final class RasterDialogSmoke {
     if (fieldSelector == null || refresh == null || configuredEditor == null)
       throw new AssertionError("Writer output widget is missing one of its editors");
 
+    var savedOutput = output.getValue();
+    for (int width : new int[] {760, 1100, 760}) {
+      dialog.setSize(width, 720);
+      output.setValue(
+          new ValueOrField(
+              SourceMode.CONFIGURED, "/very/long/path".repeat(80), "field_".repeat(80)));
+      for (int sourceMode : new int[] {0, 1}) {
+        selectValueMode(mode, sourceMode);
+        dialog.layout(true, true);
+        for (Button button : new Button[] {browse, refresh}) {
+          if (!button.isVisible()) continue;
+          var position = dialog.getDisplay().map(button, dialog, 0, 0);
+          if (position.x < 0 || position.x + button.getSize().x > dialog.getClientArea().width)
+            throw new AssertionError("Writer button is outside the dialog: " + button.getText());
+        }
+      }
+    }
+    output.setValue(savedOutput);
+
     if (saveByField) {
       if (output.getValue().mode() != SourceMode.FIELD)
         throw new AssertionError("Writer field mode was not restored from outputField metadata");
@@ -301,7 +314,8 @@ public final class RasterDialogSmoke {
       selectValueMode(mode, 1);
       fieldSelector.setText("destination_path");
       if (browse.isEnabled() || !fieldSelector.isEnabled() || !refresh.isEnabled())
-        throw new AssertionError("Writer Browse must be disabled while field selection stays active");
+        throw new AssertionError(
+            "Writer Browse must be disabled while field selection stays active");
       if (!"/tmp/unused-raster-output.tif".equals(output.getValue().configuredValue()))
         throw new AssertionError("Writer configured path was lost after switching modes");
     } else {
@@ -313,7 +327,8 @@ public final class RasterDialogSmoke {
       selectValueMode(mode, 1);
       fieldSelector.setText("destination_path");
       if (browse.isEnabled() || !fieldSelector.isEnabled() || !refresh.isEnabled())
-        throw new AssertionError("Writer Browse must be disabled while field selection stays active");
+        throw new AssertionError(
+            "Writer Browse must be disabled while field selection stays active");
       selectValueMode(mode, 0);
       if (!browse.isEnabled())
         throw new AssertionError("Writer Browse must be re-enabled in configured mode");
@@ -351,6 +366,9 @@ public final class RasterDialogSmoke {
         ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.cogCompressionTypes());
     if (!Arrays.equals(compression.getItems(), expectedCogCodecs.toArray(String[]::new)))
       throw new AssertionError("COG compression choices do not match the COG writer");
+    Button addOverviews = (Button) editorAfterLabel(dialog, "Add overviews");
+    if (addOverviews == null || addOverviews.isEnabled() || addOverviews.getSelection())
+      throw new AssertionError("COG must disable Add overviews, defaulting to false");
     String overviewsLabel = "Internal overviews (AUTO / NONE)";
     String resamplingLabel = "Overview resampling (AVERAGE / NEAREST)";
     String qualityLabel = "JPEG quality (1-100)";
@@ -384,7 +402,24 @@ public final class RasterDialogSmoke {
         || fieldEnabled(dialog, qualityLabel, quality))
       throw new AssertionError("GeoTIFF output must disable overview and quality controls");
 
-    compression.select(lzw);
+    if (!addOverviews.isEnabled()) throw new AssertionError("GeoTIFF must enable Add overviews");
+    addOverviews.setSelection(true);
+    addOverviews.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!fieldEnabled(dialog, overviewsLabel, overviews)
+        || !fieldEnabled(dialog, resamplingLabel, resampling))
+      throw new AssertionError("Add overviews must enable both overview controls");
+    compression.select(compression.indexOf("JPEG"));
+    compression.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("GeoTIFF JPEG must enable quality");
+    cogFormat.setText("COG");
+    cogFormat.setText("GEOTIFF");
+    if (!addOverviews.getSelection() || !"85".equals(((TextVar) quality).getText()))
+      throw new AssertionError("Format switches must retain settings");
+    compression.select(compression.indexOf("LZW"));
+    compression.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (fieldEnabled(dialog, qualityLabel, quality))
+      throw new AssertionError("GeoTIFF LZW must disable quality");
   }
 
   /**
@@ -447,8 +482,8 @@ public final class RasterDialogSmoke {
     return null;
   }
 
-  private static ITransformDialog dialog(
-      Shell parent, IVariables variables, DialogCase dialogCase) throws Exception {
+  private static ITransformDialog dialog(Shell parent, IVariables variables, DialogCase dialogCase)
+      throws Exception {
     var meta = dialogCase.meta();
     var pipeline = new PipelineMeta();
     pipeline.addTransform(new TransformMeta("Raster " + meta.operation(), meta));
@@ -457,6 +492,26 @@ public final class RasterDialogSmoke {
         dialogClass.getConstructor(
             Shell.class, IVariables.class, meta.getClass(), PipelineMeta.class);
     return (ITransformDialog) constructor.newInstance(parent, variables, meta, pipeline);
+  }
+
+  private static void cancelWriterWhenOpened(Display display, Shell parent) {
+    display.timerExec(
+        100,
+        () -> {
+          Shell shell =
+              Arrays.stream(parent.getShells())
+                  .filter(s -> !s.isDisposed() && s.isVisible())
+                  .findFirst()
+                  .orElse(null);
+          if (shell == null) {
+            cancelWriterWhenOpened(display, parent);
+            return;
+          }
+          ((Button) editorAfterLabel(shell, "Add overviews")).setSelection(true);
+          setTextValue(shell, "JPEG quality (1-100)", "33");
+          findButtonByText(shell, "Cancel")
+              .notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+        });
   }
 
   public static void main(String[] args) throws Exception {
@@ -469,10 +524,8 @@ public final class RasterDialogSmoke {
           List.of(
               new DialogCase(new RasterReaderMeta(), "Reader output field", true),
               new DialogCase(new RasterClipMeta(), "Input raster field", false),
-              new DialogCase(
-                  new RasterReprojectMeta(), "Input raster field", false),
-              new DialogCase(
-                  new RasterZonalStatsMeta(), "Input raster field", false),
+              new DialogCase(new RasterReprojectMeta(), "Input raster field", false),
+              new DialogCase(new RasterZonalStatsMeta(), "Input raster field", false),
               new DialogCase(new RasterInfoMeta(), "Input raster field", false),
               new DialogCase(new RasterWriterMeta(), "Input raster field", false),
               writerFieldCase());
@@ -506,10 +559,18 @@ public final class RasterDialogSmoke {
               || !writer.isOverwrite()
               || !"written_".equals(writer.getPrefix())
               || !"LZW".equals(writer.getCompression())
-              || writer.getJpegQuality() != 85)
+              || writer.getJpegQuality() != 85
+              || !writer.isAddOverviews())
             throw new AssertionError("Writer output mode or settings were not saved correctly");
         }
       }
+      var unchanged = new RasterWriterMeta();
+      unchanged.setOutput("/tmp/unchanged.tif");
+      String originalXml = unchanged.getXml();
+      cancelWriterWhenOpened(display, parent);
+      dialog(parent, variables, new DialogCase(unchanged, "Input raster field", false)).open();
+      if (!originalXml.equals(unchanged.getXml()))
+        throw new AssertionError("Cancel changed writer metadata");
     } finally {
       parent.dispose();
       display.dispose();
