@@ -17,12 +17,21 @@ final class RasterWriteProgress {
   }
 
   void started(Path output, String compression) {
+    started(output, compression, "GEOTIFF");
+  }
+
+  void started(Path output, String compression, String format) {
     this.output = output;
     this.compression = compression == null || compression.isBlank() ? "Deflate" : compression;
     startedAt = System.nanoTime();
     lastMilestone = 0;
     basicLog.accept(
-        "Raster Writer: writing " + output + " with " + this.compression + " compression");
+        "Raster Writer: writing "
+            + output
+            + " with "
+            + this.compression
+            + " compression"
+            + ("COG".equalsIgnoreCase(format) ? " as COG" : ""));
   }
 
   void report(int percentage) {

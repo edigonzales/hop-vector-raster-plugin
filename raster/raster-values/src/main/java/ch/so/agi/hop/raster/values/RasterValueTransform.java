@@ -107,13 +107,20 @@ public final class RasterValueTransform extends BaseTransform<RasterValueMeta, R
                   .toAbsolutePath()
                   .normalize();
           var progress = new RasterWriteProgress(message -> logBasic(message));
-          progress.started(output, meta.getCompression());
+          progress.started(output, meta.getCompression(), meta.getFormat());
+          var writeOptions =
+              new RasterWriteOptions(
+                  RasterWriteOptions.Format.valueOf(meta.getFormat()),
+                  RasterWriteOptions.Overviews.valueOf(meta.getOverviews()),
+                  RasterWriteOptions.Resampling.valueOf(meta.getOverviewResampling()),
+                  512,
+                  meta.getCompression());
           data.backend.write(
               raster,
               output,
               meta.isOverwrite(),
               this::isStopped,
-              meta.getCompression(),
+              writeOptions,
               progress::report);
           progress.completed();
           result[index(meta.getPrefix() + "output_file")] = output.toString();

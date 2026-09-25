@@ -96,7 +96,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
               "rasterField outputRasterField targetCrs targetCrsField resolutionX resolutionY"
                   + " resolutionFields extentMode minX minY maxX maxY bboxFields interpolation"
                   + " outputType sourceNoData outputNoData";
-          case "WRITER" -> "rasterField output compression overwrite prefix";
+          case "WRITER" ->
+              "rasterField output format compression overviews overviewResampling overwrite prefix";
           case "STATS" -> "rasterField geometryField explicitCrs band noData statistics prefix";
           case "INFO" -> "rasterField infoFields prefix";
           default -> "";
@@ -156,6 +157,9 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 case "interpolation" -> new String[] {"NEAREST", "BILINEAR"};
                 case "outputType" -> new String[] {"AUTO", "SOURCE", "FLOAT32", "FLOAT64"};
                 case "compression" -> compressionChoices();
+                case "format" -> new String[] {"GEOTIFF", "COG"};
+                case "overviews" -> new String[] {"AUTO", "NONE"};
+                case "overviewResampling" -> new String[] {"AVERAGE", "NEAREST"};
                 default -> new String[0];
               };
           if (name.equals("compression")) {
@@ -210,6 +214,21 @@ public final class RasterValueDialog extends BaseTransformDialog {
         clipMethod.addModifyListener(
             event -> updateClipControls(clipMethod.getText(), controls, fieldLabels));
         updateClipControls(clipMethod.getText(), controls, fieldLabels);
+      }
+      if (input.operation().equals("WRITER")) {
+        var format = (ComboVar) controls.get("format");
+        var compression = (Combo) controls.get("compression");
+        Runnable update =
+            () -> updateWriterControls(format.getText(), compression, controls, fieldLabels);
+        format.addSelectionListener(
+            new SelectionAdapter() {
+              @Override
+              public void widgetSelected(SelectionEvent event) {
+                update.run();
+              }
+            });
+        format.addModifyListener(event -> update.run());
+        update.run();
       }
     } catch (Exception e) {
       throw new IllegalStateException(e);
@@ -306,6 +325,22 @@ public final class RasterValueDialog extends BaseTransformDialog {
       setFieldEnabled(name, enableBounds, controls, labels);
   }
 
+  private static void updateWriterControls(
+      String format,
+      Combo compression,
+      Map<String, Control> controls,
+      Map<String, Label> labels) {
+    boolean cog = "COG".equalsIgnoreCase(format);
+    setFieldEnabled("overviews", cog, controls, labels);
+    setFieldEnabled("overviewResampling", cog, controls, labels);
+    String current = compression.getText();
+    compression.removeAll();
+    compression.setItems(cog ? cogCompressionChoices() : compressionChoices());
+    int selection = compression.indexOf(current);
+    if (selection < 0) selection = compression.indexOf("Deflate");
+    if (selection >= 0) compression.select(selection);
+  }
+
   private static void setFieldEnabled(
       String name, boolean enabled, Map<String, Control> controls, Map<String, Label> labels) {
     Control control = controls.get(name);
@@ -345,6 +380,13 @@ public final class RasterValueDialog extends BaseTransformDialog {
     return codecs.toArray(String[]::new);
   }
 
+  private static String[] cogCompressionChoices() {
+    var codecs = new ArrayList<String>();
+    codecs.add("None");
+    codecs.addAll(ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.cogCompressionTypes());
+    return codecs.toArray(String[]::new);
+  }
+
   static String[] rasterFieldNames(IRowMeta fields) {
     if (fields == null) return new String[0];
     return fields.getValueMetaList().stream()
@@ -375,7 +417,10 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "extentMode" -> "Extent (AUTO / BOUNDING_BOX)";
       case "infoFields" -> "Metadata fields (width height crs bands)";
       case "output" -> "Output GeoTIFF path";
+      case "format" -> "Output format (GEOTIFF / COG)";
       case "compression" -> "Compression";
+      case "overviews" -> "Internal overviews (AUTO / NONE)";
+      case "overviewResampling" -> "Overview resampling (AVERAGE / NEAREST)";
       case "overwrite" -> "Overwrite existing files";
       case "prefix" -> "Result field prefix";
       default -> field.replaceAll("([A-Z])", " $1");

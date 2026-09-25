@@ -339,7 +339,37 @@ public final class RasterDialogSmoke {
       throw new AssertionError("Writer compression must default to Deflate");
     int lzw = compression.indexOf("LZW");
     if (lzw < 0) throw new AssertionError("Writer compression is missing LZW");
+
+    Control formatEditor = editorAfterLabel(dialog, "Output format (GEOTIFF / COG)");
+    if (!(formatEditor instanceof ComboVar cogFormat))
+      throw new AssertionError("Writer format must be a selection box");
+    cogFormat.setText("COG");
+    cogFormat.getCComboWidget().notifyListeners(org.eclipse.swt.SWT.Modify, new Event());
+    var expectedCogCodecs = new java.util.ArrayList<String>();
+    expectedCogCodecs.add("None");
+    expectedCogCodecs.addAll(
+        ch.so.agi.hop.raster.geotools.GeoToolsRasterBackend.cogCompressionTypes());
+    if (!Arrays.equals(compression.getItems(), expectedCogCodecs.toArray(String[]::new)))
+      throw new AssertionError("COG compression choices do not match the COG writer");
+    Control overviews = editorAfterLabel(dialog, "Internal overviews (AUTO / NONE)");
+    if (overviews == null || !isEnabled(overviews))
+      throw new AssertionError("COG must enable internal overviews");
+    Control resampling = editorAfterLabel(dialog, "Overview resampling (AVERAGE / NEAREST)");
+    if (resampling == null || !isEnabled(resampling))
+      throw new AssertionError("COG must enable overview resampling");
+    cogFormat.setText("GEOTIFF");
+    cogFormat.getCComboWidget().notifyListeners(org.eclipse.swt.SWT.Modify, new Event());
+    if (!Arrays.equals(compression.getItems(), expectedCodecs.toArray(String[]::new)))
+      throw new AssertionError("GeoTIFF compression choices were not restored");
+    if (isEnabled(overviews) || isEnabled(resampling))
+      throw new AssertionError("GeoTIFF output must disable overview controls");
+
     compression.select(lzw);
+  }
+
+  private static boolean isEnabled(Control control) {
+    if (control instanceof ComboVar combo) return combo.getCComboWidget().isEnabled();
+    return control.isEnabled();
   }
 
   private static void selectValueMode(Combo mode, int index) {

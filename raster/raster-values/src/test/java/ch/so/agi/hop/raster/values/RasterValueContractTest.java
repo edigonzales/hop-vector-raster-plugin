@@ -86,6 +86,9 @@ class RasterValueContractTest {
     assertThat(restored.getOutput()).isEqualTo("destination_path");
     assertThat(restored.isOutputField()).isTrue();
     assertThat(restored.getCompression()).isEqualTo("Deflate");
+    assertThat(restored.getFormat()).isEqualTo("GEOTIFF");
+    assertThat(restored.getOverviews()).isEqualTo("AUTO");
+    assertThat(restored.getOverviewResampling()).isEqualTo("AVERAGE");
     assertThat(restored.isOverwrite()).isTrue();
     assertThat(restored.getPrefix()).isEqualTo("result_");
 
@@ -99,6 +102,50 @@ class RasterValueContractTest {
     assertThat(roundTrip.getCompression()).isEqualTo("Deflate");
     assertThat(roundTrip.isOverwrite()).isTrue();
     assertThat(roundTrip.getPrefix()).isEqualTo("result_");
+  }
+
+  @Test
+  void writerFormatAndOverviewSettingsRoundTrip() throws Exception {
+    var writer = new RasterWriterMeta();
+    writer.setOutput("destination_path");
+    writer.setFormat("COG");
+    writer.setCompression("LZW");
+    writer.setOverviews("NONE");
+    writer.setOverviewResampling("NEAREST");
+    var restored = new RasterWriterMeta();
+    restored.loadXml(
+        XmlHandler.loadXmlString("<transform>" + writer.getXml() + "</transform>")
+            .getDocumentElement(),
+        null);
+
+    assertThat(restored.getFormat()).isEqualTo("COG");
+    assertThat(restored.getCompression()).isEqualTo("LZW");
+    assertThat(restored.getOverviews()).isEqualTo("NONE");
+    assertThat(restored.getOverviewResampling()).isEqualTo("NEAREST");
+  }
+
+  @Test
+  void writerRejectsUnknownFormatAndOverviewSettings() {
+    var format = new RasterWriterMeta();
+    format.setOutput("destination.tif");
+    format.setFormat("PNG");
+    assertThatThrownBy(format::validateSettings)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("format");
+
+    var overviews = new RasterWriterMeta();
+    overviews.setOutput("destination.tif");
+    overviews.setOverviews("EXTERNAL");
+    assertThatThrownBy(overviews::validateSettings)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Overview");
+
+    var resampling = new RasterWriterMeta();
+    resampling.setOutput("destination.tif");
+    resampling.setOverviewResampling("CUBIC");
+    assertThatThrownBy(resampling::validateSettings)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("resampling");
   }
 
   @Test

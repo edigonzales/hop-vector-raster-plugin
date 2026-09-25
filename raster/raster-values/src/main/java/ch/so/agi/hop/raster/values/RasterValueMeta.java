@@ -293,6 +293,36 @@ public abstract class RasterValueMeta
     compression = value;
   }
 
+  @HopMetadataProperty private String format = "GEOTIFF";
+
+  public String getFormat() {
+    return format;
+  }
+
+  public void setFormat(String value) {
+    format = value;
+  }
+
+  @HopMetadataProperty private String overviews = "AUTO";
+
+  public String getOverviews() {
+    return overviews;
+  }
+
+  public void setOverviews(String value) {
+    overviews = value;
+  }
+
+  @HopMetadataProperty private String overviewResampling = "AVERAGE";
+
+  public String getOverviewResampling() {
+    return overviewResampling;
+  }
+
+  public void setOverviewResampling(String value) {
+    overviewResampling = value;
+  }
+
   @HopMetadataProperty private boolean overwrite = false;
 
   public boolean isOverwrite() {
@@ -376,6 +406,14 @@ public abstract class RasterValueMeta
       throw new IllegalArgumentException("Raster source is required");
     if (operation().equals("WRITER") && (output == null || output.isBlank()))
       throw new IllegalArgumentException("Output GeoTIFF is required");
+    if (operation().equals("WRITER")
+        && !List.of("GEOTIFF", "COG").contains(format))
+      throw new IllegalArgumentException("Output format must be GEOTIFF or COG");
+    if (operation().equals("WRITER") && !List.of("AUTO", "NONE").contains(overviews))
+      throw new IllegalArgumentException("Overview mode must be AUTO or NONE");
+    if (operation().equals("WRITER")
+        && !List.of("AVERAGE", "NEAREST").contains(overviewResampling))
+      throw new IllegalArgumentException("Overview resampling must be AVERAGE or NEAREST");
     if (operation().equals("CLIP") && !List.of("POLYGON", "BOUNDING_BOX").contains(clipMethod))
       throw new IllegalArgumentException("Invalid clip method");
     if (operation().equals("REPROJECT")
