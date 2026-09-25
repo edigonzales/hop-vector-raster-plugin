@@ -81,6 +81,20 @@ link:downloads/raster-values/clip-reproject.hpl[Raster Reader → Clip → Repro
 Diese Pipeline gibt das Feld `raster` direkt von Operation zu Operation weiter und schreibt erst am Ende.
 Setzen Sie die in der HPL-Datei definierten Parameter auf Ihre Daten; es entstehen keine Zwischendateien.
 
+[[raster-cog-writer-beispiel]]
+=== Raster als Cloud Optimized GeoTIFF schreiben
+
+link:downloads/raster-writer/cog.hpl[Raster Reader → Raster Writer (COG) herunterladen]
+
+Parameter: `INPUT_RASTER`, `OUTPUT_FILE`, `COMPRESSION` (`Deflate` als Standard), `OVERVIEWS` (`AUTO`)
+und `OVERVIEW_RESAMPLING` (`AVERAGE`). Die Vorlage liest eine lokale GeoTIFF-Datei oder ein öffentliches
+HTTP-COG und schreibt über *Output format* `COG` ein Cloud Optimized GeoTIFF mit internen Overviews.
+Der Writer ergänzt `raster_output_file` und `raster_status`; ein abschliessendes Select Values entfernt
+das Hilfsfeld. Verwenden Sie für eigene Testdaten mindestens 1024 Pixel Kantenlänge, damit Overviews entstehen.
+Die installierte Prüfung kontrolliert die Struktur mit `scripts/check-cog-output.py`; mit GDAL-Unterstützung
+(`GDAL_PREFIX`) läuft zusätzlich der GDAL-Validator `validate_cloud_optimized_geotiff.py`. Die Ausgabe
+wird anschliessend nochmals über den Raster Reader gelesen.
+
 === Lokale Prüfung
 
 `scripts/check-doc-examples.py` führt Clip und Statistik aus den echten HPL-Dateien mit kleinen,
@@ -97,4 +111,5 @@ Setzen Sie `HOP_HOME`, `GEOMETRY_ZIP` und `RASTER_TYPE_ZIP` auf absolute Pfade u
 python3 scripts/check-doc-examples.py --hop-home "$HOP_HOME" --geometry-zip "$GEOMETRY_ZIP" --raster-type-zip "$RASTER_TYPE_ZIP"
 ----
 
-Externe COGs gehören nicht zur verpflichtenden Prüfung.
+Externe öffentliche COGs gehören wie bisher nicht zur verpflichtenden Prüfung; das lokal erzeugte
+COG-Beispiel wird dagegen mit Strukturprüfung und, falls GDAL verfügbar ist, mit dem GDAL-Validator geprüft.

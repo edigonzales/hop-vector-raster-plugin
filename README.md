@@ -16,7 +16,7 @@ All transforms appear in the **Geospatial** category.
 | Raster Info (GeoTools) | Add selected raster metadata without calculating pixels. |
 | Raster Clip (GeoTools) | Plan a box/polygon clip of all bands or an explicit selection. |
 | Raster Reproject / Resample (GeoTools) | Reproject and resample all bands, including color, palette and alpha rasters. |
-| Raster Writer (GeoTools) | Materialize a Raster value as a local GeoTIFF/BigTIFF. |
+| Raster Writer (GeoTools) | Materialize a Raster value as a local GeoTIFF/BigTIFF or Cloud Optimized GeoTIFF. |
 | Raster Zonal Statistics (GeoTools) | Add polygon statistics such as mean, min, max and valid pixel count to rows. |
 
 FlatGeobuf, Parquet and GENERATE are output-only. Parquet uses native
@@ -79,7 +79,9 @@ python3 docs/biblios/build.py --serve --port 8080
 Use **Vector Reader → Vector Writer** for vector conversion. For raster processing, use
 **Raster Reader → Raster Clip → Raster Reproject → Raster Writer**. Reader can run without
 upstream rows; downstream operations carry a typed Raster field and do not write intermediate
-TIFFs. See the [complete value-chain example](examples/raster-values/README.md).
+TIFFs. The writer publishes plain tiled GeoTIFFs or Cloud Optimized GeoTIFFs.
+See the [complete value-chain example](examples/raster-values/README.md) and the
+[COG writer example](examples/raster-writer/cog.hpl).
 
 File-based raster pipelines require migration with
 `scripts/migrate-raster-values.py old.hpl new.hpl`. Migrate them before opening the pipeline in Hop,
@@ -106,7 +108,8 @@ into the Vector/Raster ZIP.
 - Vector CRS settings assign a CRS; they do not reproject coordinates.
 - Raster input supports local GeoTIFFs and public HTTP/HTTPS COGs. Remote servers
   must support byte ranges; authentication and custom headers are not exposed.
-- Raster output is tiled GeoTIFF, not a promised COG.
+- Raster output is tiled GeoTIFF; the Raster Writer's COG format additionally writes internal
+  overviews, the cloud-optimized layout and a GDAL ghost area.
 - Dimension, curve, NULL and overwrite behavior depend on the chosen format;
   consult the manual before converting a dataset.
 

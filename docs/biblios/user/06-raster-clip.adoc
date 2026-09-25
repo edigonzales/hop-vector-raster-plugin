@@ -127,7 +127,10 @@ Die Skizze zeigt die Defaults; mit dem Präfix `raster_` entstehen `raster_width
 | Transform name                                      [ Beispiel WRITER ]            |
 | Input raster field                                  [ raster v ]                   |
 | Output GeoTIFF path [ Value / Variable v ]         [ ${PROJECT_HOME}/result.tif ] [ Browse... ] |
-| Compression                                         [ Deflate v ]                   |
+| Output format (GEOTIFF / COG)                       [ GEOTIFF v ]                  |
+| Compression                                         [ Deflate v ]                  |
+| Internal overviews (AUTO / NONE)                    [ AUTO v ]                     |
+| Overview resampling (AVERAGE / NEAREST)             [ AVERAGE v ]                  |
 | Overwrite existing files                           [ ]                                      |
 | Result field prefix                                [ raster_ ]                             |
 |                                                                                    |
@@ -151,8 +154,21 @@ und `raster_status`. Standardpräfix: `raster_`.
 Standard ist `Deflate` (verlustfrei). Nicht jede Kompression passt zu jedem Rastertyp; insbesondere sind
 JPEG-Verfahren verlustbehaftet und CCITT-Verfahren für spezielle 1-Bit-Bilder gedacht. Der Writer filtert
 die Auswahl nicht nach Datentyp. Bei einer inkompatiblen Auswahl meldet der TIFF-Writer beim Ausführen einen Fehler.
+*Output format* wählt `GEOTIFF` (Standard) oder `COG`. Ein COG erhält zusätzlich zur tiled GeoTIFF-Ausgabe
+interne Reduced-Resolution-Subfiles (Overviews), die IFDs mit ihren Tag-Werten vor den Bilddaten, die
+Datenreihenfolge kleinste Overview → grösste Overview → Hauptbild, einen GDAL-kompatiblen Ghost-Bereich
+sowie Block-Leader und -Trailer. Die Georeferenz steht nur auf dem Hauptbild.
+*Internal overviews* (`AUTO`/`NONE`) steuert die Overviews: `AUTO` halbiert die Auflösung, bis Höhe und
+Breite höchstens 512 Pixel betragen; die letzte Stufe umfasst höchstens eine Tile-Zeile oder -Spalte.
+*Overview resampling* mittelt mit `AVERAGE` (NoData-Werte werden ausgelassen) oder wählt mit `NEAREST`
+Stichproben; Palettendaten verwenden immer `NEAREST`. Beide Overview-Felder sind nur bei `COG` aktiv.
+COG unterstützt die verlustfreien Verfahren `None`, `Deflate`, `ZLib`, `LZW`, `ZSTD` und `PackBits`;
+`JPEG`, `EXIF JPEG` und die CCITT-Verfahren bleiben der normalen GeoTIFF-Ausgabe vorbehalten.
+Overviews werden komprimiert in temporäre Nachbardateien geschrieben, während des Schreibens in das COG
+übernommen und danach entfernt; der zusätzliche Platzbedarf entspricht ungefähr den Overview-Daten.
 Im Hop-Loglevel *Basic* erscheinen Start, Schreibfortschritt in 10-Prozent-Schritten und Abschlussdauer.
-Die Ausgabe verwendet 512 × 512 Pixel grosse Tiles und ab geschätzten 2 GiB Rohdaten BigTIFF; eine COG-Erzeugung ist nicht zugesichert.
+Die Ausgabe verwendet 512 × 512 Pixel grosse Tiles und ab geschätzten 2 GiB Rohdaten BigTIFF;
+mit *Output format* `COG` entsteht ein Cloud Optimized GeoTIFF.
 Das Elternverzeichnis muss existieren. Fehler/Abbruch entfernen die temporäre Nachbardatei und erhalten ein bestehendes Ziel.
 
 === Auswertung und Fehler

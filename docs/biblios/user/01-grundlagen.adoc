@@ -15,7 +15,7 @@ Vektorformate verwenden eigene Java-Adapter, GeoPackage zusätzlich SQLite JDBC.
 |Mehrere FileGDB-Datasets schreiben |<<filegdb-writer,FileGDB Writer>>
 |Rasterwert erzeugen |<<raster-reader,Raster Reader (GeoTools)>>
 |Rastermetadaten ergänzen |<<raster-info,Raster Info (GeoTools)>>
-|Rasterwert als GeoTIFF schreiben |<<raster-writer,Raster Writer (GeoTools)>>
+|Rasterwert als GeoTIFF oder COG schreiben |<<raster-writer,Raster Writer (GeoTools)>>
 |Raster ausschneiden, Quellauflösung erhalten |<<raster-clip,Raster Clip (GeoTools)>>
 |Raster-CRS oder Pixelgrösse ändern |<<raster-reproject,Raster Reproject (GeoTools)>>
 |Rasterwerte innerhalb von Polygonen auswerten |<<raster-statistik,Raster ZonalStats (GeoTools)>>
@@ -51,6 +51,8 @@ Die Dateiauswahl unterstützt lokale TIFF-Dateien, öffentliche COG-URLs können
 Raster Writer bietet dieselbe Moduswahl für den lokalen Ausgabepfad; *Browse...* öffnet dort die Dateiauswahl.
 Im Modus *Input field* enthält eine Textspalte pro Zeile den GeoTIFF-Zielpfad.
 Beim Raster Writer lassen sich ausserdem TIFF-Kompressionsarten wählen; `Deflate` ist der Standard.
+Das Ausgabeformat `COG` ergänzt interne Overviews, den COG-Dateiaufbau und einen Ghost-Bereich;
+die Overview-Einstellungen sind nur in diesem Format aktiv.
 Clip und Reproject lesen mit *bbox Fields* alle vier Bounding-Box-Werte aus Spalten.
 Reproject bietet zusätzlich *target Crs Field* und *resolution Fields* für Ziel-CRS und beide Pixelgrössen.
 Raster- und Geometriefelder bezeichnen immer Spalten und benötigen keine zusätzliche Checkbox.
