@@ -331,7 +331,21 @@ public class VectorDialogSmoke {
       VectorReaderMeta reader = new VectorReaderMeta();
       PipelineMeta rpm = new PipelineMeta();
       rpm.addTransform(new TransformMeta("Reader", reader));
-      VectorReaderDialog rd = new VectorReaderDialog(parent, new Variables(), reader, rpm);
+      var readerVariables = new Variables();
+      var startFolder = java.nio.file.Files.createTempDirectory("hop-reader-start-");
+      readerVariables.setVariable("VECTOR_GDB_START", startFolder.toString());
+      String[] directorySelection = {null};
+      String[] observedStartPath = {null};
+      VectorReaderDialog rd =
+          new VectorReaderDialog(
+              parent,
+              readerVariables,
+              reader,
+              rpm,
+              (dialogParent, initialPath) -> {
+                observedStartPath[0] = initialPath;
+                return directorySelection[0];
+              });
       whenOpen(
           display,
           parent,
@@ -384,6 +398,18 @@ public class VectorDialogSmoke {
               }
               formats.setText("FILEGEODATABASE");
               formats.notifyListeners(SWT.Selection, new Event());
+              var fileName = (org.apache.hop.ui.core.widget.TextVar) field(content, "fileName");
+              Button directoryBrowse = (Button) field(rd, "wbFile");
+              fileName.setText("${VECTOR_GDB_START}");
+              directoryBrowse.notifyListeners(SWT.Selection, new Event());
+              if (!startFolder.toString().equals(observedStartPath[0])
+                  || !"${VECTOR_GDB_START}".equals(fileName.getText()))
+                throw new AssertionError(
+                    "FileGDB folder chooser must resolve its initial path and preserve value on cancel");
+              directorySelection[0] = startFolder.resolve("chosen.gdb").toString();
+              directoryBrowse.notifyListeners(SWT.Selection, new Event());
+              if (!directorySelection[0].equals(fileName.getText()))
+                throw new AssertionError("FileGDB folder selection was not applied");
               ((org.apache.hop.ui.core.widget.TextVar) field(content, "fileName"))
                   .setText(fgdb.toString());
               if (!((Text) field(rd, "wAvailableFieldsPreview"))
@@ -394,6 +420,7 @@ public class VectorDialogSmoke {
                 for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList())
                   java.nio.file.Files.delete(path);
               }
+              java.nio.file.Files.delete(startFolder);
               Text preview = content.getAvailableFieldsPreview();
               int initialHeight = preview.getSize().y;
               if (containsLabel(content, "FileGDB X min (source CRS)"))

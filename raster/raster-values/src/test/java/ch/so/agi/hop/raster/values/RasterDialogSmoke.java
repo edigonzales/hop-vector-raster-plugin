@@ -2,6 +2,7 @@ package ch.so.agi.hop.raster.values;
 
 import ch.so.agi.hop.commons.core.SourceMode;
 import ch.so.agi.hop.commons.core.ValueOrField;
+import ch.so.agi.hop.commons.ui.EditorKind;
 import ch.so.agi.hop.commons.ui.ValueOrFieldControl;
 import java.util.Arrays;
 import java.util.List;
@@ -245,6 +246,15 @@ public final class RasterDialogSmoke {
   private static void verifySourceControl(Control control) {
     ValueOrFieldControl source = findControl(control, ValueOrFieldControl.class);
     if (source == null) throw new AssertionError("Reader source widget is missing");
+    verifyLocalFilePicker(source);
+    TextVar configured = findControl(source, TextVar.class);
+    if (configured == null
+        || (configured.getTextWidget().getStyle() & org.eclipse.swt.SWT.READ_ONLY) != 0)
+      throw new AssertionError("Reader source must remain manually editable");
+    String publicCogUrl = "https://example.org/rasters/sample.tif";
+    source.setValue(new ValueOrField(SourceMode.CONFIGURED, publicCogUrl, ""));
+    if (!publicCogUrl.equals(source.getValue().configuredValue()))
+      throw new AssertionError("Reader must preserve a manually entered public COG URL");
     Button browse = findButton(source);
     if (browse == null || !browse.isEnabled())
       throw new AssertionError("Reader source widget must expose an enabled Browse button");
@@ -269,6 +279,141 @@ public final class RasterDialogSmoke {
     source.setValue(new ValueOrField(SourceMode.FIELD, "", "source_path"));
     if (!"source_path".equals(source.getValue().fieldName()))
       throw new AssertionError("Reader source field value was not retained by the widget");
+  }
+
+  private static final class FakeNativeFileDialog
+      implements LocalRasterFileBrowseStrategy.NativeFileDialog {
+    private final int style;
+    private final String selection;
+    private String[] extensions;
+    private String[] names;
+    private String filterPath;
+    private String fileName;
+
+    private FakeNativeFileDialog(int style, String selection) {
+      this.style = style;
+      this.selection = selection;
+    }
+
+    @Override
+    public void setFilterExtensions(String[] extensions) {
+      this.extensions = extensions.clone();
+    }
+
+    @Override
+    public void setFilterNames(String[] names) {
+      this.names = names.clone();
+    }
+
+    @Override
+    public void setFilterPath(String path) {
+      filterPath = path;
+    }
+
+    @Override
+    public void setFileName(String name) {
+      fileName = name;
+    }
+
+    @Override
+    public String open() {
+      return selection;
+    }
+  }
+
+  private static void verifyLocalFilePicker(ValueOrFieldControl control) {
+    try {
+      var configField = ValueOrFieldControl.class.getDeclaredField("config");
+      configField.setAccessible(true);
+      Object config = configField.get(control);
+      var strategyField = config.getClass().getDeclaredField("browseStrategy");
+      strategyField.setAccessible(true);
+      if (!(strategyField.get(config) instanceof LocalRasterFileBrowseStrategy))
+        throw new AssertionError("Raster selection must use the local SWT file picker");
+    } catch (ReflectiveOperationException e) {
+      throw new AssertionError("Could not inspect the raster file picker strategy", e);
+    }
+  }
+
+  private static void verifyLocalRasterBrowseStrategy(Shell parent) throws Exception {
+    var variables = new org.apache.hop.core.variables.Variables();
+    var root = java.nio.file.Files.createTempDirectory("raster-local-browse-");
+    variables.setVariable("RASTER_BROWSE_ROOT", root.toString());
+    String[] nextSelection = {root.resolve("selected.tif").toString()};
+    FakeNativeFileDialog[] lastDialog = {null};
+    var strategy =
+        new LocalRasterFileBrowseStrategy(
+            (shell, style) -> {
+              lastDialog[0] = new FakeNativeFileDialog(style, nextSelection[0]);
+              return lastDialog[0];
+            });
+    String[] extensions = {"*.tif", "*.tiff", "*"};
+    String[] names = {"GeoTIFF", "TIFF", "All files"};
+
+    var opened =
+        strategy.browse(
+            parent,
+            variables,
+            "${RASTER_BROWSE_ROOT}/input.tif",
+            EditorKind.FILE_OPEN,
+            extensions,
+            names);
+    FakeNativeFileDialog fileDialog = lastDialog[0];
+    if (!opened.orElseThrow().equals(root.resolve("selected.tif").toString())
+        || fileDialog.style != org.eclipse.swt.SWT.OPEN
+        || !root.toString().equals(fileDialog.filterPath)
+        || !"input.tif".equals(fileDialog.fileName)
+        || !Arrays.equals(extensions, fileDialog.extensions)
+        || !Arrays.equals(names, fileDialog.names))
+      throw new AssertionError("Raster open chooser must use local path, filters and resolved variables");
+
+    nextSelection[0] = root.resolve("output.tif").toString();
+    strategy.browse(
+        parent,
+        variables,
+        "${RASTER_BROWSE_ROOT}/output.tif",
+        EditorKind.FILE_SAVE,
+        extensions,
+        names);
+    fileDialog = lastDialog[0];
+    if (fileDialog.style != org.eclipse.swt.SWT.SAVE
+        || !root.toString().equals(fileDialog.filterPath)
+        || !"output.tif".equals(fileDialog.fileName))
+      throw new AssertionError("Raster save chooser must use the local output path and filters");
+
+    nextSelection[0] = null;
+    var cancelled =
+        strategy.browse(
+            parent,
+            variables,
+            "https://example.org/rasters/sample.tif",
+            EditorKind.FILE_OPEN,
+            extensions,
+            names);
+    fileDialog = lastDialog[0];
+    if (cancelled.isPresent() || fileDialog.filterPath != null || fileDialog.fileName != null)
+      throw new AssertionError("URL browsing must stay manual and cancellation must be empty");
+
+    var control =
+        ValueOrFieldControl.builder(parent, variables)
+            .editor(EditorKind.FILE_OPEN)
+            .fileFilters(extensions, names)
+            .browseStrategy(strategy)
+            .build();
+    String publicCogUrl = "https://example.org/rasters/sample.tif";
+    control.setValue(new ValueOrField(SourceMode.CONFIGURED, publicCogUrl, ""));
+    Button browse = findButton(control);
+    if (browse == null) throw new AssertionError("Local raster chooser button is missing");
+    browse.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!publicCogUrl.equals(control.getValue().configuredValue()))
+      throw new AssertionError("Cancelling local browsing must preserve a manually entered URL");
+    nextSelection[0] = root.resolve("chosen.tif").toString();
+    browse.notifyListeners(org.eclipse.swt.SWT.Selection, new Event());
+    if (!nextSelection[0].equals(control.getValue().configuredValue()))
+      throw new AssertionError("Selected local raster path was not written to the control");
+    control.dispose();
+    java.nio.file.Files.delete(root);
+    System.out.println("Raster local browse strategy: filters, variable paths, URL and cancel OK");
   }
 
   private static void verifyReprojectDialog(Shell shell, RasterValueMeta meta) {
@@ -330,6 +475,7 @@ public final class RasterDialogSmoke {
   private static void verifyWriterDialog(Shell dialog, boolean saveByField) {
     ValueOrFieldControl output = findControl(dialog, ValueOrFieldControl.class);
     if (output == null) throw new AssertionError("Writer output widget is missing");
+    verifyLocalFilePicker(output);
     Button browse = findButton(output);
     if (browse == null || !browse.isVisible())
       throw new AssertionError("Writer output widget must expose a visible Browse button");
@@ -598,6 +744,7 @@ public final class RasterDialogSmoke {
     Display display = new Display();
     Shell parent = new Shell(display);
     try {
+      verifyLocalRasterBrowseStrategy(parent);
       var variables = new Variables();
       List<DialogCase> cases =
           List.of(

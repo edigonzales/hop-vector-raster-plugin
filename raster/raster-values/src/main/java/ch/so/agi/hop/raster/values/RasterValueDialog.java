@@ -112,6 +112,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
                 .fileFilters(
                     new String[] {"*.tif", "*.tiff", "*"},
                     new String[] {"GeoTIFF", "TIFF", "All files"})
+                .browseStrategy(new LocalRasterFileBrowseStrategy())
                 .fieldProvider(() -> inputFieldNames(false))
                 .build();
         sourceControl.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -150,6 +151,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
                   .fileFilters(
                       new String[] {"*.tif", "*.tiff", "*"},
                       new String[] {"GeoTIFF", "TIFF", "All files"})
+                  .browseStrategy(new LocalRasterFileBrowseStrategy())
                   .fieldProvider(this::inputStringFieldNames)
                   .build();
           outputControl.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));

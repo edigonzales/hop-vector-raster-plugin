@@ -14,6 +14,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -21,7 +22,13 @@ import org.eclipse.swt.widgets.Text;
 
 public class VectorReaderDialog extends BaseTransformDialog {
 
+  @FunctionalInterface
+  interface DirectoryPicker {
+    String open(Shell parent, String initialPath);
+  }
+
   private final VectorReaderMeta input;
+  private final DirectoryPicker directoryPicker;
   private TextVar wFileName, wCharset, wTimezone, wCrs;
   private org.eclipse.swt.widgets.Combo wFormat;
   private Button wbFile;
@@ -38,8 +45,23 @@ public class VectorReaderDialog extends BaseTransformDialog {
       IVariables variables,
       VectorReaderMeta transformMeta,
       PipelineMeta pipelineMeta) {
+    this(
+        parent,
+        variables,
+        transformMeta,
+        pipelineMeta,
+        VectorReaderDialog::openNativeDirectoryDialog);
+  }
+
+  VectorReaderDialog(
+      Shell parent,
+      IVariables variables,
+      VectorReaderMeta transformMeta,
+      PipelineMeta pipelineMeta,
+      DirectoryPicker directoryPicker) {
     super(parent, variables, transformMeta, pipelineMeta);
     this.input = transformMeta;
+    this.directoryPicker = directoryPicker;
   }
 
   @Override
@@ -160,7 +182,10 @@ public class VectorReaderDialog extends BaseTransformDialog {
 
   private void browse() {
     if (usesDirectoryBrowser(wFormat.getText())) {
-      BaseDialog.presentDirectoryDialog(shell, wFileName, variables);
+      String initialPath = resolveUiValue(wFileName.getText());
+      if (initialPath.contains("${")) initialPath = "";
+      String selected = directoryPicker.open(shell, initialPath);
+      if (selected != null) wFileName.setText(selected);
       return;
     }
     FileDialog dialog = new FileDialog(shell, SWT.OPEN);
@@ -174,6 +199,12 @@ public class VectorReaderDialog extends BaseTransformDialog {
     if (selected != null) {
       wFileName.setText(selected);
     }
+  }
+
+  private static String openNativeDirectoryDialog(Shell parent, String initialPath) {
+    DirectoryDialog dialog = new DirectoryDialog(parent);
+    if (!Utils.isEmpty(initialPath)) dialog.setFilterPath(initialPath);
+    return dialog.open();
   }
 
   static boolean usesDirectoryBrowser(String format) {
