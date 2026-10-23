@@ -21,7 +21,10 @@ public final class GeoPackageBinary {
     copy.setSRID(0);
     byte[] wkb =
         CurveGeometrySupport.isCurveGeometry(copy)
-            ? new CurveWkbWriter().write(copy)
+            ? new CurveWkbWriter(
+                    com.atolcd.hop.gis.geometry.codec.WkbWriteOptions.iso(
+                        com.atolcd.hop.gis.geometry.codec.GeometryByteOrder.LITTLE_ENDIAN))
+                .write(copy)
             : new WKBWriter(2, ByteOrderValues.LITTLE_ENDIAN, false).write(copy);
     validateWkb(wkb);
     ByteBuffer b = ByteBuffer.allocate(8 + wkb.length).order(ByteOrder.LITTLE_ENDIAN);

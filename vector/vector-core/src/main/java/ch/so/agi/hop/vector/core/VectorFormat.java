@@ -6,7 +6,8 @@ public enum VectorFormat {
   FILEGEODATABASE,
   ARCINFO_GENERATE,
   FLATGEOBUF,
-  PARQUET;
+  PARQUET,
+  GEOJSON;
 
   public boolean writable() {
     return true;
@@ -21,11 +22,11 @@ public enum VectorFormat {
   }
 
   public boolean readable() {
-    return this == SHAPEFILE || this == GEOPACKAGE || this == FILEGEODATABASE;
+    return this == SHAPEFILE || this == GEOPACKAGE || this == FILEGEODATABASE || this == GEOJSON;
   }
 
   public boolean requiresGeometrySample() {
-    return this != ARCINFO_GENERATE;
+    return this != ARCINFO_GENERATE && this != GEOJSON;
   }
 
   public static VectorFormat resolve(String configured, java.nio.file.Path file) {
@@ -38,7 +39,8 @@ public enum VectorFormat {
     if (name.endsWith(".fgb")) return FLATGEOBUF;
     if (name.endsWith(".parquet")) return PARQUET;
     if (name.endsWith(".gen")) return ARCINFO_GENERATE;
+    if (name.endsWith(".geojson") || name.endsWith(".json")) return GEOJSON;
     throw new IllegalArgumentException(
-        "Select a vector format or use .shp, .gpkg, .gdb, .gen, .fgb or .parquet");
+        "Select a vector format or use .shp, .gpkg, .gdb, .gen, .fgb, .parquet, .geojson or .json");
   }
 }

@@ -3,8 +3,8 @@ package ch.so.agi.hop.vector.transforms;
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
 import java.nio.file.Path;
 import java.util.Locale;
-import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.core.row.IRowMeta;
+import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.ui.core.PropsUi;
 import org.apache.hop.ui.core.dialog.BaseDialog;
@@ -21,6 +21,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   private final VectorWriterMeta input;
   private TextVar wFileName;
   private Combo wFormat;
+  private GeoJsonFormatControls geoJsonOptions;
   private TextVar wLayer;
   private Composite generateOptions, layerOptions, shapeOptions;
   private TextVar wCrs, wCharset, wTimezone;
@@ -100,7 +101,8 @@ public class VectorWriterDialog extends BaseTransformDialog {
           "FILEGEODATABASE",
           "ARCINFO_GENERATE",
           "FLATGEOBUF",
-          "PARQUET"
+          "PARQUET",
+          "GEOJSON"
         });
     wFormat.setText(input.getFormat());
     new Label(body, SWT.NONE).setText("Layer (optional)");
@@ -122,6 +124,9 @@ public class VectorWriterDialog extends BaseTransformDialog {
     }
     wGeometryField.setText(initialGeometryField(input.getGeometryField(), previousFields));
     wGeometryField.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+    geoJsonOptions = new GeoJsonFormatControls(body, variables);
+    geoJsonOptions.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+    geoJsonOptions.load(input);
     layerOptions = new Composite(body, SWT.NONE);
     layerOptions.setLayout(new GridLayout(2, false));
     layerOptions.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
@@ -448,8 +453,11 @@ public class VectorWriterDialog extends BaseTransformDialog {
     }
     boolean generate = format != null && !format.supportsAttributes();
     boolean shape = format == ch.so.agi.hop.vector.core.VectorFormat.SHAPEFILE;
-    layerOptions.setVisible(!generate);
-    ((GridData) layerOptions.getLayoutData()).exclude = generate;
+    boolean json = format == ch.so.agi.hop.vector.core.VectorFormat.GEOJSON;
+    geoJsonOptions.setVisible(json);
+    ((GridData) geoJsonOptions.getLayoutData()).exclude = !json;
+    layerOptions.setVisible(!generate && !json);
+    ((GridData) layerOptions.getLayoutData()).exclude = generate || json;
     shapeOptions.setVisible(shape);
     ((GridData) shapeOptions.getLayoutData()).exclude = !shape;
     generateOptions.setVisible(generate);
@@ -464,7 +472,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
     parquetOptions.setVisible(parquet);
     ((GridData) parquetOptions.getLayoutData()).exclude = !parquet;
     wParquetAlgorithm.setEnabled(wParquetType.getText().equals("GEOGRAPHY"));
-    wLayer.setEnabled(!generate);
+    wLayer.setEnabled(!generate && !json);
     boolean gpkg = format == ch.so.agi.hop.vector.core.VectorFormat.GEOPACKAGE;
     geoPackageOptions.setVisible(gpkg);
     ((GridData) geoPackageOptions.getLayoutData()).exclude = !gpkg;
@@ -547,8 +555,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
       String available =
           "Vorhandene Layer: "
               + String.join(
-                  ", ",
-                  layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toList());
+                  ", ", layers.stream().map(ch.so.agi.hop.vector.core.LayerSchema::name).toList());
       if (wGeoPackageMode.getSelectionIndex() == 2 && !wLayer.getText().isBlank())
         previewGeoPackage(false);
       else wGeoPackagePreview.setText(available);
@@ -600,7 +607,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
       draft.setSkipEmpty(wSkipEmpty.getSelection());
       draft.setOverwrite(wOverwrite.getSelection());
       readAdditional(draft);
-      draft.validateSettings();
+      draft.validateSettings(variables);
       input.setFileName(draft.getFileName());
       input.setFormat(draft.getFormat());
       input.setLayerName(draft.getLayerName());
@@ -650,6 +657,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
   }
 
   private void readAdditional(VectorWriterMeta meta) {
+    geoJsonOptions.save(meta);
     meta.setFileGdbWriteMode(FILEGDB_MODES[wFileGdbWriteMode.getSelectionIndex()]);
     meta.setFileGdbSchemaFile(
         wFileGdbWriteMode.getSelectionIndex() == 2 ? "" : wFileGdbSchema.getText());
@@ -737,6 +745,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
       case "ARCINFO_GENERATE" -> new String[] {"*.gen"};
       case "FLATGEOBUF" -> new String[] {"*.fgb"};
       case "PARQUET" -> new String[] {"*.parquet"};
+      case "GEOJSON" -> new String[] {"*.geojson;*.json"};
       default -> new String[] {"*.*"};
     };
   }
@@ -749,6 +758,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
       case "ARCINFO_GENERATE" -> new String[] {"ArcInfo GENERATE (*.gen)"};
       case "FLATGEOBUF" -> new String[] {"FlatGeobuf (*.fgb)"};
       case "PARQUET" -> new String[] {"Parquet (*.parquet)"};
+      case "GEOJSON" -> new String[] {"GeoJSON / JSON-FG (*.geojson, *.json)"};
       default -> new String[] {"All files"};
     };
   }
@@ -765,8 +775,7 @@ public class VectorWriterDialog extends BaseTransformDialog {
     Path parent = path.getParent();
     if (parent != null) dialog.setFilterPath(parent.toString());
     Path fileName = path.getFileName();
-    if (fileName != null && !fileName.toString().isBlank())
-      dialog.setFileName(fileName.toString());
+    if (fileName != null && !fileName.toString().isBlank()) dialog.setFileName(fileName.toString());
   }
 
   private void cancel() {

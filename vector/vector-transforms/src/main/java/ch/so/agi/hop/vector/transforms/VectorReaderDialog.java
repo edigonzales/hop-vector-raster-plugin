@@ -31,6 +31,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
   private final DirectoryPicker directoryPicker;
   private TextVar wFileName, wCharset, wTimezone, wCrs;
   private org.eclipse.swt.widgets.Combo wFormat;
+  private GeoJsonFormatControls geoJsonOptions;
   private Button wbFile;
   private ComboVar wLayerName;
   private Text wAvailableFieldsPreview;
@@ -105,13 +106,21 @@ public class VectorReaderDialog extends BaseTransformDialog {
     fl.top = new FormAttachment(wTransformName, margin);
     formatLabel.setLayoutData(fl);
     wFormat = new org.eclipse.swt.widgets.Combo(shell, SWT.READ_ONLY);
-    wFormat.setItems(new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE"});
+    wFormat.setItems(
+        new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE", "GEOJSON"});
     FormData ff = new FormData();
     ff.left = new FormAttachment(props.getMiddlePct(), 0);
     ff.right = new FormAttachment(100, 0);
     ff.top = new FormAttachment(wTransformName, margin);
     wFormat.setLayoutData(ff);
     wFormat.setText(input.getFormat());
+    geoJsonOptions = new GeoJsonFormatControls(shell, variables);
+    geoJsonOptions.load(input);
+    FormData jsonData = new FormData();
+    jsonData.left = new FormAttachment(0, 0);
+    jsonData.right = new FormAttachment(100, 0);
+    jsonData.top = new FormAttachment(wFormat, margin);
+    geoJsonOptions.setLayoutData(jsonData);
     Button wOk = new Button(shell, SWT.PUSH);
     wOk.setText("OK");
     Button wCancel = new Button(shell, SWT.PUSH);
@@ -120,7 +129,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
 
     FormData fdMain = new FormData();
     fdMain.left = new FormAttachment(0, 0);
-    fdMain.top = new FormAttachment(wFormat, margin * 2);
+    fdMain.top = new FormAttachment(geoJsonOptions, margin);
     fdMain.right = new FormAttachment(100, 0);
     fdMain.bottom = new FormAttachment(wOk, -margin * 2);
 
@@ -172,6 +181,11 @@ public class VectorReaderDialog extends BaseTransformDialog {
           e -> {
             if (!suppressSchemaRefresh) loadLayersAndPreview();
           });
+    geoJsonOptions.onChange(
+        () -> {
+          input.setChanged();
+          if (!suppressSchemaRefresh) loadLayersAndPreview();
+        });
     getData();
     updateBrowseButton();
     loadLayersAndPreview();
@@ -189,7 +203,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
       return;
     }
     FileDialog dialog = new FileDialog(shell, SWT.OPEN);
-    dialog.setFilterExtensions(new String[] {"*.shp;*.gpkg", "*.*"});
+    dialog.setFilterExtensions(new String[] {"*.shp;*.gpkg;*.geojson;*.json", "*.*"});
     dialog.setFilterNames(new String[] {"Vector files", "All files"});
     String current = wFileName.getText();
     if (!Utils.isEmpty(current)) {
@@ -248,6 +262,16 @@ public class VectorReaderDialog extends BaseTransformDialog {
     wCharset.setEnabled(shp);
     wTimezone.setEnabled(shp);
     String resolvedFileName = resolveUiValue(wFileName.getText());
+    boolean json =
+        wFormat.getText().equals("GEOJSON")
+            || wFormat.getText().equals("AUTO")
+                && (resolvedFileName.toLowerCase(java.util.Locale.ROOT).endsWith(".json")
+                    || resolvedFileName.toLowerCase(java.util.Locale.ROOT).endsWith(".geojson"));
+    geoJsonOptions.setVisible(json);
+    ((FormData) geoJsonOptions.getLayoutData()).height = json ? SWT.DEFAULT : 0;
+    wCrs.setEnabled(!json);
+    wLayerName.setEnabled(!json);
+    shell.layout(true, true);
     if (resolvedFileName.isBlank()) {
       layerDefinitions = List.of();
       clearLayerCombo();
@@ -395,6 +419,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
       return;
     }
     transformName = wTransformName.getText();
+    geoJsonOptions.save(input);
     input.setCharset(wCharset.getText());
     input.setTimezone(wTimezone.getText());
     input.setCrsOverride(wCrs.getText());
@@ -402,11 +427,13 @@ public class VectorReaderDialog extends BaseTransformDialog {
     input.setFormat(wFormat.getText());
     input.setLayerName(wLayerName.getText());
     input.setGeometryFieldName(wGeometryFieldName.getText());
+    input.setChanged();
     dispose();
   }
 
   private VectorReaderMeta draft() {
     var m = new VectorReaderMeta();
+    geoJsonOptions.save(m);
     m.setFileName(wFileName.getText());
     m.setFormat(wFormat.getText());
     m.setLayerName("");

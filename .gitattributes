@@ -1,0 +1,2 @@
+# Keep vendored OGC schema bytes identical to their recorded upstream hashes.
+/scripts/tests/resources/jsonfg-1.0/*.json -text

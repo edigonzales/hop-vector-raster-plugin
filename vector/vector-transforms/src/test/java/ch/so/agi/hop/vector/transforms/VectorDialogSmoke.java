@@ -26,7 +26,8 @@ public class VectorDialogSmoke {
     StringBuilder result = new StringBuilder();
     for (Control child : composite.getChildren()) {
       result.append(child.getClass().getSimpleName()).append('=').append(child.getBounds());
-      if (child instanceof Composite nested) result.append('[').append(childSizes(nested)).append(']');
+      if (child instanceof Composite nested)
+        result.append('[').append(childSizes(nested)).append(']');
       result.append(' ');
     }
     return result.toString();
@@ -89,8 +90,7 @@ public class VectorDialogSmoke {
                 throw new AssertionError("Layer variable was not preserved or resolved");
               Combo format = (Combo) field(dialog, "wFormat");
               if (!java.util.Arrays.equals(
-                  VectorWriterDialog.fileDialogFilterExtensions("AUTO"),
-                  new String[] {"*.*"}))
+                  VectorWriterDialog.fileDialogFilterExtensions("AUTO"), new String[] {"*.*"}))
                 throw new AssertionError("AUTO save dialog must preserve the typed suffix");
               if (!java.util.Arrays.equals(
                   VectorWriterDialog.fileDialogFilterExtensions("SHAPEFILE"),
@@ -146,6 +146,15 @@ public class VectorDialogSmoke {
                 if (!((Button) field(dialog, "wOverwrite")).getVisible())
                   throw new AssertionError("Overwrite hidden");
               }
+              format.setText("GEOJSON");
+              format.notifyListeners(SWT.Selection, new Event());
+              if (!((Composite) field(dialog, "geoJsonOptions")).getVisible()
+                  || ((Composite) field(dialog, "layerOptions")).getVisible())
+                throw new AssertionError("GeoJSON mapping controls/layer visibility incorrect");
+              if (!java.util.Arrays.equals(
+                  VectorWriterDialog.fileDialogFilterExtensions("GEOJSON"),
+                  new String[] {"*.geojson;*.json"}))
+                throw new AssertionError("GeoJSON filter missing");
               // GeoPackage has its own non-destructive modes and target schema preview.
               java.nio.file.Path gpkg = java.nio.file.Files.createTempFile("hop-dialog-", ".gpkg");
               java.nio.file.Files.delete(gpkg);
@@ -354,8 +363,14 @@ public class VectorDialogSmoke {
               Combo formats = (Combo) field(rd, "wFormat");
               if (!java.util.Arrays.equals(
                   formats.getItems(),
-                  new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE"}))
+                  new String[] {"AUTO", "SHAPEFILE", "GEOPACKAGE", "FILEGEODATABASE", "GEOJSON"}))
                 throw new AssertionError("Wrong reader formats");
+              formats.setText("GEOJSON");
+              formats.notifyListeners(SWT.Selection, new Event());
+              if (!((Composite) field(rd, "geoJsonOptions")).getVisible())
+                throw new AssertionError("GeoJSON reader controls hidden");
+              formats.setText("AUTO");
+              formats.notifyListeners(SWT.Selection, new Event());
               VectorReaderDialogComposite content =
                   (VectorReaderDialogComposite) field(rd, "content");
               if (VectorReaderDialog.usesDirectoryBrowser("AUTO")
@@ -378,7 +393,8 @@ public class VectorDialogSmoke {
               if (!browse.getText().equals("Browse..."))
                 throw new AssertionError("File browse label was not restored: " + browse.getText());
               java.nio.file.Path fgdb =
-                  java.nio.file.Files.createTempDirectory("hop-reader-dialog-").resolve("sample.gdb");
+                  java.nio.file.Files.createTempDirectory("hop-reader-dialog-")
+                      .resolve("sample.gdb");
               var readerRows = new org.apache.hop.core.row.RowMeta();
               readerRows.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("name"));
               readerRows.addValueMeta(new com.atolcd.hop.core.row.value.ValueMetaGeometry("shape"));
@@ -405,7 +421,8 @@ public class VectorDialogSmoke {
               if (!startFolder.toString().equals(observedStartPath[0])
                   || !"${VECTOR_GDB_START}".equals(fileName.getText()))
                 throw new AssertionError(
-                    "FileGDB folder chooser must resolve its initial path and preserve value on cancel");
+                    "FileGDB folder chooser must resolve its initial path and preserve value on"
+                        + " cancel");
               directorySelection[0] = startFolder.resolve("chosen.gdb").toString();
               directoryBrowse.notifyListeners(SWT.Selection, new Event());
               if (!directorySelection[0].equals(fileName.getText()))

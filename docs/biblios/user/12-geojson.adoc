@@ -1,0 +1,220 @@
+[[geojson]]
+== GeoJSON und JSON-FG
+
+Geometry Type verarbeitet die Geometrie; Vector/Raster ergänzt Features, Attribute und Dateien.
+*Vector Reader* und *Vector Writer* verwenden lokale `.geojson`-/`.json`-Dateien.
+Die separaten Feature-Transforms verarbeiten ein Feature pro Hop-Zeile.
+Reine Geometry-Objekte gehören zum Geometry Converter im Geoprocessing-Plugin.
+
+=== Profile und Koordinaten
+
+[cols="1,3",options="header"]
+|===
+|Profil |Verhalten
+|`RFC7946` |Standardausgabe; X/Y ist WGS84-Längengrad/Breitengrad. Z bezeichnet WGS84-Ellipsoidhöhe in Metern. Kein `crs`.
+|`LEGACY2008` |GeoJSON 1.0 von 2008 mit benanntem `crs`; Reihenfolge X/Y.
+|`JSONFG10` |JSON-FG 1.0.0: native EPSG-/CRS84-Systeme, unterstützte Kreisbögen und M-Werte.
+|`AUTO` |Beim Lesen erkannte JSON-FG-Marker, sonst Legacy-`crs`, sonst RFC 7946. Beim Schreiben RFC 7946.
+|===
+
+JSON-FG `place` folgt der offiziellen Achsenreihenfolge des CRS. Intern verwendet Geometry
+weiterhin X/Y. Diese Zuordnung ist keine Reprojektion. `geometry` ist immer der optionale
+WGS84-Fallback, wenn die primäre Geometrie in `place` steht. Der Encoder berechnet diesen
+Fallback nicht: Das zweite Geometry-Feld muss bereits korrekt in WGS84 vorliegen.
+Ein leeres Fallback-Feld im Writer oder Encoder deaktiviert diesen Eingang ausdrücklich.
+Bei gewöhnlichen WGS84-Geometrien ohne Erweiterungen wird `geometry` verwendet.
+
+CRS müssen EPSG oder OGC CRS84/CRS84h entsprechen. Für XYZ sind bei JSON-FG ein 3D-CRS oder ein
+expliziter horizontaler/vertikaler Kontext nötig. Eine Geometrie mit SRID 2056 und Z
+besitzt dadurch noch keinen bekannten Höhenbezug. Der Kontext erhält Compound-CRS,
+M-Einheit und Beschreibung. Beliebiges WKT, verlinkte CRS, Engineering-Systeme,
+Höhenumrechnung und Koordinatenepochen werden nicht aufgelöst.
+Legacy2008 erhält Z auch mit einem zweidimensionalen CRS; die Höhenreferenz bleibt dabei unbestimmt.
+
+=== Feste Hop-Felder und Mapping
+
+[cols="1,1,3",options="header"]
+|===
+|Vorgabefeld |Hop-Typ |Inhalt
+|`geometry` |Geometry |Primäre native Geometrie; `place` hat beim Lesen Vorrang.
+|`geometry_wgs84` |Geometry |Separater WGS84-Fallback, falls vorhanden.
+|`properties_json` |String |Vollständiges Properties-Objekt oder JSON `null`.
+|`feature_id_json` |String |JSON-String oder JSON-Zahl; Hop NULL bedeutet fehlende ID.
+|`geojson_context_json` |String |Versionierter CRS-/M-, Feature- und Collection-Kontext.
+|===
+
+JSON-Text erhält verschachtelte Objekte, Arrays und genaue Dezimalzahlen.
+Whitespace und Schlüsselreihenfolge können sich ändern. Der Kontext gehört zur jeweiligen
+Geometrie und muss bei Änderungen an CRS oder Dimension entsprechend angepasst werden.
+Bounding Boxes werden nicht übernommen. Zeitangaben und weitere Feature-Metadaten bleiben erhalten.
+JSON-FG-Zeitangaben müssen gültig sein; es gibt keine zeitliche Transformation.
+
+Zusätzliche Feldprojektionen sind ausdrücklich konfiguriert, ohne Schema-Inferenz oder Vollscan:
+
+[source,json]
+----
+[{"pointer":"/address/city","field":"city","type":"STRING","writeNull":false}]
+----
+
+Typen sind `STRING`, `INTEGER`, `NUMBER`, `BIG_NUMBER`, `BOOLEAN` und `JSON`.
+`JSON` liefert beziehungsweise erwartet JSON-Text. `INTEGER` verlangt einen exakten Long-Wert;
+für genaue Dezimalzahlen dient `BIG_NUMBER`. Der Encoder legt gemappte Werte über das ursprüngliche
+Properties-JSON. Ein NULL-Feld lässt den ursprünglichen Wert bestehen; `writeNull: true` schreibt
+JSON null. Fehlende und explizit NULL gesetzte Properties bleiben im vollständigen JSON unterscheidbar.
+Doppelte oder überlappende Schreibpfade und Feldnamenskollisionen sind Fehler.
+
+=== Dateiverarbeitung
+
+Der Reader erzeugt ein festes Schema, auch bei NULL-Geometrien und gemischten Geometrietypen.
+Die Metadatenvorschau liest nicht die ganze Datei. Zur Laufzeit wird zuerst der Root-Kontext
+ermittelt; ein zweiter Durchlauf liest Features einzeln. Deshalb gelten CRS-Angaben auch dann,
+wenn sie im Dokument hinter `features` stehen. Ein einzelnes Feature ist ebenfalls lesbar.
+
+Der Writer erstellt eine FeatureCollection ohne Sample-Geometrie. Eine leere Eingabe ergibt
+eine leere Collection. Pro JSON-FG-Datei gilt ein gemeinsames primäres CRS; unterschiedliche
+CRS oder widersprüchliche Collection-Metadaten erfordern getrennte Ausgabedateien.
+Eine leere Collection erzeugt keine Hop-Zeilen und kann deshalb optionale Root-Metadaten
+nicht über die Kontextspalte weiterreichen; der Reader meldet diesen Fall. Die Quelldatei
+bei Bedarf zusätzlich aufbewahren.
+Das Ziel wird erst bei vollständigem Erfolg übernommen. Abbruch und Fehler löschen die Arbeitsdatei.
+HTTP, Append, GeoJSON Sequences und NDJSON sind nicht Bestandteil dieses Formats.
+
+Die folgenden Dateidialoge zeigen die GeoJSON-Einstellungen; alle nicht zutreffenden
+formatbezogenen Gruppen sind ausgeblendet.
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------+
+| Vector Reader                                                                  |
++--------------------------------------------------------------------------------+
+| Transform name                                     [Read GeoJSON ]             |
+| Format                                             [GEOJSON ]                  |
+| GeoJSON profile                                    [JSONFG10 ]                 |
+| WGS84 fallback geometry field                      [geometry_wgs84 ]           |
+| Properties JSON field                              [properties_json ]          |
+| Feature ID JSON field                              [feature_id_json ]          |
+| GeoJSON context JSON field                         [geojson_context_json ]     |
+| Properties mappings (JSON array)                   [[] ]                       |
+| Explicitly discard Z                               [<inaktiv> ]                |
+| Explicitly discard M                               [<inaktiv> ]                |
+| Explicitly replace unrepresentable EMPTY with null [<inaktiv> ]                |
+| Vector file                                        [${INPUT_VECTOR} ]          |
+| Layer name (optional)                              [<leer> ]                   |
+| DBF encoding (empty: auto)                         [<inaktiv> ]                |
+| Date timezone                                      [<inaktiv> ]                |
+| Assign CRS (EPSG or WKT)                           [<inaktiv> ]                |
+| Available fields                                   [Geometry + JSON + mappings ] |
+| Geometry output field                              [geometry ]                 |
+|                                                              [ OK ] [ Cancel ] |
++--------------------------------------------------------------------------------+
+----
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------+
+| Vector Writer                                                                  |
++--------------------------------------------------------------------------------+
+| Transform name                                     [Write GeoJSON ]            |
+| Format                                             [GEOJSON ]                  |
+| Layer (optional)                                   [<inaktiv> ]                |
+| Output file                                        [${OUTPUT_FILE} ]           |
+| Geometry field                                     [geometry ]                 |
+| GeoJSON profile                                    [JSONFG10 ]                 |
+| WGS84 fallback geometry field                      [geometry_wgs84 ]           |
+| Properties JSON field                              [properties_json ]          |
+| Feature ID JSON field                              [feature_id_json ]          |
+| GeoJSON context JSON field                         [geojson_context_json ]     |
+| Properties mappings (JSON array)                   [[] ]                       |
+| Explicitly discard Z                               [false ]                    |
+| Explicitly discard M                               [false ]                    |
+| Explicitly replace unrepresentable EMPTY with null [false ]                    |
+| Overwrite existing file                            [false ]                    |
+|                                                              [ OK ] [ Cancel ] |
++--------------------------------------------------------------------------------+
+----
+
+[[geojson-feature-decoder]]
+=== GeoJSON Feature Decoder
+
+Plugin-ID: `SOGIS_GEOJSON_FEATURE_DECODER`. Der Transform liest genau einen JSON-Feature-String
+pro Zeile und ergänzt die konfigurierten nativen Geometry- und JSON-Felder.
+Die ursprünglichen Eingabefelder bleiben erhalten. Ein FeatureCollection-Dokument ist hier
+kein gültiger Einzelwert; dafür dient Vector Reader.
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------+
+| GeoJSON Feature Decoder                                                        |
++--------------------------------------------------------------------------------+
+| Transform name                                     [Decode Feature ]           |
+| Feature JSON input field                           [feature_json ]             |
+| Format profile                                     [JSONFG10 ]                 |
+| Native Geometry field                              [geometry ]                 |
+| WGS84 fallback output field                        [geometry_wgs84 ]           |
+| Properties JSON field                              [properties_json ]          |
+| Feature ID JSON field                              [feature_id_json ]          |
+| Context JSON field                                 [geojson_context_json ]     |
+| Property mappings (JSON)                           [[] ]                       |
+| On data error                                      [FAIL ]                     |
+|                                                              [ OK ] [ Cancel ] |
++--------------------------------------------------------------------------------+
+----
+
+[[geojson-feature-encoder]]
+=== GeoJSON Feature Encoder
+
+Plugin-ID: `SOGIS_GEOJSON_FEATURE_ENCODER`. Der Transform ergänzt einen Feature-JSON-String
+pro Zeile. Ein einzelnes Feature kann Collection-Metadaten nicht als eigene Collection
+darstellen. Bei Reader → Encoder → Decoder → Writer deshalb das ursprüngliche
+Reader-Kontextfeld für den Writer beibehalten; die Beispiele zeigen diese Zuordnung.
+Das native Geometry-Feld ist erforderlich; Properties-, ID-, Kontext- und
+Fallback-Felder sind optional. Ohne Properties wird JSON null geschrieben.
+Das neue Ausgabefeld darf nicht mit einem vorhandenen Feld kollidieren.
+
+[.gui-mockup]
+----
++--------------------------------------------------------------------------------+
+| GeoJSON Feature Encoder                                                        |
++--------------------------------------------------------------------------------+
+| Transform name                                     [Encode Feature ]           |
+| Feature JSON output field                          [feature_json ]             |
+| Format profile                                     [JSONFG10 ]                 |
+| Native Geometry field                              [geometry ]                 |
+| WGS84 fallback field (blank disables)              [geometry_wgs84 ]           |
+| Properties JSON field                              [properties_json ]          |
+| Feature ID JSON field                              [feature_id_json ]          |
+| Context JSON field                                 [geojson_context_json ]     |
+| Property mappings (JSON)                           [[] ]                       |
+| On data error                                      [FAIL ]                     |
+| Explicitly drop Z                                  [false ]                    |
+| Explicitly drop M                                  [false ]                    |
+| Explicitly replace unrepresentable EMPTY with null [false ]                    |
+|                                                              [ OK ] [ Cancel ] |
++--------------------------------------------------------------------------------+
+----
+
+=== Fehler und Darstellungsgrenzen
+
+`FAIL` bricht beim ersten Datenfehler ab. `RETURN_NULL` setzt nur die neu erzeugten Felder
+auf NULL. `ROUTE_TO_ERROR` benötigt einen Error-Hop und liefert die ursprüngliche Zeile
+mit Fehlercode, Feldname und Beschreibung. Konfigurations- und Integrationsfehler brechen immer ab.
+Die Datei-Reader und -Writer brechen nach ihren bisherigen Fehlerregeln ab.
+
+Z/M-Verlust und EMPTY→NULL sind standardmäßig Fehler. Die ausdrücklich beschrifteten
+Optionen erlauben diese Verluste. Kurven werden für RFC/Legacy nie automatisch linearisiert;
+dafür vorher die entsprechende Geoprocessing-Operation ausführen. JSON-FG erhält unterstützte
+Kurven und M-Ordinaten. Nicht darstellbare Typen, längere CircularStrings oder verschachtelte
+Kurven-Collections werden abgewiesen, statt stillschweigend umgebaut zu werden.
+NaN/Infinity sind keine JSON-Koordinaten. Polygonorientierung wird für RFC-Ausgaben auf einer
+Kopie normalisiert; automatische Reparatur oder Zerschneidung an der Datumsgrenze erfolgt nicht.
+
+=== Ausführbare Beispiele
+
+Die Beispiele führen Reader → Feature Encoder → Feature Decoder → Writer aus.
+`INPUT_VECTOR` bezeichnet die lokale Fixture; `OUTPUT_FILE` muss ein neuer Dateiname sein.
+Die Eingaben liegen neben der Pipeline. Die JSON-FG-Fallbacklinie ist eine beigefügte illustrative
+Approximation und wird nicht in der Pipeline berechnet.
+
+* link:downloads/geojson/rfc7946.hpl[RFC-Pipeline] und link:downloads/geojson/rfc7946.geojson[Fixture]: zwei Features, darunter NULL; präzise Properties und große ID bleiben erhalten.
+* link:downloads/geojson/legacy2008.hpl[Legacy-Pipeline] und link:downloads/geojson/legacy2008.geojson[Fixture]: LV95-Punkt 2600000 / 1200000 mit CRS.
+* link:downloads/geojson/jsonfg10.hpl[JSON-FG-Pipeline] und link:downloads/geojson/jsonfg10.geojson[Fixture]: CircularString mit M=0/1/2, UTC-Zeit und separatem WGS84-Fallback.

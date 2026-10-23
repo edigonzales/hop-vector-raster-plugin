@@ -19,6 +19,7 @@
     <module>vector/formats/shapefile</module>
     <module>vector/formats/flatgeobuf</module>
     <module>vector/formats/parquet</module>
+    <module>vector/formats/geojson</module>
     <module>vector/formats/geopackage</module>
     <module>vector/formats/filegeodatabase</module>
     <module>support/geotools-support</module>

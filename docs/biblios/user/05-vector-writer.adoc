@@ -257,3 +257,5 @@ Overwrite existing file: deaktiviert
 
 Ein explizites Multipart-Schema akzeptiert auch die entsprechende einfache Geometrie.
 Für dieses Beispiel müssen Quelle und Ziel dasselbe CRS besitzen; der Writer rechnet Koordinaten nicht um.
+
+GeoJSON und JSON-FG verwenden die Einstellungen und Dialogansicht unter <<geojson>>.

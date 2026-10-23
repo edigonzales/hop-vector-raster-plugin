@@ -33,9 +33,14 @@ public record WriteRequest(
 
   public WriteRequest {
     cancelled = cancelled == null ? () -> false : cancelled;
-    if (geometry == null && sample != null) geometry = GeometrySchema.infer(sample);
-    if (sample == null && geometry != null) sample = geometry.emptyGeometry();
     options = options == null ? new FormatOptions.None() : options;
+    // GeoJSON represents each feature independently; sampling would traverse native curves and
+    // collections before the shared codec can enforce its depth and coordinate budgets.
+    boolean geoJson =
+        options instanceof GeoJsonOptions
+            || options instanceof ch.so.agi.hop.vector.core.geojson.GeoJsonFeatureOptions;
+    if (!geoJson && geometry == null && sample != null) geometry = GeometrySchema.infer(sample);
+    if (!geoJson && sample == null && geometry != null) sample = geometry.emptyGeometry();
     diagnostics = diagnostics == null ? Diagnostics.NONE : diagnostics;
   }
 

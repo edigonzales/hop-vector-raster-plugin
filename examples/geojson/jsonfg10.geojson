@@ -1,0 +1,66 @@
+{
+  "type": "FeatureCollection",
+  "conformsTo": [
+    "http://www.opengis.net/spec/json-fg-1/1.0/conf/core",
+    "http://www.opengis.net/spec/json-fg-1/1.0/conf/circular-arcs",
+    "http://www.opengis.net/spec/json-fg-1/1.0/conf/measures"
+  ],
+  "coordRefSys": "http://www.opengis.net/def/crs/EPSG/0/2056",
+  "measures": {
+    "enabled": true,
+    "unit": "m",
+    "description": "distance along fixture arc"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "arc",
+      "place": {
+        "type": "CircularString",
+        "coordinates": [
+          [
+            2600000,
+            1200000,
+            0
+          ],
+          [
+            2600010,
+            1200010,
+            1
+          ],
+          [
+            2600020,
+            1200000,
+            2
+          ]
+        ]
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.438632495,
+            46.951082877
+          ],
+          [
+            7.438764,
+            46.951173
+          ],
+          [
+            7.438895,
+            46.951083
+          ]
+        ]
+      },
+      "time": {
+        "timestamp": "2026-01-01T00:00:00Z"
+      },
+      "properties": {
+        "name": "measured arc",
+        "nested": {
+          "source": "local"
+        }
+      }
+    }
+  ]
+}

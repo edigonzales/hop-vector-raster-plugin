@@ -8,6 +8,10 @@
   </parent>
   <artifactId>hop-vector-core</artifactId>
   <dependencies>
+    <dependency><groupId>org.geotools</groupId><artifactId>gt-referencing</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.geotools</groupId><artifactId>gt-epsg-hsql</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>tech.units</groupId><artifactId>indriya</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>tools.jackson.core</groupId><artifactId>jackson-core</artifactId><version>3.2.0</version><scope>test</scope></dependency>
     <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-core</artifactId>

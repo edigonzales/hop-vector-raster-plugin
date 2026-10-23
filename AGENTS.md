@@ -46,7 +46,8 @@ contain Geometry or Vector/Raster plugin directories. Set absolute paths:
 `HOP_HOME` to that installation, `PLUGIN_ZIP` to the built Vector/Raster ZIP,
 and `GEOMETRY_ZIP` to the Geometry 0.2.0-SNAPSHOT ZIP. The workflow downloads the
 latter as `ch.so.agi:hop-geometry-type-plugin:0.2.0-SNAPSHOT`, extension `zip`,
-using the shared Maven downloader. The test requires Java, `javac` and Python. Installed E2E runs on Java 21/25
+using the shared Maven downloader. The test requires Java, `javac` and Python. Install the pinned offline schema validator
+with `python3 -m pip install -r scripts/requirements-test.txt` in a virtual environment first. Installed E2E runs on Java 21/25
 across Linux, macOS and Windows using the same canonical ZIP and Geometry snapshot.
 
 ```bash
@@ -62,3 +63,15 @@ depend on the verify workflow including this installed E2E job.
 Raster V1 additionally requires the matching Raster Type ZIP and Maven artifacts from
 `hop-raster-type-plugin`. Build/install that repository first during coordinated local development.
 The native raster model is supplied only by its separate type ZIP.
+
+## GeoJSON and JSON-FG
+
+Geometry Type owns the shared GeoJSON geometry/CRS codec and Jackson 3 runtime.
+The Vector/Raster ZIP must not bundle those libraries. Feature JSON payloads use
+String fields to preserve nested structures and number precision. Never use the
+homogeneous CloudGeometry path for GeoJSON or infer fields by scanning a file.
+The published Geometry ZIP is downloaded once before the matrix. Builds use a
+fresh `.ci/maven-repository`; canonical validation requires the resolved published POM and compares the Geometry
+JAR with that same runtime ZIP. Installed E2E uses the identical ZIP.
+`.mvn/maven.config` selects Wagon for builds and the existing pinned publisher.
+Keep the existing workflow/helper pins when extending these checks.

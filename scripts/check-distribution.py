@@ -25,6 +25,7 @@ with zipfile.ZipFile(zip_path) as archive:
         "hop-vector-format-shapefile-",
         "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "flatgeobuf-", "parquet-hadoop-",
         "hop-vector-format-geopackage-",
+        "hop-vector-format-geojson-",
         "hop-vector-format-filegeodatabase-",
         "filegdb4j-core-",
         "filegdb4j-geometry-",
@@ -86,7 +87,7 @@ with zipfile.ZipFile(zip_path) as archive:
                 raise SystemExit(
                     f"Imagen registry metadata must come from Geometry Type, not {entry}"
                 )
-            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-filegeodatabase-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-transforms-")):
+            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-filegeodatabase-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-format-geojson-", "hop-vector-transforms-")):
                 for name in nested.namelist():
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
@@ -94,6 +95,10 @@ with zipfile.ZipFile(zip_path) as archive:
             if Path(entry).name.startswith("hop-vector-transforms-"):
                 required_content = [
                     "ch/so/agi/hop/vector/transforms/GeometryRuntimeClassLoaderBootstrap.class",
+                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureDecoder.class",
+                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureEncoder.class",
+                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureDecoderDialog.class",
+                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureEncoderDialog.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbWriter.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbWriterDialog.class",
                     "ch/so/agi/hop/vector/transforms/FileGdbCatalogReader.class",

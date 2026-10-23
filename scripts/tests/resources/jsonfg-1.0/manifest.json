@@ -1,0 +1,42 @@
+{
+  "https://schemas.opengis.net/json-fg/geometry.json": {
+    "file": "0-geometry.json",
+    "sha256": "d2265431e78ec59f2cc94e607d11292b5b7d0df8460abed82bca689afbaf79a8"
+  },
+  "https://schemas.opengis.net/json-fg/geometry-object.json": {
+    "file": "1-geometry-object.json",
+    "sha256": "06a121ed8663d128d8c179c0b05836a694b5594fa39d4bd4bde0e0129aac1b77"
+  },
+  "https://schemas.opengis.net/json-fg/feature.json": {
+    "file": "2-feature.json",
+    "sha256": "1cafb87643ad1f1f8c9f0684000ab104b4855847b4260e30432e70c3b6adb65d"
+  },
+  "https://schemas.opengis.net/json-fg/featurecollection.json": {
+    "file": "3-featurecollection.json",
+    "sha256": "34125e1a12a64108784c129e85b370b9324143438b62bf8079cc3abb8a929d59"
+  },
+  "https://schemas.opengis.net/json-fg/coordrefsys.json": {
+    "file": "4-coordrefsys.json",
+    "sha256": "3b1269aaf38b2c8103f502af377397bb98ef565807d66e9cbbd5ca2acc3a8b93"
+  },
+  "https://schemas.opengis.net/json-fg/measures.json": {
+    "file": "5-measures.json",
+    "sha256": "b90991fc210e8b49cc46548686e3486b52994a081f3fd550d814012a3ed2bf6a"
+  },
+  "https://schemas.opengis.net/json-fg/featuretype.json": {
+    "file": "6-featuretype.json",
+    "sha256": "da29429047cb90ee1d9d91f3dfb86c0d0fb306ef8cacdb7c61286e96f0e8d114"
+  },
+  "https://schemas.opengis.net/json-fg/featureschema.json": {
+    "file": "7-featureschema.json",
+    "sha256": "203503ffc53ed86569b5edce4949ed04eec556b3e92d669deb0a4f8f0a9b5d56"
+  },
+  "https://schemas.opengis.net/json-fg/time.json": {
+    "file": "8-time.json",
+    "sha256": "7e97bb70d1c278326fc70232884efcd6ad03793e832b46042d67c3f403ee8f06"
+  },
+  "https://schemas.opengis.net/json-fg/place.json": {
+    "file": "9-place.json",
+    "sha256": "ecc84956df1f47c57f1860ec67056ac858cc44f7855d671702d4b140a01fd171"
+  }
+}

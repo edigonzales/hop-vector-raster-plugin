@@ -51,16 +51,18 @@ def check(root):
                 errors.append(f'{path.relative_to(root)}: missing anchor {link}')
     manual = (root / 'benutzerhandbuch/main/index.html').resolve()
     assert manual in pages, 'Missing single-page handbook'
-    expected = ['grundlagen', 'installation', 'erste-pipeline', 'vector-reader', 'vector-writer',
+    expected = ['grundlagen', 'installation', 'erste-pipeline', 'vector-reader', 'vector-writer', 'geojson', 'geojson-feature-decoder', 'geojson-feature-encoder',
                 'raster-clip', 'raster-reproject', 'raster-statistik', 'formate', 'beispiele', 'fehlerbehebung', 'glossar']
     for anchor in expected:
         assert anchor in pages[manual].ids, 'Missing section: ' + anchor
     downloads = list(root.rglob('*.hpl'))
-    assert len(downloads) == 9, f'Expected nine pipeline downloads, got {len(downloads)}'
+    assert len(downloads) == 12, f'Expected twelve pipeline downloads, got {len(downloads)}'
+    fixtures = list(root.rglob('*.geojson'))
+    assert len(fixtures) == 3, f'Expected three GeoJSON fixture downloads, got {len(fixtures)}'
     search = list(root.rglob('*search*.json'))
     assert search, 'Missing search JSON'
     combined = '\n'.join(p.read_text() for p in search)
-    for name in ['Raster Clip', 'Raster Reproject', 'Raster Zonal', 'Vector Reader', 'Vector Writer']:
+    for name in ['Raster Clip', 'Raster Reproject', 'Raster Zonal', 'Vector Reader', 'Vector Writer', 'GeoJSON Feature Decoder', 'GeoJSON Feature Encoder']:
         assert name in combined, 'Search lacks ' + name
     for path in search:
         json.loads(path.read_text())

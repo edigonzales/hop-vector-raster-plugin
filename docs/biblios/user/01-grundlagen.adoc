@@ -11,6 +11,8 @@ Vektorformate verwenden eigene Java-Adapter, GeoPackage zusätzlich SQLite JDBC.
 |Aufgabe |Transform
 |Vektordatei lesen |<<vector-reader,Vector Reader>>
 |Vektordatei schreiben |<<vector-writer,Vector Writer>>
+|Feature-JSON in Geometry und Attribute zerlegen |<<geojson-feature-decoder,GeoJSON Feature Decoder>>
+|Geometry und Attribute als Feature-JSON ausgeben |<<geojson-feature-encoder,GeoJSON Feature Encoder>>
 |FileGDB-Domains und Beziehungen lesen |<<filegdb-catalog-reader,FileGDB Catalog Reader>>
 |Mehrere FileGDB-Datasets schreiben |<<filegdb-writer,FileGDB Writer>>
 |Rasterwert erzeugen |<<raster-reader,Raster Reader (GeoTools)>>

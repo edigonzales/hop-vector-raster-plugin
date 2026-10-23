@@ -31,3 +31,5 @@ if sys.platform == "darwin":
 args += ["-cp", str(rcp) + os.pathsep + classpath,
          "ch.so.agi.hop.vector.transforms.VectorDialogSmoke"]
 subprocess.run(args, cwd=work, check=True, timeout=45)
+args[-1] = "ch.so.agi.hop.vector.transforms.GeoJsonFeatureDialogSmoke"
+subprocess.run(args, cwd=work, check=True, timeout=45)

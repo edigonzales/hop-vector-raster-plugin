@@ -44,7 +44,9 @@ def snapshot(destination, revision=None):
                 shutil.copy2(src, target)
         origin = run('git', 'rev-parse', 'HEAD', capture=True).strip() + ' + working tree'
     downloads = destination / 'docs/biblios/user/downloads'
-    for source in (destination / 'examples').rglob('*.hpl'):
+    for source in (destination / 'examples').rglob('*'):
+        if not source.is_file() or source.suffix not in ('.hpl', '.geojson'):
+            continue
         target = downloads / source.relative_to(destination / 'examples')
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)

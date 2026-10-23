@@ -22,3 +22,10 @@ After `mvn clean verify`, run `python3 scripts/check-doc-examples.py` with Java 
 to execute the clip and statistics pipelines using small local fixtures.
 
 [Raster value chain](raster-values/README.md): Reader → Clip → Reproject → Writer without intermediate TIFFs.
+
+## GeoJSON and JSON-FG
+
+The [GeoJSON examples](geojson/README.md) include local fixtures and cover RFC 7946,
+GeoJSON 2008 / Legacy, and JSON-FG with native LV95 curves, measures and a WGS84 fallback.
+Each runs Reader → Feature Encoder → Feature Decoder → Writer. The installed E2E
+checks geometry, high-precision properties, IDs, time and fallback output.

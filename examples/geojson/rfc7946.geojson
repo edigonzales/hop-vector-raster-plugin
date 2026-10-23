@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "source": "local-fixture",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 123456789012345678901234567890,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.438632495,
+          46.951082877
+        ]
+      },
+      "properties": {
+        "name": "Bern",
+        "precise": 123.1234567890123456789,
+        "nested": {
+          "tags": [
+            "city",
+            "CH"
+          ],
+          "nullable": null
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": null,
+      "properties": null
+    }
+  ]
+}

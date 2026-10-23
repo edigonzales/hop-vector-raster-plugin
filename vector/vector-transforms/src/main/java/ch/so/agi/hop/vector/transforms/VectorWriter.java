@@ -26,7 +26,7 @@ public class VectorWriter
         closeSink();
         return false;
       }
-      meta.validateSettings();
+      meta.validateSettings(this);
       Path file = Path.of(resolve(meta.getFileName()));
       VectorFormat format = VectorFormat.resolve(meta.getFormat(), file);
       if (getTransformMeta().getCopies(this) > 1)
@@ -202,7 +202,7 @@ public class VectorWriter
                         layer,
                         rm,
                         gi,
-                        (Geometry) value,
+                        format == VectorFormat.GEOJSON ? null : (Geometry) value,
                         geometry,
                         options,
                         diagnostics,

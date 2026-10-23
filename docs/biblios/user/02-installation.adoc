@@ -5,7 +5,7 @@
 
 * Java 21; zusätzlich wird Java 25 geprüft. Diese Plugin-Version wird gegen Apache Hop 2.19.0 gebaut.
 * Das separate https://github.com/edigonzales/hop-geometry-type-plugin[Geometry-Type-Plugin],
-  mindestens `0.2.0-SNAPSHOT` mit Z/M-Serialisierungsupdate oder ein kompatibler neuerer Build.
+  mindestens `0.2.0-SNAPSHOT` mit gemeinsamem GeoJSON-/JSON-FG-Codec oder ein kompatibler neuerer Build.
 * Das separate https://github.com/edigonzales/hop-raster-type-plugin[Raster-Type-Plugin]
   passend zur Vector/Raster-Version; der aktuelle Build verwendet `0.1.0-SNAPSHOT`.
 * Schreibrechte im Zielverzeichnis; Ausgabeverzeichnisse müssen bereits existieren.
@@ -50,6 +50,8 @@ Unter *Geospatial* stehen diese Transforms zur Verfügung:
 |Transform |Plugin-ID
 |<<vector-reader,Vector Reader>> |`SOGIS_VECTOR_READER`
 |<<vector-writer,Vector Writer>> |`SOGIS_VECTOR_WRITER`
+|<<geojson-feature-decoder,GeoJSON Feature Decoder>> |`SOGIS_GEOJSON_FEATURE_DECODER`
+|<<geojson-feature-encoder,GeoJSON Feature Encoder>> |`SOGIS_GEOJSON_FEATURE_ENCODER`
 |<<filegdb-catalog-reader,FileGDB Catalog Reader>> |`SOGIS_FILEGDB_CATALOG_READER`
 |<<filegdb-writer,FileGDB Writer>> |`SOGIS_FILEGDB_WRITER`
 |<<raster-reader,Raster Reader (GeoTools)>> |`SOGIS_RASTER_READER`

@@ -305,6 +305,13 @@ def main() -> int:
             "-p", "BBOX_CRS=EPSG:2056", "-p", "MIN_X=2600001", "-p", "MIN_Y=1200001",
             "-p", "MAX_X=2600003", "-p", "MAX_Y=1200003", "-p", "NODATA=-9999",
         ], env)
+        # The public examples exercise both Feature transforms and the streaming file provider.
+        for profile in ("rfc7946", "legacy2008", "jsonfg10"):
+            example = Path(__file__).parents[1] / "examples/geojson" / (profile + ".hpl")
+            run_command([hop_run, "-r", "local", "-f", str(example),
+                         "-p", f"INPUT_VECTOR={example.with_suffix('.geojson')}",
+                         "-p", f"OUTPUT_FILE={data / (profile + '.geojson')}"], env)
+        run_command([sys.executable, str(Path(__file__).with_name("check-geojson-examples.py")), str(data)], env)
         run_command(java_smoke + ["check"], env)
         if os.environ.get("GDAL_PREFIX"):
             run_command([
@@ -328,6 +335,27 @@ def main() -> int:
                 raise SystemExit(f"Installed Hop did not create {output.name}")
         if (data / "zones.parquet").read_bytes()[:4] != b"PAR1":
             raise SystemExit("Unexpected zones.parquet header")
+
+        # Keep the negative check isolated from the published ZIP and restore the disposable install.
+        legacy_probe = Path(__file__).with_name("GeoJsonLegacyRuntimeProbe.java")
+        run_command([str(javac), "-proc:none", "-cp", hop_classpath, "-d", str(classes), str(legacy_probe)], env)
+        geometry_jars = list((args.hop_home / "plugins/misc/hop-geometry-type").glob("hop-geometry-type-*.jar"))
+        if len(geometry_jars) != 1:
+            raise AssertionError("Expected one installed Geometry JAR for the legacy guard")
+        geometry_jar = geometry_jars[0]
+        original_geometry = geometry_jar.read_bytes()
+        try:
+            import io
+            with zipfile.ZipFile(io.BytesIO(original_geometry)) as source, zipfile.ZipFile(geometry_jar, "w") as destination:
+                for entry in source.infolist():
+                    name = entry.filename
+                    if "/codec/GeoJson" not in name and "/codec/JsonSupport" not in name:
+                        destination.writestr(entry, source.read(name))
+            run_command([str(java), "-cp", str(classes) + os.pathsep + hop_classpath,
+                         "GeoJsonLegacyRuntimeProbe"], probe_env)
+        finally:
+            geometry_jar.write_bytes(original_geometry)
+
 
     if args.work_dir:
         def digest(path):

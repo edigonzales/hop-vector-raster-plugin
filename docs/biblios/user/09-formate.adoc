@@ -4,6 +4,9 @@
 [cols="2,1,1,3,3",options="header"]
 |===
 |Format |Lesen |Schreiben |Dimensionen |Besonderheiten
+|GeoJSON RFC 7946 |Ja |Ja |XY, XYZ |WGS84 longitude/latitude; Z requires ellipsoidal height; no CRS member.
+|GeoJSON 2008 / Legacy |Ja |Ja |XY, XYZ |Named CRS, X/Y order; explicit context for height.
+|JSON-FG 1.0.0 |Ja |Ja |XY, XYZ, XYM, XYZM |Native EPSG/CRS84, supported curves and measures; see <<geojson>>.
 |Shapefile |Ja |Ja |XY, XYZ, XYM, XYZM |Mehrere Dateien; DBF-Grenzen; Kurven werden linearisiert.
 |GeoPackage (Vektor) |Ja |Ja |XY |Ein Layer pro Reader/Writer; unterstützt ausgewählte Kurventypen.
 |File Geodatabase (`.gdb`) |Ja |Ja |XY, XYZ, XYM, XYZM |Reines Java über `filegdb4j`; Neue GDB, zusätzliche Datasets und Append; Domains und Beziehungen.

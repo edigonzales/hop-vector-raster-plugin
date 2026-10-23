@@ -2,7 +2,8 @@
 == Vector Reader
 
 *Vector Reader* liest einen Layer aus einer lokalen Shapefile, einer GeoPackage-Datei
-oder einer File Geodatabase (`.gdb`-Verzeichnis).
+einer File Geodatabase (`.gdb`-Verzeichnis) oder GeoJSON/JSON-FG.
+Die GeoJSON-Felder und Dialogansicht sind unter <<geojson>> beschrieben.
 Er benötigt keinen vorgelagerten Generate-Rows-Transform und erzeugt für jedes Feature eine Hop-Zeile.
 Die Plugin-ID lautet `SOGIS_VECTOR_READER`.
 
@@ -51,7 +52,7 @@ der Button lautet dann *Browse folder...*. Bei *AUTO* bleibt der normale Dateiau
 |===
 |Einstellung |Standard |Bedeutung
 |Transform name |Von Hop vergeben |Name dieses Pipeline-Schritts.
-|Format |`AUTO` |Erkennt `.shp`, `.gpkg` oder `.gdb`; alternativ `SHAPEFILE`, `GEOPACKAGE` oder `FILEGEODATABASE` wählen.
+|Format |`AUTO` |Erkennt `.shp`, `.gpkg`, `.gdb`, `.geojson` oder `.json`; alternativ `SHAPEFILE`, `GEOPACKAGE` oder `FILEGEODATABASE` wählen.
 |Vector file |Leer |Lokale Eingabedatei beziehungsweise `.gdb`-Verzeichnis; Hop-Variablen sind möglich.
 |Layer name (optional) |Leer |Ein Layer pro Reader. Ohne Angabe wird der erste verfügbare Layer verwendet.
 |Geometry output field |Leer |Leer übernimmt den Quellnamen der Geometriespalte; sonst wird nur das Hop-Ausgabefeld umbenannt.

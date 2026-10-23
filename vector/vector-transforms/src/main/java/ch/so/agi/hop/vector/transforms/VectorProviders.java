@@ -19,6 +19,7 @@ final class VectorProviders {
           new ch.so.agi.hop.vector.formats.parquet.ParquetProvider(
               new ch.so.agi.hop.support.geotools.GeoToolsCrsDefinitionResolver());
       case ARCINFO_GENERATE -> new ch.so.agi.hop.vector.formats.generate.GenerateProvider();
+      case GEOJSON -> new ch.so.agi.hop.vector.formats.geojson.GeoJsonProvider();
     };
   }
 }

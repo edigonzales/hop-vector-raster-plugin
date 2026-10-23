@@ -18,7 +18,9 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 @Transform(
     id = "SOGIS_VECTOR_WRITER",
     name = "Vector Writer",
-    description = "Write vector features to Shapefile, GeoPackage, GENERATE, FlatGeobuf or Parquet",
+    description =
+        "Write vector features to Shapefile, GeoPackage, FileGDB, GENERATE, FlatGeobuf, Parquet or"
+            + " GeoJSON",
     image = "ch/so/agi/hop/vector/transforms/icons/vector-writer.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry",
@@ -288,8 +290,131 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
       fileGdbPrecisionMode = "LEGACY";
   }
 
+  @HopMetadataProperty private String geoJsonProfile = "RFC7946";
+
+  public String getGeoJsonProfile() {
+    return geoJsonProfile;
+  }
+
+  public void setGeoJsonProfile(String value) {
+    geoJsonProfile = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private String geoJsonFallbackField = "geometry_wgs84";
+
+  public String getGeoJsonFallbackField() {
+    return geoJsonFallbackField;
+  }
+
+  public void setGeoJsonFallbackField(String value) {
+    geoJsonFallbackField = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private String geoJsonPropertiesField = "properties_json";
+
+  public String getGeoJsonPropertiesField() {
+    return geoJsonPropertiesField;
+  }
+
+  public void setGeoJsonPropertiesField(String value) {
+    geoJsonPropertiesField = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private String geoJsonIdField = "feature_id_json";
+
+  public String getGeoJsonIdField() {
+    return geoJsonIdField;
+  }
+
+  public void setGeoJsonIdField(String value) {
+    geoJsonIdField = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private String geoJsonContextField = "geojson_context_json";
+
+  public String getGeoJsonContextField() {
+    return geoJsonContextField;
+  }
+
+  public void setGeoJsonContextField(String value) {
+    geoJsonContextField = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private String geoJsonMappings = "[]";
+
+  public String getGeoJsonMappings() {
+    return geoJsonMappings;
+  }
+
+  public void setGeoJsonMappings(String value) {
+    geoJsonMappings = value == null ? "" : value;
+  }
+
+  @HopMetadataProperty private boolean geoJsonDropZ = false;
+
+  public boolean isGeoJsonDropZ() {
+    return geoJsonDropZ;
+  }
+
+  public void setGeoJsonDropZ(boolean value) {
+    geoJsonDropZ = value;
+  }
+
+  @HopMetadataProperty private boolean geoJsonDropM = false;
+
+  public boolean isGeoJsonDropM() {
+    return geoJsonDropM;
+  }
+
+  public void setGeoJsonDropM(boolean value) {
+    geoJsonDropM = value;
+  }
+
+  @HopMetadataProperty private boolean geoJsonEmptyToNull = false;
+
+  public boolean isGeoJsonEmptyToNull() {
+    return geoJsonEmptyToNull;
+  }
+
+  public void setGeoJsonEmptyToNull(boolean value) {
+    geoJsonEmptyToNull = value;
+  }
+
+  public ch.so.agi.hop.vector.core.GeoJsonOptions geoJsonOptions(IVariables vars) {
+    java.util.function.Function<String, String> resolve =
+        value -> vars == null ? value : vars.resolve(value);
+    try {
+      return new ch.so.agi.hop.vector.core.GeoJsonOptions(
+          new ch.so.agi.hop.vector.core.geojson.GeoJsonFeatureOptions(
+              com.atolcd.hop.gis.geometry.codec.GeoJsonProfile.valueOf(
+                  resolve.apply(geoJsonProfile)),
+              resolve.apply(geometryField),
+              resolve.apply(geoJsonFallbackField),
+              resolve.apply(geoJsonPropertiesField),
+              resolve.apply(geoJsonIdField),
+              resolve.apply(geoJsonContextField),
+              geoJsonDropZ,
+              geoJsonDropM,
+              geoJsonEmptyToNull,
+              ch.so.agi.hop.vector.core.geojson.GeoJsonFieldMapping.parseJson(
+                  resolve.apply(geoJsonMappings))),
+          overwrite);
+    } catch (com.atolcd.hop.gis.geometry.codec.GeometryCodecException e) {
+      throw new IllegalArgumentException("Invalid GeoJSON mappings: " + e.getMessage(), e);
+    }
+  }
+
   @Override
   public void setDefault() {
+    geoJsonProfile = "RFC7946";
+    geoJsonFallbackField = "geometry_wgs84";
+    geoJsonPropertiesField = "properties_json";
+    geoJsonIdField = "feature_id_json";
+    geoJsonContextField = "geojson_context_json";
+    geoJsonMappings = "[]";
+    geoJsonDropZ = false;
+    geoJsonDropM = false;
+    geoJsonEmptyToNull = false;
     fileGdbSchemaFile = "";
     fileGdbWriteMode = "CREATE_DATABASE";
     fileGdbPrecisionMode = "AUTO";
@@ -491,15 +616,32 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
   }
 
   public void validateSettings() {
+    validateSettings(null);
+  }
+
+  public void validateSettings(IVariables variables) {
     if (fileName == null
         || fileName.isBlank()
         || (fileGdbSchemaFile.isBlank() && (geometryField == null || geometryField.isBlank())))
       throw new IllegalArgumentException("Output and geometry field are required");
-    if (("AUTO".equals(format) || format == null || format.isBlank()) && fileName.contains("${"))
-      return;
-    options(VectorFormat.resolve(format, Path.of(fileName)), null);
-    if (ch.so.agi.hop.vector.core.VectorFormat.resolve(format, Path.of(fileName))
-        == ch.so.agi.hop.vector.core.VectorFormat.ARCINFO_GENERATE)
+    String resolvedFile = variables == null ? fileName : variables.resolve(fileName);
+    if (("AUTO".equals(format) || format == null || format.isBlank())
+        && resolvedFile.contains("${")) return;
+    VectorFormat selected = VectorFormat.resolve(format, Path.of(resolvedFile));
+    // Design-time validation cannot parse expressions before the caller supplies its variables.
+    if (selected == VectorFormat.GEOJSON
+        && variables == null
+        && java.util.stream.Stream.of(
+                geoJsonProfile,
+                geoJsonMappings,
+                geometryField,
+                geoJsonFallbackField,
+                geoJsonPropertiesField,
+                geoJsonIdField,
+                geoJsonContextField)
+            .anyMatch(value -> value.contains("${"))) return;
+    options(selected, variables);
+    if (selected == VectorFormat.ARCINFO_GENERATE)
       new ch.so.agi.hop.vector.formats.generate.GenerateEncoder.Options(
           ch.so.agi.hop.vector.formats.generate.GenerateEncoder.Type.valueOf(geometryType),
           ch.so.agi.hop.vector.formats.generate.GenerateEncoder.Dimension.valueOf(dimension),
@@ -510,6 +652,7 @@ public class VectorWriterMeta extends BaseTransformMeta<VectorWriter, VectorWrit
 
   public FormatOptions options(VectorFormat f, IVariables vars) {
     java.util.function.Function<String, String> resolve = v -> vars == null ? v : vars.resolve(v);
+    if (f == VectorFormat.GEOJSON) return geoJsonOptions(vars);
     if (f == VectorFormat.GEOPACKAGE)
       return new GeoPackageOptions(
           GeoPackageOptions.WriteMode.valueOf(geoPackageWriteMode), geoPackageCreateSpatialIndex);

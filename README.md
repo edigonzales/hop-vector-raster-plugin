@@ -10,8 +10,9 @@ All transforms appear in the **Geospatial** category.
 
 | Transform | Purpose |
 |---|---|
-| Vector Reader | Read Shapefile, GeoPackage or File Geodatabase layers into typed Hop rows. |
-| Vector Writer | Write Shapefile, GeoPackage, File Geodatabase, FlatGeobuf, native spatial Parquet or ArcInfo GENERATE. |
+| Vector Reader | Read Shapefile, GeoPackage, File Geodatabase or GeoJSON features into typed Hop rows. |
+| Vector Writer | Write Shapefile, GeoPackage, File Geodatabase, FlatGeobuf, native spatial Parquet, ArcInfo GENERATE or GeoJSON. |
+| GeoJSON Feature Decoder / Encoder | Convert one Feature JSON string per row, preserving properties, IDs and metadata. |
 | Raster Reader (GeoTools) | Create a Raster value from a local GeoTIFF or public HTTP/HTTPS COG. |
 | Raster Info (GeoTools) | Add selected raster metadata without calculating pixels. |
 | Raster Clip (GeoTools) | Plan a box/polygon clip of all bands or an explicit selection. |
@@ -19,6 +20,8 @@ All transforms appear in the **Geospatial** category.
 | Raster Writer (GeoTools) | Materialize a Raster value as a local GeoTIFF/BigTIFF or Cloud Optimized GeoTIFF. |
 | Raster Zonal Statistics (GeoTools) | Add polygon statistics such as mean, min, max and valid pixel count to rows. |
 
+GeoJSON supports RFC 7946, GeoJSON 2008 (Legacy) and JSON-FG 1.0.0.
+Reprojection is explicit; native CRS, curves and M use JSON-FG.
 FlatGeobuf, Parquet and GENERATE are output-only. Parquet uses native
 GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
 
@@ -27,7 +30,7 @@ GEOMETRY/GEOGRAPHY logical types, not GeoParquet metadata.
 - Java 21 or newer; the plugin is built against Apache Hop **2.19.0**.
 - The separately installed
   [Geometry Type plugin](https://github.com/edigonzales/hop-geometry-type-plugin),
-  **0.2.0-SNAPSHOT with the Z/M serialization update or a compatible newer build**.
+  **0.2.0-SNAPSHOT with the GeoJSON codec API or a compatible newer build**.
 - The matching [Raster Type plugin](https://github.com/edigonzales/hop-raster-type-plugin),
   which supplies the shared Raster model and Hop value type.
 - A writable local directory for output files.

@@ -10,14 +10,15 @@ import org.apache.hop.core.plugins.PluginRegistry;
 import org.apache.hop.core.row.value.ValueMetaPluginType;
 import org.apache.hop.core.variables.IVariables;
 
-/** Initializes the shared Geometry runtime before a pipeline can load raster implementation data. */
+/**
+ * Initializes the shared Geometry runtime before a pipeline can load raster implementation data.
+ */
 @ExtensionPoint(
     id = "VectorRasterGeometryRuntimeClassLoaderBootstrap",
     extensionPointId = "HopEnvironmentAfterInit",
     description = "Initialize the shared Geometry runtime for Vector/Raster",
     classLoaderGroup = GeometryRuntimeClassLoaderBootstrap.GEOMETRY_CLASSLOADER_GROUP)
-public final class GeometryRuntimeClassLoaderBootstrap
-    implements IExtensionPoint<PluginRegistry> {
+public final class GeometryRuntimeClassLoaderBootstrap implements IExtensionPoint<PluginRegistry> {
 
   static final String GEOMETRY_CLASSLOADER_GROUP = "sogeo-geometry";
   static final String GEOMETRY_VALUE_META_PLUGIN_ID = "43663879";
@@ -30,8 +31,7 @@ public final class GeometryRuntimeClassLoaderBootstrap
 
   static void initialize(PluginRegistry pluginRegistry) throws HopException {
     IPlugin geometryPlugin =
-        pluginRegistry.findPluginWithId(
-            ValueMetaPluginType.class, GEOMETRY_VALUE_META_PLUGIN_ID);
+        pluginRegistry.findPluginWithId(ValueMetaPluginType.class, GEOMETRY_VALUE_META_PLUGIN_ID);
     if (geometryPlugin == null) {
       throw new HopException(
           "Vector/Raster requires the hop-geometry-type plugin (ValueMeta plugin id "
@@ -50,8 +50,16 @@ public final class GeometryRuntimeClassLoaderBootstrap
     try {
       ClassLoader geometryLoader = pluginRegistry.getClassLoader(geometryPlugin);
       geometryLoader.loadClass("org.eclipse.imagen.PlanarImage");
-    } catch (HopPluginException | ClassNotFoundException e) {
-      throw new HopException("Unable to initialize the shared Geometry runtime", e);
+      Class<?> codec = geometryLoader.loadClass("com.atolcd.hop.gis.geometry.codec.GeometryCodec");
+      Class<?> options =
+          geometryLoader.loadClass("com.atolcd.hop.gis.geometry.codec.GeoJsonReadOptions");
+      codec.getMethod("readGeoJson", String.class, options);
+      geometryLoader.loadClass("com.atolcd.hop.gis.geometry.codec.JsonSupport");
+    } catch (HopPluginException | ReflectiveOperationException | LinkageError e) {
+      throw new HopException(
+          "Vector/Raster requires the Geometry Type 0.2.0-SNAPSHOT runtime with the GeoJSON codec"
+              + " API; replace the complete Geometry Type plugin folder and restart Hop",
+          e);
     }
   }
 }
