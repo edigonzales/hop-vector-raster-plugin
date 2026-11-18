@@ -171,8 +171,7 @@ See the [sequential example pipelines and GUI settings](docs/examples/geopackage
 
 The shared CI contract verifies Java 21/25 compatibility on Linux, macOS and Windows.
 The canonical Ubuntu/Java 21 build creates the publishable ZIP; package, cloud-output and
-installed E2E checks use that exact artifact. Existing workflow and `ci-ref` pins are retained.
-The repository contract is checked separately with the `multi-module-suite` profile.
+installed E2E checks use that exact artifact.
 Documentation PRs validate the nested Biblios handbook, and pushes to `main` publish it when
 `docs/biblios/**`, `examples/**` or the documentation workflow changes.
 

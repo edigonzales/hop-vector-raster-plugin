@@ -36,8 +36,8 @@ Mit `--revision` stammen Handbuchquellen, Beispiele, Biblios-Konfiguration und C
 Commit, auch bei PR-Merge-Commits oder detached HEAD. Buildhelfer und abschliessender Site-Checker
 stammen aus dem aufrufenden Checkout. Der Biblios-Snapshot wird separat aufgelöst oder mit `--jar` fixiert.
 Die Suche wird mit Enter gestartet. `site.css` ergänzt das Standardtheme für schmale Tabellenansichten.
-ASCII-Dialoge verwenden `[.gui-mockup]` vor einem geschlossenen `----`-Listing
-gemäss dem [zentralen Repository-Vertrag](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/plugin-repository-contract.md#gui-documentation).
+ASCII-Dialoge verwenden `[.gui-mockup]` vor einem geschlossenen `----`-Listing.
+Die Klassennamen verbinden die Skizzen mit dem eigenen Stylesheet.
 Die GUI-Regeln (`font-size: 0.75em`, `line-height: 1.25`) werden nach dem Theme
 geladen; gewöhnliche Codeblöcke behalten ihre Schriftgrösse.
 Der Build prüft lokale Links, Includes/Referenzen, Anker, HPL-Downloads und Suchindex.
