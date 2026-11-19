@@ -7,20 +7,6 @@ permissions:
   contents: read
 
 jobs:
-  contract:
-    name: Check plugin repository contract
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-plugin-ci
-          ref: main
-          path: .ci/hop-plugin-ci
-          persist-credentials: false
-      - name: Validate repository structure and documentation links
-        run: python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile multi-module-suite
-
   geometry-input:
     name: Download published Geometry dependency
     runs-on: ubuntu-latest
@@ -29,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: edigonzales/hop-plugin-ci
-          ref: 990af4813013fa8d21f6447e7545ed5499f2f202
+          ref: f0a1eec368cb8c5d2592086b26393a6fc3916ad1
           path: .ci/hop-plugin-ci
           persist-credentials: false
       - uses: actions/setup-java@v4
@@ -54,9 +40,8 @@ jobs:
 
   build:
     needs: geometry-input
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@990af4813013fa8d21f6447e7545ed5499f2f202
+    uses: edigonzales/hop-plugin-ci/.github/workflows/verify.yml@f0a1eec368cb8c5d2592086b26393a6fc3916ad1
     with:
-      ci-ref: 990af4813013fa8d21f6447e7545ed5499f2f202
       java-versions: '["21", "25"]'
       runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
       canonical-runner-os: ubuntu-latest
@@ -67,17 +52,19 @@ jobs:
       maven-extra-args: -Dhop.geometry.type.version=0.2.0-SNAPSHOT -Dmaven.repo.local=.ci/maven-repository
       dependency-artifact-name: vector-geometry-dependency
       dependency-artifact-path: .ci/dependencies
-      dependency-install: false
       maven-goals: clean verify
       pom-file: assemblies/assemblies-hop-vector-raster/pom.xml
-      zip-glob: assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip
-      validation-commands: '["python scripts/check-distribution.py", "python3 -m unittest discover -s scripts/tests -v", "python scripts/check-cloud-output.py", "python scripts/test-raster-migration.py", "sh scripts/run-headless-vector-dialogs.sh", "python3 scripts/verify-published-geometry.py --zip-directory .ci/dependencies --maven-repository .ci/maven-repository"]'
-      additional-verified-files: '["pom.xml"]'
       artifact-name-prefix: hop-vector-raster-plugin
-      group-id: ch.so.agi
-      artifact-id: hop-vector-raster-plugin
-      hop-version: 2.19.0
-      plugin-root: plugins/transforms/vector-raster
+      artifacts: >-
+        [{"pom":"pom.xml"},
+         {"file":"assemblies/assemblies-hop-vector-raster/target/hop-vector-raster-plugin-*.zip","pom":"assemblies/assemblies-hop-vector-raster/pom.xml"}]
+      validation-command: |
+        python scripts/check-distribution.py
+        python3 -m unittest discover -s scripts/tests -v
+        python scripts/check-cloud-output.py
+        python scripts/test-raster-migration.py
+        sh scripts/run-headless-vector-dialogs.sh
+        python3 scripts/verify-published-geometry.py --zip-directory .ci/dependencies --maven-repository .ci/maven-repository
 
   e2e-inputs:
     needs: build
@@ -87,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: edigonzales/hop-plugin-ci
-          ref: 990af4813013fa8d21f6447e7545ed5499f2f202
+          ref: f0a1eec368cb8c5d2592086b26393a6fc3916ad1
           path: .ci/hop-plugin-ci
           persist-credentials: false
       - uses: actions/setup-java@v4
@@ -98,7 +85,7 @@ jobs:
         run: |
           python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py \
             --output "$RUNNER_TEMP/maven-settings.xml"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: hop-vector-raster-plugin-canonical
           path: .ci/verified
@@ -148,7 +135,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: hop-vector-raster-plugin-canonical
           path: .ci/verified
