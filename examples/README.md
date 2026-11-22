@@ -18,7 +18,7 @@ Raster examples accept local GeoTIFFs or public HTTP COGs. Band numbers are inte
 dialog settings, not variable parameters. Detailed German instructions and complete
 parameter examples are in the [handbook](https://edigonzales.github.io/hop-vector-raster-plugin/benutzerhandbuch/main/index.html#beispiele).
 
-After `mvn clean verify`, run `python3 scripts/check-doc-examples.py` with Java 21
+After `mvn clean verify`, follow the [installed Hop E2E instructions](../AGENTS.md#installed-hop-e2e)
 to execute the clip and statistics pipelines using small local fixtures.
 
 [Raster value chain](raster-values/README.md): Reader → Clip → Reproject → Writer without intermediate TIFFs.

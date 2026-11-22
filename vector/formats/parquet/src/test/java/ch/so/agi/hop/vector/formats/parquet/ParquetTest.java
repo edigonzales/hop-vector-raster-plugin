@@ -286,17 +286,4 @@ public class ParquetTest {
     assertThatThrownBy(() -> new ParquetProvider(CRS).create(r))
         .hasMessageContaining("only one Geometry");
   }
-
-  /** Invoked with the unpacked distribution and no Hadoop dependencies. */
-  public static void main(String[] args) throws Exception {
-    Path file = Path.of(args[0]);
-    try (var sink =
-        new ParquetProvider(CRS)
-            .create(request(file, "POINT", "XYZM", 2056, ParquetOptions.defaults()))) {
-      sink.write(row(new WKTReader().read("POINT ZM (1 2 3 4)")));
-      sink.finish();
-    }
-    if (footer(file).num_rows != 1) throw new AssertionError("Wrong row count");
-    System.out.println("Parquet output without Hadoop runtime OK");
-  }
 }

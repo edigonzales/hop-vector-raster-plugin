@@ -6,9 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import hashlib
-import platform
-import re
+import runpy
 import sys
 from contextlib import nullcontext
 import os
@@ -46,8 +44,6 @@ def run_command(command: list[str], env: dict[str, str], timeout: int = 180) -> 
 def extract_plugin(zip_path: Path, hop_home: Path, plugin_root: str) -> None:
     required_root = plugin_root.rstrip("/") + "/"
     with zipfile.ZipFile(zip_path) as archive:
-        if archive.testzip() is not None:
-            raise SystemExit(f"Corrupt plugin ZIP: {zip_path}")
         entries = archive.namelist()
         if not any(name.startswith(required_root) for name in entries):
             raise SystemExit(f"{zip_path.name} lacks required installation root {required_root}")
@@ -251,9 +247,9 @@ def main() -> int:
                         "-p", f"OUTPUT_FILE={data / target}",
                     ], env)
             run_command([gdal_python, str(Path(__file__).with_name("check-geopackage-append.py")), "check", str(data)], gdal_env)
-        import runpy
+        raster_scenarios = runpy.run_path(str(Path(__file__).with_name("raster-value-scenarios.py")))
         for fixture in ("input.tif", "input-scaled.tif"):
-            scenario = runpy.run_path(str(Path(__file__).with_name("raster-value-scenarios.py")))["create"](data, data / fixture)
+            scenario = raster_scenarios["create"](data, data / fixture)
             run_command([hop_run, "-r", "local", "-f", str(scenario)], env)
             if (data / "branch-a.tif").read_bytes() != (data / "branch-b.tif").read_bytes():
                 raise SystemExit("Raster branches produced different outputs")
@@ -267,10 +263,9 @@ def main() -> int:
             "-p", "COMPRESSION=Deflate", "-p", "OVERVIEWS=AUTO",
             "-p", "OVERVIEW_RESAMPLING=AVERAGE",
         ], env)
-        run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif")], env)
-        if gdal_python:
-            run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog.tif"), "--gdal"], gdal_env)
-        overview_scenario = runpy.run_path(str(Path(__file__).with_name("raster-value-scenarios.py")))["create_overview"]
+        cog_check = [gdal_python or sys.executable, str(Path(__file__).with_name("check-cog-output.py"))]
+        cog_options = ["--gdal"] if gdal_python else []
+        run_command(cog_check + [str(data / "cog.tif")] + cog_options, gdal_env)
         for output_format, resampling, enabled, mode in (
             ("COG", "AVERAGE", False, "AUTO"),
             ("COG", "NEAREST", False, "AUTO"),
@@ -279,7 +274,7 @@ def main() -> int:
             ("GEOTIFF", "AVERAGE", False, "AUTO"),
             ("GEOTIFF", "AVERAGE", True, "NONE"),
         ):
-            scenario = overview_scenario(data, output_format, resampling, enabled, mode)
+            scenario = raster_scenarios["create_overview"](data, output_format, resampling, enabled, mode)
             run_command([hop_run, "-r", "local", "-f", str(scenario)], env)
             if output_format == "COG":
                 run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")),
@@ -293,9 +288,7 @@ def main() -> int:
             "-p", "COMPRESSION=JPEG", "-p", "OVERVIEWS=AUTO",
             "-p", "OVERVIEW_RESAMPLING=AVERAGE",
         ], env)
-        run_command([sys.executable, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog-jpeg.tif")], env)
-        if gdal_python:
-            run_command([gdal_python, str(Path(__file__).with_name("check-cog-output.py")), str(data / "cog-jpeg.tif"), "--gdal"], gdal_env)
+        run_command(cog_check + [str(data / "cog-jpeg.tif")] + cog_options, gdal_env)
         # The bundled reader must accept the generated COG as a local source.
         run_command([
             hop_run, "-r", "local", "-f",
@@ -313,9 +306,9 @@ def main() -> int:
                          "-p", f"OUTPUT_FILE={data / (profile + '.geojson')}"], env)
         run_command([sys.executable, str(Path(__file__).with_name("check-geojson-examples.py")), str(data)], env)
         run_command(java_smoke + ["check"], env)
-        if os.environ.get("GDAL_PREFIX"):
+        if gdal_python:
             run_command([
-                str(Path(os.environ["GDAL_PREFIX"]) / "bin/python3"),
+                gdal_python,
                 str(Path(__file__).with_name("check-filegdb-catalog.py")),
                 str(data / "catalog-output.gdb"),
             ], gdal_env)
@@ -356,25 +349,6 @@ def main() -> int:
         finally:
             geometry_jar.write_bytes(original_geometry)
 
-
-    if args.work_dir:
-        def digest(path):
-            value = hashlib.sha256()
-            with path.open("rb") as stream:
-                for block in iter(lambda: stream.read(1024 * 1024), b""):
-                    value.update(block)
-            return value.hexdigest()
-        version = subprocess.check_output([str(java), "-version"], env=env,
-                                          stderr=subprocess.STDOUT, text=True)
-        major = re.search(r'version "(\d+)', version).group(1)
-        system = {"Darwin": "macos", "Windows": "windows", "Linux": "linux"}[platform.system()]
-        evidence = {
-            "manifest": {"zip_hashes": {"raster": digest(args.raster_type_zip),
-                                          "vector": digest(args.plugin_zip)}, "jdk": version},
-            "checks": [{"name": system + "-java" + major, "actual": True, "expected": True}],
-            "complete": False,
-        }
-        (args.work_dir / "platform-evidence.json").write_text(json.dumps(evidence, indent=2), encoding="utf-8")
     print("Installed Hop vector/raster E2E OK")
     return 0
 

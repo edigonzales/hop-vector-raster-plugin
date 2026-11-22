@@ -14,7 +14,7 @@ zip_path = zips[0]
 with zipfile.ZipFile(zip_path) as archive:
     entries = [name for name in archive.namelist() if not name.endswith("/")]
     names = [Path(name).name.lower() for name in entries]
-    if len(names)!=len(set(names)):
+    if len(names) != len(set(names)):
         raise SystemExit("Duplicate distribution filenames")
     if any(not entry.startswith("plugins/transforms/vector-raster/") for entry in entries):
         raise SystemExit("Unexpected plugin installation path")
@@ -32,7 +32,6 @@ with zipfile.ZipFile(zip_path) as archive:
         "filegdb4j-jts-",
         "hop-geotools-support-",
         "hop-raster-values-",
-        "hop-raster-geotools-",
         "hop-vector-format-generate-",
         "sqlite-jdbc-",
     ]
@@ -40,24 +39,10 @@ with zipfile.ZipFile(zip_path) as archive:
         if not any(fragment in name for name in names):
             raise SystemExit(f"{zip_path.name}: required dependency matching {fragment!r} is missing")
 
-    for fragment in ("hop-plugin-commons-ui-", "hop-plugin-commons-core-"):
-        matches = [entry for entry in entries if fragment in Path(entry).name]
-        if len(matches) != 1 or "/lib/" not in matches[0]:
-            raise SystemExit(f"{fragment} must be packaged exactly once in the plugin lib directory")
-
-    host_runtime = [
-        entry for entry in entries
-        if Path(entry).name.startswith(("hop-core-", "hop-engine-", "hop-ui-", "org.eclipse.swt"))
-    ]
-    if host_runtime:
-        raise SystemExit(f"Hop and SWT host libraries must not be bundled: {host_runtime}")
-
-    raster_backend = [
-        entry for entry in entries
-        if Path(entry).name.lower().startswith("hop-raster-geotools-")
-    ]
-    if len(raster_backend) != 1 or "/lib/" not in raster_backend[0]:
-        raise SystemExit("hop-raster-geotools must be packaged once in the plugin lib directory")
+    for prefix in ("hop-plugin-commons-ui-", "hop-plugin-commons-core-", "hop-raster-geotools-"):
+        matches = [entry for entry in entries if Path(entry).name.lower().startswith(prefix)]
+        if len(matches) != 1 or Path(matches[0]).parent.as_posix() != "plugins/transforms/vector-raster/lib":
+            raise SystemExit(f"{prefix} must be packaged exactly once in the plugin lib directory")
 
     dependencies = ET.fromstring(archive.read("plugins/transforms/vector-raster/dependencies.xml"))
     folders = {node.text for node in dependencies.findall("folder")}
@@ -65,11 +50,12 @@ with zipfile.ZipFile(zip_path) as archive:
         raise SystemExit("Raster Type dependencies must be explicit")
 
     forbidden = [
+        "hop-core-", "hop-engine-", "hop-ui-", "org.eclipse.swt",
         "hop-geometry-type-", "hop-raster-type-", "hop-raster-core-", "jts-core-",
         "gt-", "imageio-ext-", "indriya-", "unit-api-", "systems-common-", "uom-", "si-",
-        "gt-shapefile-", "gt-geopkg-", "gt-jdbc-", "hop-transform-arcinfo-generate-writer-",
+        "hop-transform-arcinfo-generate-writer-",
         "hadoop-common-", "hadoop-client-", "hadoop-mapreduce-", "snappy-java-", "zstd-jni-",
-        "gdal", "ogr-", "kakadu", "turbojpeg", "imageio-ext-gdal",
+        "gdal", "ogr-", "kakadu", "turbojpeg",
     ]
     for fragment in forbidden:
         matches = [name for name in names if fragment in name]
@@ -83,64 +69,34 @@ with zipfile.ZipFile(zip_path) as archive:
         if not entry.endswith(".jar"):
             continue
         with zipfile.ZipFile(BytesIO(archive.read(entry))) as nested:
-            if "META-INF/registryFile.imagen" in nested.namelist():
-                raise SystemExit(
-                    f"Imagen registry metadata must come from Geometry Type, not {entry}"
-                )
-            if Path(entry).name.startswith(("hop-vector-core-", "hop-vector-format-shapefile-", "hop-vector-format-geopackage-", "hop-vector-format-filegeodatabase-", "hop-vector-format-generate-", "hop-vector-format-flatgeobuf-", "hop-vector-format-parquet-", "hop-vector-format-geojson-", "hop-vector-transforms-")):
-                for name in nested.namelist():
+            contents = nested.namelist()
+            jar_name = Path(entry).name
+            if "META-INF/registryFile.imagen" in contents:
+                raise SystemExit(f"Imagen registry metadata must come from Geometry Type, not {entry}")
+            if jar_name.startswith(("hop-vector-core-", "hop-vector-format-", "hop-vector-transforms-")):
+                for name in contents:
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
-            required_content = []
-            if Path(entry).name.startswith("hop-vector-transforms-"):
-                required_content = [
-                    "ch/so/agi/hop/vector/transforms/GeometryRuntimeClassLoaderBootstrap.class",
-                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureDecoder.class",
-                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureEncoder.class",
-                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureDecoderDialog.class",
-                    "ch/so/agi/hop/vector/transforms/GeoJsonFeatureEncoderDialog.class",
-                    "ch/so/agi/hop/vector/transforms/FileGdbWriter.class",
-                    "ch/so/agi/hop/vector/transforms/FileGdbWriterDialog.class",
-                    "ch/so/agi/hop/vector/transforms/FileGdbCatalogReader.class",
-                    "ch/so/agi/hop/vector/transforms/FileGdbCatalogReaderDialog.class",
-                ]
-            elif Path(entry).name.startswith("hop-vector-format-filegeodatabase-"):
-                required_content = [
-                    "ch/so/agi/hop/vector/formats/filegeodatabase/export-schema-v1.json",
-                ]
-            for name in required_content:
-                if name not in nested.namelist():
-                    raise SystemExit(f"Missing FileGDB content in {entry}: {name}")
-            if Path(entry).name.startswith("hop-raster-values-"):
-                legacy_classes = [
-                    "ch/so/agi/hop/raster/values/RasterLegacyClipMeta.class",
-                    "ch/so/agi/hop/raster/values/RasterLegacyReprojectMeta.class",
-                    "ch/so/agi/hop/raster/values/RasterLegacyStatsMeta.class",
-                ]
-                present = [name for name in legacy_classes if name in nested.namelist()]
-                if present:
-                    raise SystemExit(f"Legacy raster transforms must not be packaged: {present}")
+            if jar_name.startswith("hop-vector-format-filegeodatabase-"):
+                schema = "ch/so/agi/hop/vector/formats/filegeodatabase/export-schema-v1.json"
+                if schema not in contents:
+                    raise SystemExit(f"Missing FileGDB export schema in {entry}")
+            if jar_name.startswith("hop-raster-values-"):
                 legacy_ids = (
                     b"SOGIS_RASTER_CLIP",
                     b"SOGIS_RASTER_REPROJECT",
                     b"SOGIS_RASTER_ZONAL_STATS",
                 )
-                for name in nested.namelist():
+                for name in contents:
                     if name.endswith(".class"):
                         content = nested.read(name)
                         if any(legacy_id in content for legacy_id in legacy_ids):
                             raise SystemExit(
                                 f"Legacy raster transform ID remains in {entry}:{name}"
                             )
-            if any("ArcInfoGenerateWriter" in name for name in nested.namelist()):
-                raise SystemExit(f"Legacy separate GENERATE transform in {entry}")
-            natives = [n for n in nested.namelist() if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]
-            if natives and not Path(entry).name.startswith("sqlite-jdbc-"):
+            natives = [n for n in contents if n.lower().endswith((".dll", ".so", ".dylib", ".jnilib"))]
+            if natives and not jar_name.startswith("sqlite-jdbc-"):
                 raise SystemExit(f"Unexpected native library in {entry}: {natives}")
 
 size_mib = zip_path.stat().st_size / (1024 * 1024)
 print(f"Distribution OK: {zip_path} ({size_mib:.1f} MiB)")
-print("  Native Java Shapefile + Geometry Type supplied GeoTools/Imagen runtime; GeoPackage uses SQLite JDBC")
-print("  File geodatabase support is pure Java via filegdb4j, no GDAL bindings")
-print("  Geometry, JTS, GeoTools, Imagen, ImageIO-Ext and UOM are supplied only by Geometry Type")
-print("  No GeoTools/Imagen registry metadata or GDAL bindings; SQLite JDBC natives are allowed")

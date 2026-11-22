@@ -34,7 +34,7 @@ class DocumentationBuildTest(unittest.TestCase):
                                ('docs/biblios/build.py', True), ('README.md', False),
                                ('examples/raster-clip/clip-cog.hpl', False),
                                ('.github/workflows/biblios-docs.yml', False),
-                               ('pom.xml', False), ('scripts/check-doc-examples.py', False)]:
+                               ('pom.xml', False), ('scripts/run-installed-e2e.py', False)]:
             self.assertEqual(fnmatch.fnmatchcase(path, 'docs/biblios/**'), expected)
         guard = "if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         self.assertEqual(workflow.count(guard), 2)
