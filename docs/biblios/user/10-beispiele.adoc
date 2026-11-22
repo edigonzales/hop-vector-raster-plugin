@@ -100,19 +100,9 @@ wird anschliessend nochmals über den Raster Reader gelesen.
 
 === Lokale Prüfung
 
-`scripts/check-doc-examples.py` führt Clip und Statistik aus den echten HPL-Dateien mit kleinen,
-lokal erzeugten Testdaten aus. Benötigt werden Java 21 einschliesslich `javac`, Python 3 und eine saubere,
-entbehrliche Apache-Hop-2.19.0-Installation ohne bereits installierte Geometry-, Raster-Type- oder Vector/Raster-Plugins.
-Das Skript installiert die Plugins in diese Testinstallation.
-Bauen Sie zuerst die passenden Raster-Type- und Geometry-Artefakte sowie das Vector/Raster-ZIP;
-siehe {repo}/blob/main/docs/dev-setup.md[Entwickleranleitung].
-In `assemblies/assemblies-hop-vector-raster/target` muss genau ein Vector/Raster-ZIP liegen.
-Setzen Sie `HOP_HOME`, `GEOMETRY_ZIP` und `RASTER_TYPE_ZIP` auf absolute Pfade und führen Sie vom Repository-Stamm aus:
-
-[source,bash]
-----
-python3 scripts/check-doc-examples.py --hop-home "$HOP_HOME" --geometry-zip "$GEOMETRY_ZIP" --raster-type-zip "$RASTER_TYPE_ZIP"
-----
+Die installierte Hop-Prüfung führt die HPL-Dateien für Clip und Statistik mit lokal erzeugten
+Testdaten aus. Die {repo}/blob/main/AGENTS.md#installed-hop-e2e[Anleitung für den E2E-Lauf]
+beschreibt die benötigten Plugin-ZIPs, die saubere Hop-Installation und den Aufruf.
 
 Externe öffentliche COGs gehören wie bisher nicht zur verpflichtenden Prüfung; das lokal erzeugte
 COG-Beispiel wird dagegen mit Strukturprüfung und, falls GDAL verfügbar ist, mit dem GDAL-Validator geprüft.
