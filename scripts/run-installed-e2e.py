@@ -182,18 +182,22 @@ def main() -> int:
             "-p", f"INPUT_RASTER={data / 'input.tif'}", "-p", "GEOMETRY_CRS=EPSG:2056",
             "-p", "NODATA=255", "-p", f"OUTPUT_FILE={data / 'zonal.csv'}",
         ], env)
-        run_command([
-            hop_run, "-r", "local", "-f",
-            str(Path(__file__).parents[1] / "examples/cloud-output/vector-to-flatgeobuf.hpl"),
-            "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
-            "-p", f"OUTPUT_FILE={data / 'zones.fgb'}",
-        ], env)
-        run_command([
-            hop_run, "-r", "local", "-f",
-            str(Path(__file__).parents[1] / "examples/cloud-output/vector-to-parquet.hpl"),
-            "-p", f"INPUT_VECTOR={data / 'zones.gpkg'}", "-p", "INPUT_LAYER=zones",
-            "-p", f"OUTPUT_FILE={data / 'zones.parquet'}",
-        ], env)
+        # Keep the XY workflows and exercise XYZM curves with the same installed writers.
+        for source, layer in (("zones.gpkg", "zones"), ("curves.gdb", "curves")):
+            for format_name, extension in (("flatgeobuf", "fgb"), ("parquet", "parquet")):
+                output = data / f"{layer}.{extension}"
+                run_command([
+                    hop_run, "-r", "local", "-f",
+                    str(Path(__file__).parents[1] / f"examples/cloud-output/vector-to-{format_name}.hpl"),
+                    "-p", f"INPUT_VECTOR={data / source}", "-p", f"INPUT_LAYER={layer}",
+                    "-p", f"OUTPUT_FILE={output}",
+                ], env)
+                if not output.is_file() or output.stat().st_size < 50:
+                    raise SystemExit(f"Installed Hop did not create a complete {output.name}")
+                if extension == "parquet":
+                    with output.open("rb") as stream:
+                        if stream.read(4) != b"PAR1":
+                            raise SystemExit(f"Unexpected {output.name} header")
 
         run_command([
             hop_run, "-r", "local", "-f",
@@ -323,11 +327,6 @@ def main() -> int:
                 raise SystemExit(f"Unexpected {name}: {row[name]!r}")
         if row["name"] != "whole raster":
             raise SystemExit(f"Input attribute was not preserved: {row['name']!r}")
-        for output in (data / "zones.fgb", data / "zones.parquet"):
-            if not output.is_file() or output.stat().st_size <= 4:
-                raise SystemExit(f"Installed Hop did not create {output.name}")
-        if (data / "zones.parquet").read_bytes()[:4] != b"PAR1":
-            raise SystemExit("Unexpected zones.parquet header")
 
         # Keep the negative check isolated from the published ZIP and restore the disposable install.
         legacy_probe = Path(__file__).with_name("GeoJsonLegacyRuntimeProbe.java")

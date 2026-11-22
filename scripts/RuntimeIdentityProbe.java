@@ -73,6 +73,11 @@ public class RuntimeIdentityProbe {
         throw new AssertionError("Missing/shared-loader Feature plugin " + id);
     }
     System.out.println("GEOJSON RUNTIME OK " + args[0]);
+    if (r.findPluginWithId(TransformPluginType.class, "ARCINFO_GENERATE_WRITER") != null)
+      throw new AssertionError("Retired GENERATE transform is still registered");
+    IPlugin writer = r.findPluginWithId(TransformPluginType.class, "SOGIS_VECTOR_WRITER");
+    if (r.getClassLoader(writer).getResource("org/apache/hadoop/conf/Configuration.class") != null)
+      throw new AssertionError("Hadoop is available to the installed vector writer");
     // The Geometry bootstrap must have initialized ImageN during HopEnvironment.init().
     // Keep Hop's original context loader here: changing it would mask missing bootstrap logic.
     {
