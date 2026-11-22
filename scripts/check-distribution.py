@@ -77,6 +77,14 @@ with zipfile.ZipFile(zip_path) as archive:
                 for name in contents:
                     if name.endswith(".class") and b"org/geotools/" in nested.read(name):
                         raise SystemExit(f"GeoTools type leaked into neutral vector module: {entry}:{name}")
+            if jar_name.startswith("hop-vector-transforms-"):
+                # Installed pipelines run headless, so check the packaged SWT dialogs here.
+                for dialog in (
+                    "GeoJsonFeatureDecoderDialog", "GeoJsonFeatureEncoderDialog",
+                    "FileGdbWriterDialog", "FileGdbCatalogReaderDialog",
+                ):
+                    if f"ch/so/agi/hop/vector/transforms/{dialog}.class" not in contents:
+                        raise SystemExit(f"Missing packaged dialog {dialog} in {entry}")
             if jar_name.startswith("hop-vector-format-filegeodatabase-"):
                 schema = "ch/so/agi/hop/vector/formats/filegeodatabase/export-schema-v1.json"
                 if schema not in contents:
