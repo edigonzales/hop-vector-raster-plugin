@@ -24,10 +24,6 @@ public final class ParquetProvider implements VectorProvider {
     this.resolver = resolver;
   }
 
-  public VectorFormat format() {
-    return VectorFormat.PARQUET;
-  }
-
   public List<LayerSchema> layers(ReadRequest r) {
     throw new UnsupportedOperationException("Parquet supports writing only");
   }

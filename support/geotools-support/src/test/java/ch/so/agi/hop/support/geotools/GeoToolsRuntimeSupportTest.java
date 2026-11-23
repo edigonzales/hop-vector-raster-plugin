@@ -3,6 +3,8 @@ package ch.so.agi.hop.support.geotools;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.so.agi.hop.raster.geotools.CrsSupport;
+import ch.so.agi.hop.raster.geotools.GeoToolsRuntimeSupport;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -64,9 +66,9 @@ class GeoToolsRuntimeSupportTest {
 
     try (ServiceHidingClassLoader loader =
         new ServiceHidingClassLoader(
-            new URL[] {pluginClasses, indriyaJar, ch.so.agi.hop.raster.geotools.GeoToolsRuntimeSupport.class.getProtectionDomain().getCodeSource().getLocation()}, ClassLoader.getPlatformClassLoader())) {
+            new URL[] {pluginClasses, indriyaJar}, ClassLoader.getPlatformClassLoader())) {
       Class<?> runtimeSupport =
-          loader.loadClass("ch.so.agi.hop.support.geotools.GeoToolsRuntimeSupport");
+          loader.loadClass(GeoToolsRuntimeSupport.class.getName());
       Method initialize = runtimeSupport.getDeclaredMethod("initialize");
       initialize.setAccessible(true);
       initialize.invoke(null);

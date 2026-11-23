@@ -1,6 +1,10 @@
 import ch.so.agi.hop.vector.core.*;
 import ch.so.agi.hop.vector.formats.geopackage.GeoPackageProvider;
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
+import it.geosolutions.imageio.plugins.tiff.TIFFDirectory;
+import it.geosolutions.imageio.plugins.tiff.TIFFField;
+import it.geosolutions.imageio.plugins.tiff.TIFFTag;
+import ch.so.agi.hop.raster.RasterReference;
 import java.awt.image.BufferedImage;
 import java.nio.file.*;
 import org.apache.hop.core.HopEnvironment;
@@ -97,7 +101,7 @@ public class DocumentationExamplesSmoke {
     if (!Files.exists(cog)) return;
     try (var source =
         new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(cog.toString()))) {
+            new RasterReference(cog.toString(), null))) {
       if (source.bounds().width != 1200 || source.bounds().height != 1000)
         throw new AssertionError("COG bounds are wrong: " + source.bounds());
       if (source.noData(0) == null || source.noData(0) != -9999d)
@@ -115,10 +119,10 @@ public class DocumentationExamplesSmoke {
     if (!Files.exists(jpegCog)) return;
     try (var source =
             new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-                new ch.so.agi.hop.raster.geotools.RasterDatasetRef(rgb.toString()));
+                new RasterReference(rgb.toString(), null));
         var written =
             new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-                new ch.so.agi.hop.raster.geotools.RasterDatasetRef(jpegCog.toString()))) {
+                new RasterReference(jpegCog.toString(), null))) {
       if (written.bounds().width != 1200 || written.bounds().height != 1000)
         throw new AssertionError("JPEG COG bounds are wrong: " + written.bounds());
       if (written.bands() != 3
@@ -310,61 +314,31 @@ public class DocumentationExamplesSmoke {
       rgbCoverage.dispose(true);
     }
 
-    try (var raw =
-        new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(raster.toString()))) {
-      var scaled =
-          new ch.so.agi.hop.raster.geotools.RasterSource() {
-            public java.awt.Rectangle bounds() {
-              return raw.bounds();
-            }
-
-            public org.geotools.api.referencing.crs.CoordinateReferenceSystem crs() {
-              return raw.crs();
-            }
-
-            public org.geotools.api.referencing.operation.MathTransform gridToWorld() {
-              return raw.gridToWorld();
-            }
-
-            public int bands() {
-              return 1;
-            }
-
-            public int dataType() {
-              return raw.dataType();
-            }
-
-            public Double noData(int band) {
-              return 255d;
-            }
-
-            public double scale(int band) {
-              return .5;
-            }
-
-            public double offset(int band) {
-              return 100;
-            }
-
-            public boolean valid(double v, int band) {
-              return v != 255 && Double.isFinite(v);
-            }
-
-            public double physical(double v, int band) {
-              return v * .5 + 100;
-            }
-
-            public java.awt.image.Raster read(ch.so.agi.hop.raster.geotools.RasterReadRequest r)
-                throws Exception {
-              return raw.read(r);
-            }
-
-            public void close() {}
-          };
-      var full = new GeometryFactory().toGeometry(new Envelope(2600000, 2600004, 1200000, 1200003));
-      ch.so.agi.hop.raster.geotools.RasterClip.write(
-          scaled, full, false, 0, 255d, temp.resolve("input-scaled.tif"), false, () -> false);
+    var tiffReader = new it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi()
+        .createReaderInstance();
+    var tiffWriter = new it.geosolutions.imageioimpl.plugins.tiff.TIFFImageWriterSpi()
+        .createWriterInstance();
+    try (var in = new javax.imageio.stream.FileImageInputStream(raster.toFile());
+        var out = new javax.imageio.stream.FileImageOutputStream(
+            temp.resolve("input-scaled.tif").toFile())) {
+      tiffReader.setInput(in);
+      var tags = TIFFDirectory.createFromMetadata(tiffReader.getImageMetadata(0));
+      tags.addTIFFField(new TIFFField(
+          new TIFFTag("GDAL_NODATA", 42113, 1 << TIFFTag.TIFF_ASCII),
+          TIFFTag.TIFF_ASCII, 1, new String[] {"255"}));
+      tags.addTIFFField(new TIFFField(
+          new TIFFTag("GDAL_METADATA", 42112, 1 << TIFFTag.TIFF_ASCII),
+          TIFFTag.TIFF_ASCII, 1, new String[] {"""
+              <GDALMetadata>
+                <Item name="SCALE" sample="0" role="scale">0.5</Item>
+                <Item name="OFFSET" sample="0" role="offset">100</Item>
+              </GDALMetadata>
+              """}));
+      tiffWriter.setOutput(out);
+      tiffWriter.write(null, new javax.imageio.IIOImage(image, null, tags.getAsMetadata()), null);
+    } finally {
+      tiffReader.dispose();
+      tiffWriter.dispose();
     }
 
     var geometry =
@@ -474,8 +448,7 @@ public class DocumentationExamplesSmoke {
     }
     try (var scaled =
         new ch.so.agi.hop.raster.geotools.GeoTiffSource(
-            new ch.so.agi.hop.raster.geotools.RasterDatasetRef(
-                temp.resolve("branch-a.tif").toString()))) {
+            new RasterReference(temp.resolve("branch-a.tif").toString(), null))) {
       if (scaled.scale(0) != .5 || scaled.offset(0) != 100)
         throw new AssertionError("Installed Raster value chain lost scale/offset");
     }

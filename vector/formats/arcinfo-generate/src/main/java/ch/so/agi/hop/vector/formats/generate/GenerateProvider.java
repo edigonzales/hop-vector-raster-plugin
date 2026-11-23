@@ -6,10 +6,6 @@ import org.apache.hop.core.row.IValueMeta;
 import org.locationtech.jts.geom.Geometry;
 
 public final class GenerateProvider implements VectorProvider {
-  public VectorFormat format() {
-    return VectorFormat.ARCINFO_GENERATE;
-  }
-
   public List<LayerSchema> layers(ReadRequest request) {
     throw new UnsupportedOperationException("GENERATE supports writing only");
   }

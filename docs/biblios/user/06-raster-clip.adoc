@@ -45,11 +45,10 @@ Reader liest zunächst Metadaten, nicht den vollständigen Pixelbestand.
 | explicit Crs                                        [ <leer> ]               |
 | Bands (ALL or 1-based list)                         [ ALL ]                  |
 | no Data                                             [ <leer> ]               |
-| Use input fields for bounding box coordinates       [ ]                      |
-| min X                                               [ <leer> ]               |
-| min Y                                               [ <leer> ]               |
-| max X                                               [ <leer> ]               |
-| max Y                                               [ <leer> ]               |
+| min X                          [ Value / Variable v ]  [ <leer> ]            |
+| min Y                          [ Value / Variable v ]  [ <leer> ]            |
+| max X                          [ Value / Variable v ]  [ <leer> ]            |
+| max Y                          [ Value / Variable v ]  [ <leer> ]            |
 |                                                                              |
 |                                                            [ OK ] [ Cancel ] |
 +------------------------------------------------------------------------------+
@@ -67,10 +66,10 @@ ein anderer Name ergänzt einen zweiten Rasterwert. Andere Attribute bleiben erh
 
 Alle methodenspezifischen Felder bleiben sichtbar; die für die gewählte Clip-Methode unpassenden
 Felder sind ausgegraut und nicht editierbar. Bei `BOUNDING_BOX` geben Sie das CRS in *explicit Crs*
-und die vier Grenzen in minX/minY/maxX/maxY ein. Wenn *Use input fields for bounding box coordinates*
-aktiviert ist, enthalten diese vier Felder stattdessen Eingabespaltennamen. Deren Werte werden pro Zeile
-als endliche Zahlen gelesen. Ohne Häkchen sind es Zahlen oder Hop-Variablen. Der gemeinsame Schalter
-ist anfangs ausgeschaltet.
+und die vier Grenzen in minX/minY/maxX/maxY ein. Die Moduswahl an einem dieser Felder
+schaltet alle vier gemeinsam um. Im Modus *Value / Variable* enthalten die Felder Zahlen
+oder Hop-Variablen. Im Modus *Input field* wählen Sie vier Eingabespalten mit endlichen
+Zahlenwerten. Der Dialog behält die Texte und Feldnamen beim Umschalten bis zum Speichern.
 
 Bei `POLYGON` wird *geometry Field* verwendet. Ist *explicit Crs* leer, wird die SRID der Geometrie
 verwendet; ein eingetragenes CRS bestimmt stattdessen, wie ihre Koordinaten interpretiert werden.

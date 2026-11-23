@@ -22,10 +22,6 @@ public final class FlatGeobufProvider implements VectorProvider {
     this.sortBudget = sortBudget;
   }
 
-  public VectorFormat format() {
-    return VectorFormat.FLATGEOBUF;
-  }
-
   public List<LayerSchema> layers(ReadRequest r) {
     throw new UnsupportedOperationException("FlatGeobuf supports writing only");
   }

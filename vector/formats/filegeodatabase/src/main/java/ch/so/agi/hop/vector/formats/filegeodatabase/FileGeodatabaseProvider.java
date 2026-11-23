@@ -17,7 +17,6 @@ import ch.so.agi.hop.vector.core.GeometrySchema;
 import ch.so.agi.hop.vector.core.LayerSchema;
 import ch.so.agi.hop.vector.core.Ordinate;
 import ch.so.agi.hop.vector.core.ReadRequest;
-import ch.so.agi.hop.vector.core.VectorFormat;
 import ch.so.agi.hop.vector.core.VectorProvider;
 import ch.so.agi.hop.vector.core.VectorSink;
 import ch.so.agi.hop.vector.core.VectorSource;
@@ -47,11 +46,6 @@ public final class FileGeodatabaseProvider implements VectorProvider {
 
   public FileGeodatabaseProvider(CrsDefinitionResolver crs) {
     this.crs = crs;
-  }
-
-  @Override
-  public VectorFormat format() {
-    return VectorFormat.FILEGEODATABASE;
   }
 
   @Override

@@ -25,10 +25,6 @@ public final class GeoPackageProvider implements VectorProvider {
     this.crs = crs;
   }
 
-  public VectorFormat format() {
-    return VectorFormat.GEOPACKAGE;
-  }
-
   static String quote(String s) {
     if (s == null || s.isBlank() || s.indexOf(0) >= 0)
       throw new IllegalArgumentException("Invalid SQL identifier");
