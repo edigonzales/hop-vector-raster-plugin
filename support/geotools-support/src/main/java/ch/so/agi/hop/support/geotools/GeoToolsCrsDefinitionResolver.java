@@ -1,5 +1,6 @@
 package ch.so.agi.hop.support.geotools;
 
+import ch.so.agi.hop.raster.geotools.GeoToolsRuntimeSupport;
 import ch.so.agi.hop.vector.core.CrsDefinitionResolver;
 
 public final class GeoToolsCrsDefinitionResolver implements CrsDefinitionResolver {

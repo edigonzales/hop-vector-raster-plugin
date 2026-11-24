@@ -11,10 +11,6 @@ import java.util.*;
 
 /** Streaming FeatureCollection provider; schema inspection never scans the input file. */
 public final class GeoJsonProvider implements VectorProvider {
-  public VectorFormat format() {
-    return VectorFormat.GEOJSON;
-  }
-
   public List<LayerSchema> layers(ReadRequest request) {
     return List.of(schema(request, readOptions(request)));
   }

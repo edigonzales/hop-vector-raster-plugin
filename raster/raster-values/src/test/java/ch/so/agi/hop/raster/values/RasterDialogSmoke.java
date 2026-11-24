@@ -141,6 +141,16 @@ public final class RasterDialogSmoke {
   }
 
   private static boolean controlTreeEnabled(Control control, boolean expected) {
+    if (control instanceof ValueOrFieldControl editor) {
+      var mode = (Combo) editor.getChildren()[0];
+      var configured = findControl(editor, TextVar.class);
+      var field = findOtherCombo(editor, mode);
+      boolean configuredMode = editor.getValue().mode() == SourceMode.CONFIGURED;
+      return editor.getEnabled() == expected
+          && mode.getEnabled() == expected
+          && configured.getTextWidget().getEnabled() == (expected && configuredMode)
+          && field.getEnabled() == (expected && !configuredMode);
+    }
     if (control instanceof TextVar text && text.getTextWidget().getEnabled() != expected)
       return false;
     if (control instanceof ComboVar combo && combo.getCComboWidget().getEnabled() != expected)
@@ -182,25 +192,10 @@ public final class RasterDialogSmoke {
     verifyClipCommonFieldsEnabled(shell);
     verifyFieldEnabled(shell, "geometry Field", true);
     verifyFieldEnabled(shell, "explicit Crs", true);
-    for (String field :
-        List.of(
-            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
-      verifyFieldEnabled(shell, field, false);
-
+    var bounds = List.of("min X", "min Y", "max X", "max Y");
+    for (String field : bounds) verifyFieldEnabled(shell, field, false);
     setTextValue(shell, "geometry Field", "mask_geom");
     setTextValue(shell, "explicit Crs", "EPSG:2056");
-    setTextValue(shell, "min X", "1");
-    setTextValue(shell, "min Y", "2");
-    setTextValue(shell, "max X", "3");
-    setTextValue(shell, "max Y", "4");
-    String bboxFieldsLabel = "Use input fields for bounding box coordinates";
-    Control bboxFieldsEditor = editorAfterLabel(shell, bboxFieldsLabel);
-    if (!(bboxFieldsEditor instanceof Button bboxFields))
-      throw new AssertionError("Bounding box field mode must be a checkbox");
-    Control minXEditor = editorAfterLabel(shell, "min X");
-    if (minXEditor == null || bboxFieldsEditor.getBounds().y >= minXEditor.getBounds().y)
-      throw new AssertionError("Bounding box field mode must appear before the coordinate inputs");
-    bboxFields.setSelection(true);
 
     selectCombo(method, 1);
     if (!"BOUNDING_BOX".equals(method.getText()))
@@ -208,30 +203,50 @@ public final class RasterDialogSmoke {
     verifyClipCommonFieldsEnabled(shell);
     verifyFieldEnabled(shell, "geometry Field", false);
     verifyFieldEnabled(shell, "explicit Crs", true);
-    for (String field :
-        List.of(
-            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
-      verifyFieldEnabled(shell, field, true);
+    editValueGroup(shell, bounds, 1, true);
 
     selectCombo(method, 0);
-    if (!"POLYGON".equals(method.getText()))
-      throw new AssertionError("Clip method selection did not change back to POLYGON");
     verifyFieldEnabled(shell, "geometry Field", true);
     verifyClipCommonFieldsEnabled(shell);
-    for (String field :
-        List.of(
-            "Use input fields for bounding box coordinates", "min X", "min Y", "max X", "max Y"))
-      verifyFieldEnabled(shell, field, false);
+    for (String field : bounds) verifyFieldEnabled(shell, field, false);
     if (!"mask_geom".equals(textValue(shell, "geometry Field"))
-        || !"EPSG:2056".equals(textValue(shell, "explicit Crs"))
-        || !"1".equals(textValue(shell, "min X"))
-        || !"2".equals(textValue(shell, "min Y"))
-        || !"3".equals(textValue(shell, "max X"))
-        || !"4".equals(textValue(shell, "max Y"))
-        || !bboxFields.getSelection())
-      throw new AssertionError("Clip field values were lost during method changes");
+        || !"EPSG:2056".equals(textValue(shell, "explicit Crs")))
+      throw new AssertionError("Polygon inputs were lost during method changes");
 
     selectCombo(method, 1);
+    for (int i = 0; i < bounds.size(); i++) {
+      var editor = (ValueOrFieldControl) editorAfterLabel(shell, bounds.get(i));
+      if (!editor.getValue().equals(new ValueOrField(
+          SourceMode.FIELD, Integer.toString(i + 1), "field_" + (i + 1))))
+        throw new AssertionError("Clip inputs were lost during method changes");
+    }
+  }
+
+  private static void editValueGroup(
+      Shell shell, List<String> labels, int firstValue, boolean saveByField) {
+    var editors = labels.stream()
+        .map(label -> (ValueOrFieldControl) editorAfterLabel(shell, label))
+        .toList();
+    var mode = (Combo) editors.getLast().getChildren()[0];
+    selectValueMode(mode, 0);
+    for (int i = 0; i < editors.size(); i++)
+      findControl(editors.get(i), TextVar.class).setText(Integer.toString(firstValue + i));
+
+    selectValueMode(mode, 1);
+    for (int i = 0; i < editors.size(); i++) {
+      var editor = editors.get(i);
+      if (editor.getValue().mode() != SourceMode.FIELD)
+        throw new AssertionError("Field mode did not reach " + labels.get(i));
+      findOtherCombo(editor, (Combo) editor.getChildren()[0]).setText("field_" + (firstValue + i));
+    }
+    selectValueMode(mode, 0);
+    for (int i = 0; i < editors.size(); i++) {
+      int value = firstValue + i;
+      if (!editors.get(i).getValue().equals(new ValueOrField(
+          SourceMode.CONFIGURED, Integer.toString(value), "field_" + value)))
+        throw new AssertionError("Configured mode or inactive input was lost for " + labels.get(i));
+    }
+    if (saveByField) selectValueMode(mode, 1);
   }
 
   private static void verifyClipCommonFieldsEnabled(Shell shell) {
@@ -451,11 +466,9 @@ public final class RasterDialogSmoke {
     for (String label :
         List.of(
             "Target CRS",
-            "Use input fields for resolution",
             "Resolution X (target units)",
             "Resolution Y (target units)",
             "Extent (AUTO / BOUNDING_BOX)",
-            "Use input fields for bounding box coordinates",
             "min X",
             "min Y",
             "max X",
@@ -468,8 +481,10 @@ public final class RasterDialogSmoke {
     for (String label : List.of("Resolution X (target units)", "Resolution Y (target units)")) {
       if (!findLabel(shell, label).getToolTipText().contains("metres or degrees"))
         throw new AssertionError("Resolution units need a tooltip");
-      setTextValue(shell, label, "2");
     }
+    editValueGroup(shell, List.of("Resolution X (target units)", "Resolution Y (target units)"),
+        1, meta.isTargetCrsField());
+    editValueGroup(shell, List.of("min X", "min Y", "max X", "max Y"), 3, !meta.isTargetCrsField());
   }
 
   private static void verifyWriterDialog(Shell dialog, boolean saveByField) {
@@ -727,9 +742,9 @@ public final class RasterDialogSmoke {
           if (containsLabel(shell, "Target CRS")) {
             ((ValueOrFieldControl) editorAfterLabel(shell, "Target CRS"))
                 .setValue(new ValueOrField(SourceMode.FIELD, "EPSG:4326", "changed_crs"));
-            ((Button) editorAfterLabel(shell, "Use input fields for resolution"))
-                .setSelection(true);
-            setTextValue(shell, "Resolution X (target units)", "99");
+            editValueGroup(shell, List.of("Resolution X (target units)", "Resolution Y (target units)"),
+                99, true);
+            editValueGroup(shell, List.of("min X", "min Y", "max X", "max Y"), 1, true);
           } else {
             ((Button) editorAfterLabel(shell, "Add overviews")).setSelection(true);
             setTextValue(shell, "JPEG quality (1-100)", "33");
@@ -773,16 +788,22 @@ public final class RasterDialogSmoke {
           if (!"BOUNDING_BOX".equals(clip.getClipMethod())
               || !"mask_geom".equals(clip.getGeometryField())
               || !"EPSG:2056".equals(clip.getExplicitCrs())
-              || !"1".equals(clip.getMinX())
-              || !"2".equals(clip.getMinY())
-              || !"3".equals(clip.getMaxX())
-              || !"4".equals(clip.getMaxY())
+              || !"field_1".equals(clip.getMinX())
+              || !"field_2".equals(clip.getMinY())
+              || !"field_3".equals(clip.getMaxX())
+              || !"field_4".equals(clip.getMaxY())
               || !clip.isBboxFields())
             throw new AssertionError("Clip method or field values were not saved correctly");
         } else if (dialogCase.meta().operation().equals("REPROJECT")) {
           var meta = dialogCase.meta();
           if (!(meta.isTargetCrsField() ? "manual_crs" : "${TARGET_CRS}")
               .equals(meta.getTargetCrs())) throw new AssertionError("CRS selection was not saved");
+          if (meta.isResolutionFields() == meta.isBboxFields()
+              || !meta.getResolutionX().equals(meta.isResolutionFields() ? "field_1" : "1")
+              || !meta.getResolutionY().equals(meta.isResolutionFields() ? "field_2" : "2")
+              || !meta.getMinX().equals(meta.isBboxFields() ? "field_3" : "3")
+              || !meta.getMaxY().equals(meta.isBboxFields() ? "field_6" : "6"))
+            throw new AssertionError("Reproject groups were not saved independently");
         } else if (dialogCase.meta().operation().equals("WRITER")) {
           var writer = (RasterWriterMeta) dialogCase.meta();
           String expectedOutput =

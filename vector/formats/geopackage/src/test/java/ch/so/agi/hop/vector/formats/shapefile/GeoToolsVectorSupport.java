@@ -1,5 +1,6 @@
 package ch.so.agi.hop.vector.formats.shapefile;
 
+import ch.so.agi.hop.raster.geotools.GeoToolsRuntimeSupport;
 import com.atolcd.hop.core.row.value.ValueMetaGeometry;
 import java.io.IOException;
 import java.nio.file.Files;

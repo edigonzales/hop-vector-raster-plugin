@@ -1,5 +1,8 @@
 package ch.so.agi.hop.vector.transforms;
 
+import ch.so.agi.hop.vector.core.LayerSchema;
+import ch.so.agi.hop.vector.core.VectorFormat;
+import ch.so.agi.hop.vector.core.VectorProvider;
 import java.util.List;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
@@ -37,7 +40,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
   private Text wAvailableFieldsPreview;
   private TextVar wGeometryFieldName;
   private VectorReaderDialogComposite content;
-  private List<VectorSchemaProbe.LayerDefinition> layerDefinitions = List.of();
+  private List<LayerSchema> layerDefinitions = List.of();
   private boolean suppressSchemaRefresh;
   private boolean geometryFieldAutoPopulated;
 
@@ -289,10 +292,9 @@ public class VectorReaderDialog extends BaseTransformDialog {
     }
 
     try {
-      layerDefinitions =
-          VectorSchemaProbe.readLayers(
-              draft().request(variables, ch.so.agi.hop.vector.core.Diagnostics.NONE),
-              wFormat.getText());
+      var request = draft().request(variables, ch.so.agi.hop.vector.core.Diagnostics.NONE);
+      layerDefinitions = VectorProviders.get(VectorFormat.resolve(wFormat.getText(), request.file()))
+          .layers(request);
       populateLayerCombo(layerDefinitions);
       refreshFieldsPreview();
     } catch (Throwable e) {
@@ -305,12 +307,12 @@ public class VectorReaderDialog extends BaseTransformDialog {
     }
   }
 
-  private void populateLayerCombo(List<VectorSchemaProbe.LayerDefinition> layers) {
+  private void populateLayerCombo(List<LayerSchema> layers) {
     String currentLayer = resolveUiValue(wLayerName.getText());
     suppressSchemaRefresh = true;
     try {
       wLayerName.removeAll();
-      for (VectorSchemaProbe.LayerDefinition layer : layers) {
+      for (LayerSchema layer : layers) {
         wLayerName.add(layer.name());
       }
 
@@ -320,7 +322,7 @@ public class VectorReaderDialog extends BaseTransformDialog {
       }
 
       try {
-        wLayerName.setText(VectorSchemaProbe.resolveLayer(layers, currentLayer).name());
+        wLayerName.setText(VectorProvider.resolveLayer(layers, currentLayer).name());
       } catch (IllegalArgumentException e) {
         wLayerName.setText(layers.get(0).name());
       }
@@ -346,8 +348,8 @@ public class VectorReaderDialog extends BaseTransformDialog {
     }
 
     try {
-      VectorSchemaProbe.LayerDefinition layer =
-          VectorSchemaProbe.resolveLayer(layerDefinitions, resolveUiValue(wLayerName.getText()));
+      LayerSchema layer =
+          VectorProvider.resolveLayer(layerDefinitions, resolveUiValue(wLayerName.getText()));
       if (!layer.name().equals(wLayerName.getText())) {
         suppressSchemaRefresh = true;
         try {
@@ -356,8 +358,8 @@ public class VectorReaderDialog extends BaseTransformDialog {
           suppressSchemaRefresh = false;
         }
       }
-      updateGeometryFieldDefault(layer.geometryFieldName());
-      String preview = VectorSchemaProbe.formatFieldPreview(layer);
+      updateGeometryFieldDefault(layer.geometryColumn());
+      String preview = formatFieldPreview(layer);
       var path = java.nio.file.Path.of(variables.resolve(wFileName.getText()));
       if (ch.so.agi.hop.vector.core.VectorFormat.resolve(wFormat.getText(), path)
           == ch.so.agi.hop.vector.core.VectorFormat.FILEGEODATABASE)
@@ -366,6 +368,72 @@ public class VectorReaderDialog extends BaseTransformDialog {
     } catch (Exception e) {
       resetAvailableFieldsPreview(e.getMessage());
     }
+  }
+
+  static String formatFieldPreview(LayerSchema layer) {
+    StringBuilder preview = new StringBuilder();
+    preview.append("Layer: ").append(layer.name()).append('\n');
+    preview
+        .append("Geometry type: ")
+        .append(layer.geometryType().isBlank() ? "(none)" : layer.geometryType())
+        .append('\n');
+    preview
+        .append("Geometry field: ")
+        .append(layer.geometryColumn().isBlank() ? "(none)" : layer.geometryColumn())
+        .append('\n');
+    preview
+        .append("Dimension: ")
+        .append(layer.geometry() == null ? "" : layer.geometry().dimension())
+        .append("\nCRS: ")
+        .append(layer.srid())
+        .append("\n");
+    if (layer.xyPrecision() != null) {
+      var p = layer.xyPrecision();
+      preview
+          .append("XY resolution: ")
+          .append(p.resolution())
+          .append("\nXY tolerance: ")
+          .append(p.tolerance())
+          .append("\nXY origin: ")
+          .append(p.xOrigin())
+          .append(", ")
+          .append(p.yOrigin())
+          .append('\n');
+    }
+    preview.append("Fields:");
+    var fields = layer.rowMeta().getValueMetaList().stream()
+        .filter(field -> !field.getName().equals(layer.geometryColumn()))
+        .toList();
+    if (fields.isEmpty()) {
+      preview.append("\n- (none)");
+    } else {
+      for (var field : fields) {
+        preview
+            .append("\n- ")
+            .append(field.getName())
+            .append(" (")
+            .append(displayType(field.getType()))
+            .append(')')
+            .append(" length=")
+            .append(field.getLength())
+            .append(" precision=")
+            .append(field.getPrecision());
+      }
+    }
+    return preview.toString();
+  }
+
+  private static String displayType(int type) {
+    return switch (type) {
+      case org.apache.hop.core.row.IValueMeta.TYPE_INTEGER -> "INTEGER";
+      case org.apache.hop.core.row.IValueMeta.TYPE_NUMBER -> "NUMBER";
+      case org.apache.hop.core.row.IValueMeta.TYPE_BIGNUMBER -> "BIGNUMBER";
+      case org.apache.hop.core.row.IValueMeta.TYPE_BOOLEAN -> "BOOLEAN";
+      case org.apache.hop.core.row.IValueMeta.TYPE_DATE -> "DATE";
+      case org.apache.hop.core.row.IValueMeta.TYPE_BINARY -> "BINARY";
+      case org.apache.hop.core.row.IValueMeta.TYPE_TIMESTAMP -> "TIMESTAMP";
+      default -> "STRING";
+    };
   }
 
   private void resetAvailableFieldsPreview(String message) {

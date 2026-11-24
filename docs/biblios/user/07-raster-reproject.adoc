@@ -20,15 +20,13 @@ Der Dialogtitel lautet `Raster REPROJECT (GeoTools)`.
 | Input raster field                                  [ raster v ]             |
 | Output raster field (empty: replace input)          [ <leer> ]               |
 | Target CRS                  [ Value / Variable v ]  [ <leer> ]               |
-| Use input fields for resolution                     [ ]                      |
-| Resolution X (target units)                         [ 2 ]                    |
-| Resolution Y (target units)                         [ 2 ]                    |
+| Resolution X (target units)    [ Value / Variable v ]  [ 2 ]                 |
+| Resolution Y (target units)    [ Value / Variable v ]  [ 2 ]                 |
 | Extent (AUTO / BOUNDING_BOX)                        [ AUTO v ]               |
-| Use input fields for bounding box coordinates       [ ]                      |
-| min X                                               [ <leer> ]               |
-| min Y                                               [ <leer> ]               |
-| max X                                               [ <leer> ]               |
-| max Y                                               [ <leer> ]               |
+| min X                          [ Value / Variable v ]  [ <leer> ]            |
+| min Y                          [ Value / Variable v ]  [ <leer> ]            |
+| max X                          [ Value / Variable v ]  [ <leer> ]            |
+| max Y                          [ Value / Variable v ]  [ <leer> ]            |
 | Interpolation (NEAREST / BILINEAR)                  [ NEAREST v ]            |
 | Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)    [ AUTO v ]               |
 | source No Data                                      [ <leer> ]               |
@@ -55,9 +53,9 @@ das Ziel-CRS. Die Werte beider Modi bleiben beim Umschalten im geöffneten Dialo
 +------------------------------------------------------------------------------+
 ----
 
-*Use input fields for resolution* und *Use input fields for bounding box coordinates*
-sind standardmässig ausgeschaltet und stehen jeweils vor ihrer Feldgruppe.
-Sie binden beide Auflösungen beziehungsweise alle vier Grenzen an Eingabespalten.
+Jede Moduswahl zwischen *Value / Variable* und *Input field* schaltet die zugehörige
+Gruppe gemeinsam um. Die Auflösung X/Y und die vier Bounding-Box-Grenzen können
+unterschiedliche Modi verwenden. Texte und Feldnamen bleiben beim Umschalten im Dialog erhalten.
 *Resolution X (target units)* und *Resolution Y (target units)* bezeichnen die
 Pixelbreite und Pixelhöhe in Einheiten des Ziel-CRS, beispielsweise Meter bei
 `EPSG:2056` oder Grad bei `EPSG:4326`. Bei leerem konfiguriertem Ziel-CRS gelten

@@ -2,6 +2,9 @@ package ch.so.agi.hop.vector.transforms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.vector.core.LayerSchema;
+import ch.so.agi.hop.vector.core.VectorFormat;
+import ch.so.agi.hop.vector.core.VectorProvider;
 import ch.so.agi.hop.vector.formats.shapefile.GeoToolsReference;
 import java.nio.file.Path;
 import java.util.List;
@@ -14,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 
-class VectorSchemaProbeTest {
+class VectorReaderSchemaTest {
 
   @TempDir Path tempDir;
 
@@ -29,38 +32,35 @@ class VectorSchemaProbeTest {
       store.dispose();
     }
 
-    List<VectorSchemaProbe.LayerDefinition> layers = VectorSchemaProbe.readLayers(file);
+    List<LayerSchema> layers = VectorProviders.get(VectorFormat.GEOPACKAGE).layers(file);
 
     assertThat(layers)
-        .extracting(VectorSchemaProbe.LayerDefinition::name)
+        .extracting(LayerSchema::name)
         .containsExactlyInAnyOrder("roads", "places");
 
-    VectorSchemaProbe.LayerDefinition roads = VectorSchemaProbe.resolveLayer(layers, "roads");
-    assertThat(roads.geometryFieldName()).isEqualTo("geom");
+    LayerSchema roads = VectorProvider.resolveLayer(layers, "roads");
+    assertThat(roads.geometryColumn()).isEqualTo("geom");
     assertThat(roads.geometryType()).isEqualTo("LineString");
-    assertThat(roads.fields())
-        .containsExactly(new VectorSchemaProbe.FieldDefinition("name", "STRING"));
+    assertThat(VectorReaderDialog.formatFieldPreview(roads)).contains("- name (STRING)");
 
-    VectorSchemaProbe.LayerDefinition places = VectorSchemaProbe.resolveLayer(layers, "PLACES");
-    assertThat(places.geometryFieldName()).isEqualTo("shape");
+    LayerSchema places = VectorProvider.resolveLayer(layers, "PLACES");
+    assertThat(places.geometryColumn()).isEqualTo("shape");
     assertThat(places.geometryType()).isEqualTo("Point");
-    assertThat(places.fields())
-        .containsExactly(new VectorSchemaProbe.FieldDefinition("rank", "INTEGER", -1, 0));
+    assertThat(VectorReaderDialog.formatFieldPreview(places))
+        .contains("- rank (INTEGER) length=-1 precision=0");
   }
 
   @Test
   void formatsReadableFieldPreview() {
-    VectorSchemaProbe.LayerDefinition layer =
-        new VectorSchemaProbe.LayerDefinition(
-            "places",
-            "shape",
-            "Point",
-            List.of(
-                new VectorSchemaProbe.FieldDefinition("name", "STRING"),
-                new VectorSchemaProbe.FieldDefinition("rank", "INTEGER", -1, 0),
-                new VectorSchemaProbe.FieldDefinition("precise", "BIGNUMBER", 12, 4)));
+    var fields = new org.apache.hop.core.row.RowMeta();
+    fields.addValueMeta(new org.apache.hop.core.row.value.ValueMetaString("name"));
+    fields.addValueMeta(new org.apache.hop.core.row.value.ValueMetaInteger("rank"));
+    var precise = new org.apache.hop.core.row.value.ValueMetaBigNumber("precise");
+    precise.setLength(12, 4);
+    fields.addValueMeta(precise);
+    var layer = new LayerSchema("places", "shape", "Point", 2056, fields);
 
-    assertThat(VectorSchemaProbe.formatFieldPreview(layer))
+    assertThat(VectorReaderDialog.formatFieldPreview(layer))
         .contains("Layer: places")
         .contains("Geometry type: Point")
         .contains("Geometry field: shape")

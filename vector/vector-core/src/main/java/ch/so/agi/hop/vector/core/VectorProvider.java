@@ -1,8 +1,6 @@
 package ch.so.agi.hop.vector.core;
 
 public interface VectorProvider {
-  VectorFormat format();
-
   java.util.List<LayerSchema> layers(ReadRequest request) throws Exception;
 
   default java.util.List<LayerSchema> layers(java.nio.file.Path file) throws Exception {

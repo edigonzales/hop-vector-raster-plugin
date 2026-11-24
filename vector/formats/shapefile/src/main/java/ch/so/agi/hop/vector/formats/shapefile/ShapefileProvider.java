@@ -48,10 +48,6 @@ public final class ShapefileProvider implements VectorProvider {
         .collect(java.util.stream.Collectors.joining("\n"));
   }
 
-  public VectorFormat format() {
-    return VectorFormat.SHAPEFILE;
-  }
-
   public List<LayerSchema> layers(ReadRequest r) throws Exception {
     try (var s = open(r)) {
       return List.of(s.schema());

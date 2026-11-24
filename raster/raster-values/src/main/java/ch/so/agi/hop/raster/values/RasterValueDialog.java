@@ -6,6 +6,7 @@ import ch.so.agi.hop.commons.ui.EditorKind;
 import ch.so.agi.hop.commons.ui.ValueOrFieldControl;
 import ch.so.agi.hop.raster.type.ValueMetaRaster;
 import java.util.*;
+import java.util.List;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -22,6 +23,9 @@ import org.eclipse.swt.widgets.*;
 
 /** Operation-specific fields, edited on a clone so Cancel cannot change the pipeline. */
 public final class RasterValueDialog extends BaseTransformDialog {
+  private static final List<String> BOUNDS = List.of("minX", "minY", "maxX", "maxY");
+  private static final List<String> RESOLUTION = List.of("resolutionX", "resolutionY");
+
   private final RasterValueMeta input;
 
   public RasterValueDialog(
@@ -91,10 +95,10 @@ public final class RasterValueDialog extends BaseTransformDialog {
           case "READER" -> "rasterField";
           case "CLIP" ->
               "rasterField outputRasterField clipMethod geometryField explicitCrs bands noData"
-                  + " bboxFields minX minY maxX maxY";
+                  + " minX minY maxX maxY";
           case "REPROJECT" ->
-              "rasterField outputRasterField targetCrs resolutionFields resolutionX resolutionY"
-                  + " extentMode bboxFields minX minY maxX maxY interpolation"
+              "rasterField outputRasterField targetCrs resolutionX resolutionY"
+                  + " extentMode minX minY maxX maxY interpolation"
                   + " outputType sourceNoData outputNoData";
           case "WRITER" ->
               "rasterField output format compression jpegQuality addOverviews overviews"
@@ -162,6 +166,32 @@ public final class RasterValueDialog extends BaseTransformDialog {
           controls.put(name, outputControl);
           continue;
         }
+        if (BOUNDS.contains(name) || RESOLUTION.contains(name)) {
+          boolean resolution = RESOLUTION.contains(name);
+          var group = resolution ? RESOLUTION : BOUNDS;
+          boolean fromFields = resolution ? input.isResolutionFields() : input.isBboxFields();
+          var editor =
+              ValueOrFieldControl.builder(body, variables)
+                  .editor(EditorKind.TEXT)
+                  .fieldProvider(() -> inputFieldNames(false))
+                  .onChange(() -> synchronizeMode(controls, group, name))
+                  .build();
+          editor.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+          String initial = (String) field.get(input);
+          editor.setValue(fromFields
+              ? new ValueOrField(SourceMode.FIELD, "", initial)
+              : new ValueOrField(SourceMode.CONFIGURED, initial, ""));
+          if (resolution) {
+            String tooltip =
+                "Pixel size in target CRS units, for example metres or degrees. "
+                    + "An empty configured Target CRS uses the source CRS units. "
+                    + "With input fields enabled, choose the field containing the pixel size.";
+            fieldLabel.setToolTipText(tooltip);
+            editor.setToolTipText(tooltip);
+          }
+          controls.put(name, editor);
+          continue;
+        }
         if (field.getType() == boolean.class) {
           var button = new Button(body, SWT.CHECK);
           button.setSelection(field.getBoolean(input));
@@ -215,14 +245,6 @@ public final class RasterValueDialog extends BaseTransformDialog {
           var text = new TextVar(variables, body, SWT.BORDER);
           text.setText(String.valueOf(field.get(input)));
           text.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-          if (name.equals("resolutionX") || name.equals("resolutionY")) {
-            String tooltip =
-                "Pixel size in target CRS units, for example metres or degrees. "
-                    + "An empty configured Target CRS uses the source CRS units. "
-                    + "With input fields enabled, enter the field name containing the pixel size.";
-            fieldLabel.setToolTipText(tooltip);
-            text.setToolTipText(tooltip);
-          }
           control = text;
         }
         controls.put(name, control);
@@ -312,6 +334,10 @@ public final class RasterValueDialog extends BaseTransformDialog {
                   edited.setOutputField(selection.mode() == SourceMode.FIELD);
                 else if (entry.getKey().equals("targetCrs"))
                   edited.setTargetCrsField(selection.mode() == SourceMode.FIELD);
+                else if (entry.getKey().equals(BOUNDS.getFirst()))
+                  edited.setBboxFields(selection.mode() == SourceMode.FIELD);
+                else if (entry.getKey().equals(RESOLUTION.getFirst()))
+                  edited.setResolutionFields(selection.mode() == SourceMode.FIELD);
               } else if (entry.getValue() instanceof Button b) {
                 value = b.getSelection();
               } else if (entry.getValue() instanceof Combo combo) {
@@ -336,6 +362,9 @@ public final class RasterValueDialog extends BaseTransformDialog {
             if (controls.containsKey("output")) input.setOutputField(edited.isOutputField());
             if (controls.containsKey("targetCrs"))
               input.setTargetCrsField(edited.isTargetCrsField());
+            if (controls.containsKey(BOUNDS.getFirst())) input.setBboxFields(edited.isBboxFields());
+            if (controls.containsKey(RESOLUTION.getFirst()))
+              input.setResolutionFields(edited.isResolutionFields());
             transformName = wTransformName.getText();
             input.setChanged();
             shell.dispose();
@@ -356,10 +385,21 @@ public final class RasterValueDialog extends BaseTransformDialog {
     shell.setDefaultButton(ok);
     shell.setSize(760, 720);
     resizeBody.run();
-    shell.open();
     var display = shell.getDisplay();
+    shell.open();
     while (!shell.isDisposed()) if (!display.readAndDispatch()) display.sleep();
     return transformName;
+  }
+
+  private static void synchronizeMode(
+      Map<String, Control> controls, List<String> group, String changed) {
+    SourceMode mode = ((ValueOrFieldControl) controls.get(changed)).getValue().mode();
+    for (String name : group) {
+      var editor = (ValueOrFieldControl) controls.get(name);
+      var value = editor.getValue();
+      if (value.mode() != mode)
+        editor.setValue(new ValueOrField(mode, value.configuredValue(), value.fieldName()));
+    }
   }
 
   private static String configuredSource(ValueOrField source) {
@@ -373,7 +413,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
     boolean recognized = polygon || boundingBox;
     setFieldEnabled("geometryField", polygon || !recognized, controls, labels);
     boolean enableBounds = boundingBox || !recognized;
-    for (String name : java.util.List.of("minX", "minY", "maxX", "maxY", "bboxFields"))
+    for (String name : BOUNDS)
       setFieldEnabled(name, enableBounds, controls, labels);
   }
 
@@ -409,7 +449,7 @@ public final class RasterValueDialog extends BaseTransformDialog {
 
   private static void setControlTreeEnabled(Control control, boolean enabled) {
     control.setEnabled(enabled);
-    if (control instanceof Composite composite)
+    if (control instanceof Composite composite && !(control instanceof ValueOrFieldControl))
       for (Control child : composite.getChildren()) setControlTreeEnabled(child, enabled);
   }
 
@@ -470,10 +510,8 @@ public final class RasterValueDialog extends BaseTransformDialog {
       case "bands" -> "Bands (ALL or 1-based list)";
       case "clipMethod" -> "Clip method (POLYGON / BOUNDING_BOX)";
       case "targetCrs" -> "Target CRS";
-      case "resolutionFields" -> "Use input fields for resolution";
       case "resolutionX" -> "Resolution X (target units)";
       case "resolutionY" -> "Resolution Y (target units)";
-      case "bboxFields" -> "Use input fields for bounding box coordinates";
       case "interpolation" -> "Interpolation (NEAREST / BILINEAR)";
       case "outputType" -> "Numeric type (AUTO / SOURCE / FLOAT32 / FLOAT64)";
       case "extentMode" -> "Extent (AUTO / BOUNDING_BOX)";
